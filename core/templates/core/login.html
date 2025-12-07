@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}
+{% block title %}Logowanie{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Logowanie do ESIR</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Login</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hasło</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Zaloguj</button>
+                </form>
+                <hr>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

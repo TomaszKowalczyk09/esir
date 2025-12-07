@@ -1,0 +1,69 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Porządek obrad{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Sidebar jak w panelu radnego -->
+  <div class="col-md-3 mb-3">
+  <div class="list-group shadow-sm">
+    <a href="{% url 'radny' %}" class="list-group-item list-group-item-action">
+      <i class="bi bi-check2-square me-2"></i> Głosowania
+    </a>
+    <span class="list-group-item list-group-item-action active">
+      <i class="bi bi-list-ul me-2"></i> Porządek obrad
+    </span>
+    <a href="#" class="list-group-item list-group-item-action disabled">
+      Wnioski (w przygotowaniu)
+    </a>
+  </div>
+</div>
+
+  <!-- Główna część -->
+  <div class="col-md-9">
+    <h4 class="mb-3">Porządek obrad</h4>
+
+    {% if sesja %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h5 class="card-title mb-1">{{ sesja.nazwa }}</h5>
+          <p class="text-muted mb-0">{{ sesja.data }}</p>
+        </div>
+      </div>
+
+      {% if sesja.punkty.all %}
+        <div class="list-group shadow-sm">
+          {% for punkt in sesja.punkty.all %}
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <div>
+                <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
+                {% if punkt.aktywny %}
+                  <span class="badge bg-primary ms-1">Aktualnie omawiany</span>
+                {% endif %}
+                {% if punkt.opis %}
+                  <div class="text-muted small">{{ punkt.opis }}</div>
+                {% endif %}
+              </div>
+              {% if punkt.glosowanie %}
+              <div class="text-end small text-muted">
+                Głosowanie: {{ punkt.glosowanie.nazwa }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info mt-3">
+          Brak zdefiniowanych punktów obrad dla tej sesji.
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="alert alert-info">
+        Brak aktywnej sesji. Skontaktuj się z prezydium.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

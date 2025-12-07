@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>ESIR - {{ sesja.nazwa }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        background-color: #ffffff;
+      }
+      .ekran-topbar {
+        background-color: #004a6d;
+        color: #ffffff;
+        padding: 10px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .ekran-topbar-title {
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .ekran-topbar-time {
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .ekran-content {
+        padding: 40px 60px;
+        min-height: calc(100% - 60px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+      .ekran-punkt-title {
+        color: #c1004a;
+        font-size: 48px;
+        font-weight: 700;
+        margin-bottom: 30px;
+      }
+      .ekran-lista {
+        font-size: 28px;
+        margin-bottom: 40px;
+        list-style: none;
+        padding: 0;
+      }
+      .ekran-wyniki-container {
+        display: flex;
+        gap: 60px;
+        justify-content: center;
+        margin-top: 40px;
+      }
+      .wynik-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 30px;
+        border-radius: 10px;
+        min-width: 200px;
+      }
+      .wynik-box.za {
+        background-color: #d4edda;
+        border: 3px solid #28a745;
+      }
+      .wynik-box.przeciw {
+        background-color: #f8d7da;
+        border: 3px solid #dc3545;
+      }
+      .wynik-box.wstrzymuje {
+        background-color: #fff3cd;
+        border: 3px solid #ffc107;
+      }
+      .wynik-label {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .wynik-liczba {
+        font-size: 72px;
+        font-weight: 700;
+      }
+      .wynik-procent {
+        font-size: 24px;
+        margin-top: 10px;
+        opacity: 0.8;
+      }
+    </style>
+</head>
+<body>
+<div class="ekran-topbar">
+  <div class="d-flex align-items-center">
+    <img src="https://via.placeholder.com/40x40" alt="Herb" class="me-3">
+    <div class="ekran-topbar-title">
+      {{ sesja.nazwa }}
+    </div>
+  </div>
+  <div class="ekran-topbar-time">
+    <i class="bi bi-clock me-1"></i>
+    <span id="ekran-czas"></span>
+  </div>
+</div>
+
+<div class="ekran-content">
+  <h1 id="ekran-punkt-tytul" class="ekran-punkt-title">Brak aktywnego punktu</h1>
+  <ul id="ekran-lista" class="ekran-lista"></ul>
+
+  <div id="ekran-wyniki" style="display:none; width: 100%;">
+    <div style="font-size: 24px; margin-bottom: 20px;">
+      <strong>Głosowanie: <span id="ekran-glosowanie-nazwa"></span></strong>
+    </div>
+
+    <div class="ekran-wyniki-container">
+      <div class="wynik-box za">
+        <div class="wynik-label">ZA</div>
+        <div class="wynik-liczba" id="ekran-za">0</div>
+        <div class="wynik-procent" id="ekran-za-procent">0%</div>
+      </div>
+
+      <div class="wynik-box przeciw">
+        <div class="wynik-label">PRZECIW</div>
+        <div class="wynik-liczba" id="ekran-przeciw">0</div>
+        <div class="wynik-procent" id="ekran-przeciw-procent">0%</div>
+      </div>
+
+      <div class="wynik-box wstrzymuje">
+        <div class="wynik-label">WSTRZYMUJĘ SIĘ</div>
+        <div class="wynik-liczba" id="ekran-wstrzymuje">0</div>
+        <div class="wynik-procent" id="ekran-wstrzymuje-procent">0%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+function aktualizujCzas() {
+  const teraz = new Date();
+  const hh = String(teraz.getHours()).padStart(2, '0');
+  const mm = String(teraz.getMinutes()).padStart(2, '0');
+  document.getElementById('ekran-czas').innerText = hh + ':' + mm;
+}
+
+function zaladujAktywnyPunkt() {
+  $.get("{% url 'api_aktywny_punkt' sesja.id %}", function (data) {
+    const tytulEl = $('#ekran-punkt-tytul');
+    const listaEl = $('#ekran-lista');
+    const wynikiBox = $('#ekran-wyniki');
+
+    if (!data.aktywny) {
+      tytulEl.text('Brak aktywnego punktu');
+      listaEl.empty();
+      wynikiBox.hide();
+      return;
+    }
+
+    tytulEl.text(data.tytul || 'Punkt porządku obrad');
+    listaEl.empty();
+    if (data.opis) {
+      listaEl.append('<li>' + data.opis + '</li>');
+    }
+
+    if (data.glosowanie_id) {
+      const suma = data.za + data.przeciw + data.wstrzymuje;
+      function procent(x) {
+        return suma > 0 ? Math.round(x * 100 / suma) : 0;
+      }
+
+      $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
+      $('#ekran-za').text(data.za);
+      $('#ekran-przeciw').text(data.przeciw);
+      $('#ekran-wstrzymuje').text(data.wstrzymuje);
+
+      $('#ekran-za-procent').text(procent(data.za) + '%');
+      $('#ekran-przeciw-procent').text(procent(data.przeciw) + '%');
+      $('#ekran-wstrzymuje-procent').text(procent(data.wstrzymuje) + '%');
+
+      wynikiBox.show();
+    } else {
+      wynikiBox.hide();
+    }
+  });
+}
+
+$(function () {
+  aktualizujCzas();
+  setInterval(aktualizujCzas, 10000);
+
+  zaladujAktywnyPunkt();
+  setInterval(zaladujAktywnyPunkt, 3000);
+});
+</script>
+</body>
+</html>

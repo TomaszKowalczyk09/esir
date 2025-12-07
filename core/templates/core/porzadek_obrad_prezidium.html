@@ -1,0 +1,219 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Porządek obrad (Prezydium){% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Sidebar -->
+  <div class="col-md-3 mb-3">
+    <div class="list-group shadow-sm">
+      <a href="{% url 'prezidium' %}" class="list-group-item list-group-item-action">
+        <i class="bi bi-check2-square me-2"></i> Głosowania
+      </a>
+      <span class="list-group-item list-group-item-action active">
+        <i class="bi bi-list-ul me-2"></i> Porządek obrad
+      </span>
+      <a href="#" class="list-group-item list-group-item-action disabled">
+        Wnioski (w przygotowaniu)
+      </a>
+    </div>
+  </div>
+
+  <!-- Główna część -->
+  <div class="col-md-9">
+    <h4 class="mb-3">Porządek obrad – prezydium</h4>
+
+    <!-- Formularze w zwijanej sekcji -->
+    <div class="accordion mb-4" id="accordionForms">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingSesja">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSesja">
+            Nowa sesja
+          </button>
+        </h2>
+        <div id="collapseSesja" class="accordion-collapse collapse" data-bs-parent="#accordionForms">
+          <div class="accordion-body">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="sesja">
+              {{ sesja_form.as_p }}
+              <button type="submit" class="btn btn-primary">Utwórz sesję</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingPunkt">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePunkt">
+            Nowy punkt obrad
+          </button>
+        </h2>
+        <div id="collapsePunkt" class="accordion-collapse collapse" data-bs-parent="#accordionForms">
+          <div class="accordion-body">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="punkt">
+              {{ punkt_form.as_p }}
+              <button type="submit" class="btn btn-primary">Utwórz punkt</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingGlosowanie">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGlosowanie">
+            Nowe głosowanie
+          </button>
+        </h2>
+        <div id="collapseGlosowanie" class="accordion-collapse collapse" data-bs-parent="#accordionForms">
+          <div class="accordion-body">
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="glosowanie">
+              {{ glosowanie_form.as_p }}
+              <button type="submit" class="btn btn-primary">Utwórz głosowanie</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if sesje %}
+      {% for sesja in sesje %}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ sesja.nazwa }}</strong><br>
+            <small class="text-muted">{{ sesja.data }}</small>
+          </div>
+          <div>
+            {% if sesja.aktywna %}
+              <span class="badge bg-success me-2">Sesja aktywna</span>
+            {% else %}
+              <span class="badge bg-secondary me-2">Nieaktywna</span>
+            {% endif %}
+            {% if not sesja.aktywna %}
+            <form method="post" action="{% url 'ustaw_sesje_aktywna' sesja.id %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-success">
+                Ustaw jako aktywną
+              </button>
+            </form>
+            <form method="post" action="{% url 'usun_sesje' sesja.id %}" class="d-inline"
+                  onsubmit="return confirm('Na pewno usunąć tę sesję wraz z punktami i głosowaniami?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger ms-1">
+                Usuń
+              </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'sesja_ekran' sesja.id %}" target="_blank"
+               class="btn btn-sm btn-outline-info ms-1">
+              Ekran sesji
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if sesja.punkty.all %}
+            {% for punkt in sesja.punkty.all %}
+            <div class="border rounded p-3 mb-3">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h6 class="mb-1">
+                    {{ punkt.numer }}. {{ punkt.tytul }}
+                    {% if punkt.aktywny %}
+                      <span class="badge bg-primary ms-1">Aktywny na ekranie</span>
+                    {% endif %}
+                  </h6>
+                  {% if punkt.opis %}
+                    <p class="mb-1 text-muted">{{ punkt.opis }}</p>
+                  {% endif %}
+                </div>
+                <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="btn btn-sm {% if punkt.aktywny %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Pokaż na ekranie
+                  </button>
+                </form>
+              </div>
+
+              {% if punkt.glosowanie %}
+              <div class="mt-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <div>
+                    <strong>{{ punkt.glosowanie.nazwa }}</strong><br>
+                    <small id="wyniki-prez-{{ punkt.glosowanie.id }}" class="text-muted">
+                      Wyniki: Za: 0 | Przeciw: 0 | Wstrzymuję: 0
+                    </small>
+                  </div>
+                  <button class="btn btn-sm btn-outline-success toggle-glosowanie"
+                          data-id="{{ punkt.glosowanie.id }}">
+                    {% if punkt.glosowanie.otwarte %}Zamknij{% else %}Otwórz{% endif %}
+                  </button>
+                </div>
+              </div>
+              {% else %}
+                <small class="text-muted">Brak głosowania dla tego punktu.</small>
+              {% endif %}
+            </div>
+            {% endfor %}
+          {% else %}
+            <span class="text-muted">Brak punktów obrad.</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-info">Brak utworzonych sesji.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<script>
+$(function () {
+  // Otwieranie / zamykanie głosowania
+  $('.toggle-glosowanie').click(function () {
+    const id = $(this).data('id');
+    const btn = $(this);
+    $.get('/glosowanie/' + id + '/toggle/', function (data) {
+      if (data.otwarte) {
+        btn.text('Zamknij');
+      } else {
+        btn.text('Otwórz');
+      }
+    });
+  });
+
+  // Wyniki live
+  {% for sesja in sesje %}
+    {% for punkt in sesja.punkty.all %}
+      {% if punkt.glosowanie %}
+      (function(glosowanieId) {
+        function odswiezWynikiPrez() {
+          $.get('/api/wyniki/' + glosowanieId + '/', function (data) {
+            const suma = data.za + data.przeciw + data.wstrzymuje;
+            function procent(x) {
+              return suma > 0 ? Math.round(x * 100 / suma) : 0;
+            }
+            $('#wyniki-prez-' + glosowanieId).text(
+              'Wyniki: Za: ' + data.za + ' (' + procent(data.za) + '%)' +
+              ' | Przeciw: ' + data.przeciw + ' (' + procent(data.przeciw) + '%)' +
+              ' | Wstrzymuję: ' + data.wstrzymuje + ' (' + procent(data.wstrzymuje) + '%)'
+            );
+          });
+        }
+        odswiezWynikiPrez();
+        setInterval(odswiezWynikiPrez, 2000);
+      })({{ punkt.glosowanie.id }});
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+});
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Głosowania{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Lewa kolumna – menu (jak sidebar) -->
+  <div class="col-md-3 mb-3">
+  <div class="list-group shadow-sm">
+    <span class="list-group-item list-group-item-action active">
+      <i class="bi bi-check2-square me-2"></i> Głosowania
+    </span>
+    <a href="{% url 'porzadek_obrad' %}" class="list-group-item list-group-item-action">
+      <i class="bi bi-list-ul me-2"></i> Porządek obrad
+    </a>
+    <a href="#" class="list-group-item list-group-item-action disabled">
+      Wnioski (w przygotowaniu)
+    </a>
+  </div>
+</div>
+
+  <!-- Prawa kolumna – główna karta głosowania -->
+  <div class="col-md-9">
+    <h4 class="mb-3">Głosowania</h4>
+
+    {% if glosowania %}
+      {% for glosowanie in glosowania %}
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h5 class="card-title mb-1">{{ glosowanie.nazwa }}</h5>
+              <p class="text-muted mb-1">
+                {{ glosowanie.punkt_obrad.tytul }}
+              </p>
+              <small class="text-muted">
+                Punkt {{ glosowanie.punkt_obrad.numer }} porządku obrad
+              </small>
+            </div>
+            <span class="badge {% if glosowanie.otwarte %}bg-success{% else %}bg-secondary{% endif %}">
+              {% if glosowanie.otwarte %}Głosowanie aktywne{% else %}Zakończone{% endif %}
+            </span>
+          </div>
+
+          {% if glosowanie.otwarte %}
+          <!-- Przyciski głosowania -->
+          <form method="post"
+                action="{% url 'oddaj_glos' glosowanie.id %}"
+                id="form-{{ glosowanie.id }}"
+                class="form-glosowanie mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="glos" value="">
+            <div class="row g-2">
+              <div class="col-md-4">
+                <button type="button" data-glos="za"
+                        class="btn btn-success btn-lg w-100 btn-glos">
+                  👍 ZA
+                </button>
+              </div>
+              <div class="col-md-4">
+                <button type="button" data-glos="przeciw"
+                        class="btn btn-danger btn-lg w-100 btn-glos">
+                  👎 PRZECIW
+                </button>
+              </div>
+              <div class="col-md-4">
+                <button type="button" data-glos="wstrzymuje"
+                        class="btn btn-warning btn-lg w-100 btn-glos">
+                  ✋ WSTRZYMUJĘ SIĘ
+                </button>
+              </div>
+            </div>
+          </form>
+          {% endif %}
+
+          <!-- Wyniki głosowania na żywo -->
+          <h6 class="mt-3 mb-2">Wyniki głosowania na żywo</h6>
+          <div id="wyniki-{{ glosowanie.id }}">
+            <small class="text-muted">Ładowanie wyników...</small>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-info">
+        Brak aktywnych głosowań.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<script>
+$(function () {
+  // Kliknięcie przycisku głosowania
+  $('.btn-glos').on('click', function () {
+    const wartosc = $(this).data('glos');
+    const $form = $(this).closest('form');
+    $form.find('input[name="glos"]').val(wartosc);
+
+    const action = $form.attr('action');
+    const data = $form.serialize();
+
+    $.post(action, data, function (resp) {
+      if (resp.success) {
+        alert('Głos zapisany.');
+      } else if (resp.error) {
+        alert(resp.error);
+      }
+    }).fail(function () {
+      alert('Błąd podczas wysyłania głosu.');
+    });
+  });
+
+  // Live wyniki: generujemy paski jak w eParlamencie
+  {% for glosowanie in glosowania %}
+  (function(glosowanieId) {
+    function odswiezWyniki() {
+      $.get("{% url 'api_wyniki' glosowanie.id %}", function (data) {
+        const suma = data.za + data.przeciw + data.wstrzymuje;
+        function procent(x) {
+          return suma > 0 ? Math.round(x * 100 / suma) : 0;
+        }
+        const html =
+          '<div class="mb-2">' +
+            '<span class="fw-semibold text-success">ZA</span>' +
+            '<div class="progress" style="height: 12px;">' +
+              '<div class="progress-bar bg-success" role="progressbar" style="width:' + procent(data.za) + '%;"></div>' +
+            '</div>' +
+            '<div class="d-flex justify-content-between small text-muted">' +
+              '<span>' + data.za + ' głosów</span>' +
+              '<span>' + procent(data.za) + '%</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mb-2">' +
+            '<span class="fw-semibold text-danger">PRZECIW</span>' +
+            '<div class="progress" style="height: 12px;">' +
+              '<div class="progress-bar bg-danger" role="progressbar" style="width:' + procent(data.przeciw) + '%;"></div>' +
+            '</div>' +
+            '<div class="d-flex justify-content-between small text-muted">' +
+              '<span>' + data.przeciw + ' głosów</span>' +
+              '<span>' + procent(data.przeciw) + '%</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mb-1">' +
+            '<span class="fw-semibold text-warning">WSTRZYMUJĘ SIĘ</span>' +
+            '<div class="progress" style="height: 12px;">' +
+              '<div class="progress-bar bg-warning" role="progressbar" style="width:' + procent(data.wstrzymuje) + '%;"></div>' +
+            '</div>' +
+            '<div class="d-flex justify-content-between small text-muted">' +
+              '<span>' + data.wstrzymuje + ' głosów</span>' +
+              '<span>' + procent(data.wstrzymuje) + '%</span>' +
+            '</div>' +
+          '</div>';
+
+                $('#wyniki-' + glosowanieId).html(html);
+      });
+    }
+    odswiezWyniki();
+    setInterval(odswiezWyniki, 2000);
+  })({{ glosowanie.id }});
+  {% endfor %}
+});
+</script>
+{% endblock %}
+
