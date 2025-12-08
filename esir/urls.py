@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('login/', include('accounts.urls')),
-    path('', include('core.urls')),
+    path("admin/", admin.site.urls),
+    path("login/", include("accounts.urls")),
+    path("", include("core.urls")),  # jeśli masz osobne URL-e dla panelu
 ]

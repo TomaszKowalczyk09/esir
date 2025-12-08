@@ -35,7 +35,9 @@ def prezidium_panel(request):
     if request.user.rola != 'prezydium':
         return redirect('radny')
 
-    sesja_aktywna = Sesja.objects.filter(aktywna=True).prefetch_related('punkty__glosowanie').first()
+    sesja_aktywna = Sesja.objects.filter(aktywna=True, jest_usunieta=False) \
+        .prefetch_related('punkty__glosowanie') \
+        .first()
 
     glosowania = []
     if sesja_aktywna:
@@ -242,7 +244,7 @@ from .models import Sesja, PunktObrad
 @login_required
 def porzadek_obrad(request):
     # aktualna aktywna sesja – tę pokazujemy radnym
-    sesja = Sesja.objects.filter(aktywna=True).prefetch_related('punkty').first()
+    sesja = Sesja.objects.filter(aktywna=True, jest_usunieta=False).prefetch_related('punkty').first()
     return render(request, 'core/porzadek_obrad.html', {'sesja': sesja})
 
 @login_required
@@ -270,7 +272,7 @@ def porzadek_obrad_prezidium(request):
                 messages.success(request, 'Głosowanie zostało utworzone.')
         return redirect('porzadek_obrad_prezidium')
 
-    sesje = Sesja.objects.all().prefetch_related('punkty__glosowanie')
+    sesje = Sesja.objects.filter(jest_usunieta=False).prefetch_related('punkty__glosowanie')
     context = {
         'sesje': sesje,
         'sesja_form': SesjaForm(),
@@ -301,3 +303,39 @@ def api_lista_glosow(request, glosowanie_id):
 
     return JsonResponse({'glosy': lista})
 
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Sesja
+
+
+def _czy_prezydium(user):
+    return user.is_authenticated and getattr(user, "rola", "") == "prezydium"
+
+
+@login_required
+def zamknij_sesje(request, sesja_id):
+    if not _czy_prezydium(request.user):
+        messages.error(request, "Nie masz uprawnień do zamykania sesji.")
+        return redirect("panel")
+
+    sesja = get_object_or_404(Sesja, pk=sesja_id, jest_usunieta=False)
+    sesja.zamknij()
+    messages.success(request, "Sesja została zamknięta.")
+    return redirect("prezidium_panel")  # u Ciebie to prezidium_panel()
+
+
+@login_required
+def usun_sesje(request, sesja_id):
+    if not _czy_prezydium(request.user):
+        messages.error(request, "Nie masz uprawnień do usuwania sesji.")
+        return redirect("panel")
+
+    sesja = get_object_or_404(Sesja, pk=sesja_id, jest_usunieta=False)
+
+    if request.method == "POST":
+        sesja.usun()
+        messages.success(request, "Sesja została usunięta z listy.")
+        return redirect("prezidium_panel")
+
+    return render(request, "core/potwierdz_usuniecie_sesji.html", {"sesja": sesja})

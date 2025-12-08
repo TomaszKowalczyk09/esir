@@ -12,6 +12,17 @@ class Sesja(models.Model):
         # dezaktywuj wszystkie inne sesje
         Sesja.objects.exclude(id=self.id).update(aktywna=False)
         self.aktywna = True
+        jest_zamknieta = models.BooleanField(default=False)  # czy sesja zakończona
+        jest_usunieta = models.BooleanField(default=False)  # miękkie usunięcie (soft delete)
+
+        def zamknij(self):
+            self.jest_zamknieta = True
+            self.save()
+
+        def usun(self):
+            self.jest_usunieta = True
+            self.save()
+
         self.save()
 
     def __str__(self):

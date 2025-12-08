@@ -24,6 +24,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -72,6 +73,8 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 LANGUAGE_CODE = "pl"
 USE_I18N = True
+TIMEZONE = 'Europe/Warsaw'
+USE_TZ = True
 
 
 LOGIN_URL = '/login/'
