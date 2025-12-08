@@ -7,6 +7,7 @@ class Sesja(models.Model):
     nazwa = models.CharField(max_length=200)
     data = models.DateTimeField(default=timezone.now)
     aktywna = models.BooleanField(default=True)
+    jest_usunieta = models.BooleanField(default=False)  # NOWE POLE
 
     def ustaw_aktywna(self):
         # dezaktywuj wszystkie inne sesje
