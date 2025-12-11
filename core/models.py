@@ -8,6 +8,7 @@ class Sesja(models.Model):
     data = models.DateTimeField(default=timezone.now)
     aktywna = models.BooleanField(default=True)
     jest_usunieta = models.BooleanField(default=False)  # NOWE POLE
+    opublikowana = models.BooleanField(default=False)  # widoczna dla radnych przed startem
 
     def ustaw_aktywna(self):
         # dezaktywuj wszystkie inne sesje
@@ -29,6 +30,8 @@ class Sesja(models.Model):
     def __str__(self):
         return self.nazwa
 
+    class Meta:
+        ordering = ["data"]
 
 
 class PunktObrad(models.Model):

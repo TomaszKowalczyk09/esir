@@ -1,0 +1,72 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Nadchodzące sesje{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <!-- LEWA KOLUMNA: ten sam sidebar co w widoku głosowań -->
+    <div class="col-12 col-md-3 mb-3">
+      <div class="list-group">
+        <a href="{% url 'radny' %}" class="list-group-item list-group-item-action">
+          Głosowania
+        </a>
+        <a href="{% url 'porzadek_obrad' %}" class="list-group-item list-group-item-action">
+          Porządek obrad
+        </a>
+        <a href="#" class="list-group-item list-group-item-action disabled">
+          Wnioski (w przygotowaniu)
+        </a>
+        <a href="{% url 'nadchodzace_sesje' %}" class="list-group-item list-group-item-action active">
+          Nadchodzące sesje
+        </a>
+      </div>
+    </div>
+
+    <!-- PRAWA KOLUMNA: treść strony -->
+    <div class="col-12 col-md-9">
+      <h1 class="mb-4">Nadchodzące sesje rady</h1>
+
+      {% if sesje %}
+        {% for sesja in sesje %}
+          <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ sesja.nazwa }}</strong><br>
+                <small>Data i godzina: {{ sesja.data|date:"d.m.Y H:i" }}</small>
+              </div>
+              {% if sesja.aktywna %}
+                <span class="badge text-bg-success">Sesja aktywna</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Zaplanowana</span>
+              {% endif %}
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Porządek obrad</h5>
+              {% if sesja.punkty.all %}
+                <ol class="mb-0">
+                  {% for punkt in sesja.punkty.all %}
+                    <li class="mb-1">
+                      {{ punkt.tytul }}
+                      {% if punkt.opis %}
+                        <br><small class="text-muted">{{ punkt.opis }}</small>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ol>
+              {% else %}
+                <p class="text-muted mb-0">Brak zdefiniowanych punktów obrad.</p>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="alert alert-info">
+          Brak zaplanowanych, opublikowanych sesji do wyświetlenia.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

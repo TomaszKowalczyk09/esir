@@ -339,3 +339,13 @@ def usun_sesje(request, sesja_id):
         return redirect("prezidium_panel")
 
     return render(request, "core/potwierdz_usuniecie_sesji.html", {"sesja": sesja})
+
+from django.utils import timezone
+@login_required
+def nadchodzace_sesje(request):
+    teraz = timezone.now()
+    sesje = (Sesja.objects
+             .filter(opublikowana=True, data__gte=teraz)
+             .prefetch_related('punkty')
+             .order_by('data'))
+    return render(request, 'core/nadchodzace_sesje.html', {'sesje': sesje})
