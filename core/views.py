@@ -9,6 +9,7 @@ from django.forms import ModelForm, Textarea
 from django import forms
 
 
+
 class WniosekForm(ModelForm):
     class Meta:
         model = Wniosek
@@ -350,8 +351,48 @@ def nadchodzace_sesje(request):
              .order_by('data'))
     return render(request, 'core/nadchodzace_sesje.html', {'sesje': sesje})
 
+
 @login_required
 def porzadek_obrad_prezidium(request):
     if request.user.rola != "prezydium":
-        return redirect("porzadek_obrad")  # zwykły podgląd radnego
-    ...
+        return redirect("porzadek_obrad")
+
+    sesja = (
+        Sesja.objects
+        .filter(aktywna=True)
+        .prefetch_related("punkty")
+        .first()
+    )
+
+    if request.method == "POST":
+        form = PunktObradForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Punkt obrad został dodany.")
+            return redirect("porzadek_obrad_prezidium")
+    else:
+        form = PunktObradForm()
+
+    return render(
+        request,
+        "core/porzadek_obrad_prezidium.html",
+        {"sesja": sesja, "punkt_form": form},
+    )
+
+
+@login_required
+def nadchodzace_sesje_prezidium(request):
+    if request.user.rola != "prezydium":
+        return redirect("panel")
+
+    sesje = (
+        Sesja.objects
+        .filter(data__gte=timezone.now())
+        .order_by("data")
+    )
+    return render(
+        request,
+        "core/nadchodzace_sesje_prezidium.html",
+        {"sesje": sesje},
+    )
+

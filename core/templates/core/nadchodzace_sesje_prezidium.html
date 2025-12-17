@@ -1,0 +1,48 @@
+{% extends "core/base.html" %}
+{% block title %}Nadchodzące sesje (Prezydium){% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Sidebar prezydium -->
+  <div class="col-md-3 mb-3">
+    <div class="list-group shadow-sm">
+      <a href="{% url 'prezidium' %}" class="list-group-item list-group-item-action">
+        <i class="bi bi-check2-square me-2"></i> Głosowania
+      </a>
+      <a href="{% url 'porzadek_obrad_prezidium' %}" class="list-group-item list-group-item-action">
+        <i class="bi bi-list-ul me-2"></i> Porządek obrad
+      </a>
+      <span class="list-group-item list-group-item-action active">
+        <i class="bi bi-calendar-event me-2"></i> Nadchodzące sesje
+      </span>
+    </div>
+  </div>
+
+  <!-- Główna część -->
+  <div class="col-md-9">
+    <h4 class="mb-3">Nadchodzące sesje – prezydium</h4>
+
+    {% if sesje %}
+      <div class="list-group shadow-sm">
+        {% for sesja in sesje %}
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ sesja.nazwa }}</strong><br>
+              <span class="text-muted small">{{ sesja.data }}</span>
+            </div>
+            {% if sesja.aktywna %}
+              <span class="badge bg-success">Sesja aktywna</span>
+            {% else %}
+              <span class="badge bg-secondary">Nieaktywna</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        Brak nadchodzących sesji w kalendarzu.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

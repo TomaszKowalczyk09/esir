@@ -21,6 +21,6 @@ urlpatterns = [
     path('api/glosowanie/<int:glosowanie_id>/lista-glosow/', views.api_lista_glosow, name='api_lista_glosow'),
     path("nadchodzace-sesje/", views.nadchodzace_sesje, name="nadchodzace_sesje"),
     path("prezydium/porzadek-obrad/", views.porzadek_obrad_prezidium, name="porzadek_obrad_prezidium"),
-
+    path("prezydium/nadchodzace-sesje/", views.nadchodzace_sesje_prezidium, name="nadchodzace_sesje_prezidium"),
 
 ]
