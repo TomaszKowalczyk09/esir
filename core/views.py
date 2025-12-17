@@ -349,3 +349,9 @@ def nadchodzace_sesje(request):
              .prefetch_related('punkty')
              .order_by('data'))
     return render(request, 'core/nadchodzace_sesje.html', {'sesje': sesje})
+
+@login_required
+def porzadek_obrad_prezidium(request):
+    if request.user.rola != "prezydium":
+        return redirect("porzadek_obrad")  # zwykły podgląd radnego
+    ...

@@ -47,33 +47,16 @@
 
           {% if glosowanie.otwarte %}
           <!-- Przyciski głosowania -->
-          <form method="post"
-                action="{% url 'oddaj_glos' glosowanie.id %}"
-                id="form-{{ glosowanie.id }}"
-                class="form-glosowanie mb-3">
-            {% csrf_token %}
-            <input type="hidden" name="glos" value="">
-            <div class="row g-2">
-              <div class="col-md-4">
-                <button type="button" data-glos="za"
-                        class="btn btn-success btn-lg w-100 btn-glos">
-                  👍 ZA
-                </button>
-              </div>
-              <div class="col-md-4">
-                <button type="button" data-glos="przeciw"
-                        class="btn btn-danger btn-lg w-100 btn-glos">
-                  👎 PRZECIW
-                </button>
-              </div>
-              <div class="col-md-4">
-                <button type="button" data-glos="wstrzymuje"
-                        class="btn btn-warning btn-lg w-100 btn-glos">
-                  ✋ WSTRZYMUJĘ SIĘ
-                </button>
-              </div>
-            </div>
-          </form>
+          <form method="post" action="{% url 'oddaj_glos' glosowanie.id %}">
+  {% csrf_token %}
+  <input type="hidden" name="glos" value="">
+  <div class="btn-group w-100" role="group">
+    <button type="button" class="btn btn-success btn-glos" data-glos="za">ZA</button>
+    <button type="button" class="btn btn-danger btn-glos" data-glos="przeciw">PRZECIW</button>
+    <button type="button" class="btn btn-warning btn-glos" data-glos="wstrzymuje">WSTRZYMUJĘ SIĘ</button>
+  </div>
+</form>
+
           {% endif %}
 
           <!-- Wyniki głosowania na żywo -->

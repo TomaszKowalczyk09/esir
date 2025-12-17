@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'core',
 ]
 
+
+
 AUTH_USER_MODEL = 'accounts.Uzytkownik'
 
 MIDDLEWARE = [
