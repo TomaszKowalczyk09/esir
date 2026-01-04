@@ -83,6 +83,17 @@ urlpatterns = [
         views.ustaw_punkt_aktywny,
         name="ustaw_punkt_aktywny",
 ),
+path(
+    "prezydium/agenda/",
+    views.prezydium_agenda,
+    name="prezydium_agenda",
+),
+path(
+    "punkty/<int:punkt_id>/ustaw-aktywny/",
+    views.ustaw_punkt_aktywny,
+    name="ustaw_punkt_aktywny",
+),
+
 
 
 

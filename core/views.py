@@ -429,9 +429,27 @@ def ustaw_punkt_aktywny(request, punkt_id):
         return redirect("radny")
 
     punkt = get_object_or_404(PunktObrad, id=punkt_id)
-    # dezaktywuj wszystkie punkty tej sesji
     PunktObrad.objects.filter(sesja=punkt.sesja).update(aktywny=False)
     punkt.aktywny = True
     punkt.save()
-    messages.success(request, "Ustawiono aktywny punkt obrad.")
-    return redirect("porzadek_obrad_prezydium")
+    return redirect("prezydium_agenda")
+
+
+@login_required
+def prezydium_agenda(request):
+    """
+    Prosty ekran sterowania sesją dla prezydium:
+    - pokazuje punkty aktywnej sesji,
+    - pozwala ustawić aktywny punkt,
+    - pokazuje stan głosowania (otwarte/zamknięte).
+    """
+    if request.user.rola != "prezydium":
+        return redirect("radny")
+
+    sesja = Sesja.objects.filter(aktywna=True).prefetch_related("punkty__glosowanie").first()
+    punkty = sesja.punkty.all() if sesja else []
+
+    return render(request, "core/prezydium_agenda.html", {
+        "sesja": sesja,
+        "punkty": punkty,
+    })
