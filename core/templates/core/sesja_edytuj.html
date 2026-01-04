@@ -1,0 +1,121 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Edycja sesji{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Edycja sesji</h3>
+
+<div class="mb-3">
+  <a href="{% url 'prezydium_sesje' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Powrót do listy sesji
+  </a>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h5 class="card-title mb-1">{{ sesja.nazwa }}</h5>
+    <p class="text-muted mb-2">{{ sesja.data }}</p>
+    <p class="mb-0">
+      Status:
+      {% if sesja.aktywna %}
+        <span class="badge bg-success">Aktywna</span>
+      {% else %}
+        <span class="badge bg-secondary">Nieaktywna</span>
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Dodawanie punktu -->
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">
+        Dodaj punkt obrad
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ punkt_form.as_p }}
+          <button type="submit" class="btn btn-primary w-100" name="dodaj_punkt">
+            <i class="bi bi-plus-lg me-1"></i> Dodaj punkt
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Punkty i głosowania -->
+  <div class="col-md-8">
+    <h5 class="mb-3">Punkty i głosowania</h5>
+
+    {% if punkty %}
+      {% for punkt in punkty %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong><br>
+              {% if punkt.opis %}
+                <span class="text-muted small">{{ punkt.opis }}</span>
+              {% endif %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+  <div>
+    <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
+    {% if punkt.aktywny %}
+      <span class="badge bg-primary ms-1">Aktualnie omawiany</span>
+    {% endif %}
+    {% if punkt.opis %}
+      <div class="text-muted small">{{ punkt.opis }}</div>
+    {% endif %}
+  </div>
+  <div>
+    <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-primary">
+        Ustaw jako aktywny
+      </button>
+    </form>
+  </div>
+</div>
+
+            </div>
+          </div>
+
+          {% if punkt.glosowanie %}
+            <div class="mt-2 d-flex justify-content-between align-items-center">
+              <div>
+                <span class="text-muted small">Głosowanie:</span><br>
+                <strong>{{ punkt.glosowanie.nazwa }}</strong>
+              </div>
+              <span class="badge bg-{% if punkt.glosowanie.otwarte %}success{% else %}secondary{% endif %}">
+                {% if punkt.glosowanie.otwarte %}Otwarte{% else %}Zamknięte{% endif %}
+              </span>
+            </div>
+          {% else %}
+            <div class="mt-2">
+              <form method="post" class="d-flex gap-2 align-items-center">
+                {% csrf_token %}
+                <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
+                <div class="flex-grow-1">
+                  {{ glosowanie_form.nazwa }}
+                </div>
+                <button type="submit" name="dodaj_glosowanie"
+                        class="btn btn-outline-success btn-sm">
+                  <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
+                </button>
+              </form>
+              <small class="text-muted">Brak głosowania dla tego punktu.</small>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-info">
+        Brak punktów w tej sesji. Dodaj pierwszy punkt w formularzu po lewej.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

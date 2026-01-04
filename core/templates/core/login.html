@@ -1,28 +1,40 @@
 {% extends 'core/base.html' %}
+
 {% block title %}Logowanie{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3>Logowanie do ESIR</h3>
-            </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label">Login</label>
-                        <input type="text" name="username" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Hasło</label>
-                        <input type="password" name="password" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Zaloguj</button>
-                </form>
-                <hr>
-            </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-header text-center">
+        <h4 class="mb-0">Logowanie do ESIR</h4>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Login</label>
+            <input type="text" name="username" class="form-control" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hasło</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            Zaloguj
+          </button>
+        </form>
+
+        <hr>
+        <div class="text-center">
+          <small class="text-muted">
+            Demo loginy:<br>
+            <strong>radny / radny123</strong><br>
+            <strong>prez / prez123</strong>
+          </small>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

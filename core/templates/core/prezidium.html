@@ -1,150 +1,135 @@
-<!-- core/templates/core/prezidium.html -->
-
 {% extends 'core/base.html' %}
 
 {% block title %}Głosowania (Prezydium){% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-md-3 mb-3">
-    <div class="list-group shadow-sm">
-      <span class="list-group-item list-group-item-action active">
-        <i class="bi bi-check2-square me-2"></i> Głosowania
-      </span>
-      <a href="{% url 'porzadek_obrad_prezidium' %}" class="list-group-item list-group-item-action">
-        <i class="bi bi-list-ul me-2"></i> Porządek obrad
-      </a>
-      <a href="#" class="list-group-item list-group-item-action disabled">
-        Wnioski (w przygotowaniu)
-      </a>
-        <a href="{% url 'nadchodzace_sesje_prezidium' %}"
-   class="list-group-item list-group-item-action">
-  <i class="bi bi-calendar-event me-2"></i> Nadchodzące sesje
-</a>
+<h3 class="mb-3">Głosowania – prezydium</h3>
 
+<p class="text-muted">
+  Poniżej widzisz wszystkie sesje, ich punkty oraz powiązane głosowania.
+  Możesz otwierać i zamykać głosowania oraz przechodzić do ekranu sesji.
+</p>
+
+<div class="mb-3">
+  <a href="{% url 'sesja_nowa' %}" class="btn btn-primary">
+    <i class="bi bi-calendar-plus me-1"></i> Nowa sesja
+  </a>
+  <a href="{% url 'prezydium_sesje' %}" class="btn btn-outline-secondary ms-1">
+    <i class="bi bi-list-ul me-1"></i> Lista sesji
+  </a>
+</div>
+
+{% if sesje %}
+  {% for sesja in sesje %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div>
+        <strong>{{ sesja.nazwa }}</strong><br>
+        <small class="text-muted">{{ sesja.data }}</small>
+      </div>
+      <div class="d-flex align-items-center">
+        {% if sesja.aktywna %}
+          <span class="badge bg-success me-2">Sesja aktywna</span>
+        {% else %}
+          <span class="badge bg-secondary me-2">Nieaktywna</span>
+        {% endif %}
+
+        <a href="{% url 'sesja_edytuj' sesja.id %}" class="btn btn-sm btn-outline-primary me-1">
+          <i class="bi bi-pencil-square me-1"></i> Edytuj porządek
+        </a>
+
+        <a href="{% url 'sesja_ekran' sesja.id %}" target="_blank"
+           class="btn btn-sm btn-outline-info me-1">
+          <i class="bi bi-tv me-1"></i> Ekran sesji
+        </a>
+      </div>
     </div>
-  </div>
 
-  <div class="col-md-9">
-    <h4 class="mb-3">Głosowania</h4>
-
-    {% if sesja_aktywna %}
-      {% if glosowania %}
-        {% for glosowanie in glosowania %}
-        <div class="card shadow-sm mb-4">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <p class="text-muted small mb-1">
-                  <strong>Sesja:</strong> {{ sesja_aktywna.nazwa }}
-                </p>
-                <h5 class="card-title mb-1">
-                  {{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}
-                </h5>
-                {% if glosowanie.punkt_obrad.opis %}
-                  <p class="text-muted mb-2">{{ glosowanie.punkt_obrad.opis }}</p>
-                {% endif %}
-                <p class="mb-1">
-                  <strong>Głosowanie:</strong> {{ glosowanie.nazwa }}
-                </p>
-              </div>
-              <div class="text-end">
-                <span class="badge {% if glosowanie.otwarte %}bg-success{% else %}bg-secondary{% endif %} mb-2 d-block">
-                  {% if glosowanie.otwarte %}Aktywne{% else %}Zamknięte{% endif %}
-                </span>
-                <button class="btn btn-sm btn-outline-success toggle-glosowanie"
-                        data-id="{{ glosowanie.id }}">
-                  {% if glosowanie.otwarte %}Zamknij{% else %}Otwórz{% endif %}
-                </button>
-              </div>
-            </div>
-
-            <h6 class="mt-3 mb-2">Wyniki głosowania na żywo</h6>
-            <div id="wyniki-{{ glosowanie.id }}">
-              <small class="text-muted">Ładowanie wyników...</small>
+    <div class="card-body">
+      {% if sesja.punkty.all %}
+        {% for punkt in sesja.punkty.all %}
+        <div class="border rounded p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h6 class="mb-1">
+                {{ punkt.numer }}. {{ punkt.tytul }}
+              </h6>
+              {% if punkt.opis %}
+                <p class="mb-1 text-muted">{{ punkt.opis }}</p>
+              {% endif %}
             </div>
           </div>
+
+          {% if punkt.glosowanie %}
+          <div class="mt-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <div>
+                <strong>{{ punkt.glosowanie.nazwa }}</strong><br>
+                <small id="wyniki-prez-{{ punkt.glosowanie.id }}" class="text-muted">
+                  Wyniki: Za: 0 | Przeciw: 0 | Wstrzymuję: 0
+                </small>
+              </div>
+              <button class="btn btn-sm btn-outline-success toggle-glosowanie"
+                      data-id="{{ punkt.glosowanie.id }}">
+                {% if punkt.glosowanie.otwarte %}Zamknij{% else %}Otwórz{% endif %}
+              </button>
+            </div>
+          </div>
+          {% else %}
+            <small class="text-muted">Brak głosowania dla tego punktu.</small>
+          {% endif %}
         </div>
         {% endfor %}
       {% else %}
-        <div class="alert alert-info">
-          Brak głosowań dla aktywnej sesji.
-        </div>
+        <span class="text-muted">Brak punktów obrad.</span>
       {% endif %}
-    {% else %}
-      <div class="alert alert-warning">
-        Brak aktywnej sesji. Utwórz sesję w zakładce „Porządek obrad" i ustaw ją jako aktywną.
-      </div>
-    {% endif %}
+    </div>
   </div>
-</div>
+  {% endfor %}
+{% else %}
+  <div class="alert alert-info">Brak utworzonych sesji.</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
 <script>
 $(function () {
+  // Otwieranie / zamykanie głosowania
   $('.toggle-glosowanie').click(function () {
     const id = $(this).data('id');
     const btn = $(this);
     $.get('/glosowanie/' + id + '/toggle/', function (data) {
       if (data.otwarte) {
         btn.text('Zamknij');
-        btn.closest('.card').find('.badge').removeClass('bg-secondary').addClass('bg-success').text('Aktywne');
       } else {
         btn.text('Otwórz');
-        btn.closest('.card').find('.badge').removeClass('bg-success').addClass('bg-secondary').text('Zamknięte');
       }
     });
   });
 
-  {% for glosowanie in glosowania %}
-  (function(glosowanieId) {
-    function odswiezWyniki() {
-      $.get('/api/wyniki/' + glosowanieId + '/', function (data) {
-        const suma = data.za + data.przeciw + data.wstrzymuje;
-        function procent(x) {
-          return suma > 0 ? Math.round(x * 100 / suma) : 0;
+  // Wyniki live pod każdym głosowaniem
+  {% for sesja in sesje %}
+    {% for punkt in sesja.punkty.all %}
+      {% if punkt.glosowanie %}
+      (function(glosowanieId) {
+        function odswiezWynikiPrez() {
+          $.get('/api/wyniki/' + glosowanieId + '/', function (data) {
+            const suma = data.za + data.przeciw + data.wstrzymuje;
+            function procent(x) {
+              return suma > 0 ? Math.round(x * 100 / suma) : 0;
+            }
+            $('#wyniki-prez-' + glosowanieId).text(
+              'Wyniki: Za: ' + data.za + ' (' + procent(data.za) + '%)' +
+              ' | Przeciw: ' + data.przeciw + ' (' + procent(data.przeciw) + '%)' +
+              ' | Wstrzymuję: ' + data.wstrzymuje + ' (' + procent(data.wstrzymuje) + '%)'
+            );
+          });
         }
-        const html =
-          '<div class="mb-2">' +
-            '<span class="fw-semibold text-success">ZA</span>' +
-            '<div class="progress" style="height: 12px;">' +
-              '<div class="progress-bar bg-success" role="progressbar" style="width:' + procent(data.za) + '%;"></div>' +
-            '</div>' +
-            '<div class="d-flex justify-content-between small text-muted">' +
-              '<span>' + data.za + ' głosów</span>' +
-              '<span>' + procent(data.za) + '%</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="mb-2">' +
-            '<span class="fw-semibold text-danger">PRZECIW</span>' +
-            '<div class="progress" style="height: 12px;">' +
-              '<div class="progress-bar bg-danger" role="progressbar" style="width:' + procent(data.przeciw) + '%;"></div>' +
-            '</div>' +
-            '<div class="d-flex justify-content-between small text-muted">' +
-              '<span>' + data.przeciw + ' głosów</span>' +
-              '<span>' + procent(data.przeciw) + '%</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="mb-1">' +
-            '<span class="fw-semibold text-warning">WSTRZYMUJĘ SIĘ</span>' +
-            '<div class="progress" style="height: 12px;">' +
-              '<div class="progress-bar bg-warning" role="progressbar" style="width:' + procent(data.wstrzymuje) + '%;"></div>' +
-            '</div>' +
-            '<div class="d-flex justify-content-between small text-muted">' +
-              '<span>' + data.wstrzymuje + ' głosów</span>' +
-              '<span>' + procent(data.wstrzymuje) + '%</span>' +
-            '</div>' +
-          '</div>';
-
-        $('#wyniki-' + glosowanieId).html(html);
-      });
-    }
-    odswiezWyniki();
-    setInterval(odswiezWyniki, 2000);
-  })({{ glosowanie.id }});
+        odswiezWynikiPrez();
+        setInterval(odswiezWynikiPrez, 2000);
+      })({{ punkt.glosowanie.id }});
+      {% endif %}
+    {% endfor %}
   {% endfor %}
 });
 </script>

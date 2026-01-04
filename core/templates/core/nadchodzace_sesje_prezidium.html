@@ -1,48 +1,57 @@
-{% extends "core/base.html" %}
-{% block title %}Nadchodzące sesje (Prezydium){% endblock %}
+{% extends 'core/base.html' %}
+
+{% block title %}Nadchodzące sesje{% endblock %}
 
 {% block content %}
-<div class="row">
-  <!-- Sidebar prezydium -->
-  <div class="col-md-3 mb-3">
-    <div class="list-group shadow-sm">
-      <a href="{% url 'prezidium' %}" class="list-group-item list-group-item-action">
-        <i class="bi bi-check2-square me-2"></i> Głosowania
-      </a>
-      <a href="{% url 'porzadek_obrad_prezidium' %}" class="list-group-item list-group-item-action">
-        <i class="bi bi-list-ul me-2"></i> Porządek obrad
-      </a>
-      <span class="list-group-item list-group-item-action active">
-        <i class="bi bi-calendar-event me-2"></i> Nadchodzące sesje
-      </span>
-    </div>
-  </div>
+<h3 class="mb-3">Nadchodzące sesje</h3>
 
-  <!-- Główna część -->
-  <div class="col-md-9">
-    <h4 class="mb-3">Nadchodzące sesje – prezydium</h4>
+<p class="text-muted">
+  Tu widzisz wszystkie zaplanowane sesje posortowane wg daty.
+</p>
 
-    {% if sesje %}
-      <div class="list-group shadow-sm">
-        {% for sesja in sesje %}
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <strong>{{ sesja.nazwa }}</strong><br>
-              <span class="text-muted small">{{ sesja.data }}</span>
-            </div>
-            {% if sesja.aktywna %}
-              <span class="badge bg-success">Sesja aktywna</span>
-            {% else %}
-              <span class="badge bg-secondary">Nieaktywna</span>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="alert alert-info">
-        Brak nadchodzących sesji w kalendarzu.
-      </div>
-    {% endif %}
-  </div>
+{% if sesje %}
+<div class="table-responsive">
+  <table class="table table-sm align-middle table-hover bg-white shadow-sm">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>Nazwa</th>
+        <th>Data</th>
+        <th>Status</th>
+        <th class="text-end">Akcje</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sesja in sesje %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ sesja.nazwa }}</td>
+        <td>{{ sesja.data }}</td>
+        <td>
+          {% if sesja.aktywna %}
+            <span class="badge bg-success">Aktywna</span>
+          {% else %}
+            <span class="badge bg-secondary">Nieaktywna</span>
+          {% endif %}
+        </td>
+        <td class="text-end">
+          <a href="{% url 'sesja_edytuj' sesja.id %}"
+             class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil-square me-1"></i> Edytuj
+          </a>
+          <a href="{% url 'sesja_ekran' sesja.id %}" target="_blank"
+             class="btn btn-sm btn-outline-dark ms-1">
+            <i class="bi bi-tv me-1"></i> Ekran sesji
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+{% else %}
+  <div class="alert alert-info">
+    Brak zaplanowanych sesji.
+  </div>
+{% endif %}
 {% endblock %}

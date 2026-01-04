@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Wyniki głosowań{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Wyniki głosowań – bieżąca sesja</h3>
+
+{% if punkty %}
+  {% for punkt in punkty %}
+    <div class="card mb-3 shadow-sm">
+      <div class="card-header">
+        <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
+        {% if punkt.glosowanie %}
+          <span class="badge bg-secondary ms-2">
+            {{ punkt.glosowanie.nazwa }}
+          </span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if punkt.glosowanie %}
+          <div id="wyniki-public-{{ punkt.glosowanie.id }}">
+            <em>Ładowanie wyników...</em>
+          </div>
+        {% else %}
+          <span class="text-muted">Brak głosowania dla tego punktu.</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="alert alert-info">
+    Brak aktywnej sesji lub brak punktów obrad.
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+  {% for punkt in punkty %}
+    {% if punkt.glosowanie %}
+      (function(glosowanieId) {
+        function odswiez() {
+          $.get("{% url 'api_wyniki' punkt.glosowanie.id %}", function (data) {
+            $('#wyniki-public-' + glosowanieId).html(
+              '<strong>Wyniki:</strong> ' +
+              'Za: <span class="text-success fw-bold">' + data.za + '</span> | ' +
+              'Przeciw: <span class="text-danger fw-bold">' + data.przeciw + '</span> | ' +
+              'Wstrzymuję się: <span class="text-warning fw-bold">' + data.wstrzymuje + '</span>'
+            );
+          });
+        }
+        odswiez();
+        setInterval(odswiez, 2000);
+      })({{ punkt.glosowanie.id }});
+    {% endif %}
+  {% endfor %}
+});
+</script>
+{% endblock %}

@@ -2,20 +2,24 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>ESIR - {{ sesja.nazwa }}</title>
+    <title>{{ sesja.nazwa }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap + ikony -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
     <style>
       html, body {
         height: 100%;
         margin: 0;
         background-color: #ffffff;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
       }
       .ekran-topbar {
-        background-color: #004a6d;
+        background-color: #0066cc;
         color: #ffffff;
-        padding: 10px 30px;
+        padding: 12px 40px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -24,177 +28,201 @@
         font-size: 24px;
         font-weight: 600;
       }
-      .ekran-topbar-time {
+      .ekran-topbar-sub {
+        font-size: 16px;
+        opacity: 0.85;
+      }
+      .ekran-topbar-right {
         font-size: 18px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
       }
-      .ekran-content {
-        padding: 40px 60px;
-        min-height: calc(100% - 60px);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
+      .ekran-main {
+        padding: 35px 60px 20px 60px;
+        min-height: calc(100% - 80px);
+        box-sizing: border-box;
       }
-      .ekran-punkt-title {
-        color: #c1004a;
-        font-size: 48px;
+      .ekran-punkt-tytul {
+        color: #222222;
+        font-size: 40px;
         font-weight: 700;
-        margin-bottom: 30px;
-      }
-      .ekran-lista {
-        font-size: 28px;
-        margin-bottom: 40px;
-        list-style: none;
-        padding: 0;
-      }
-      .ekran-wyniki-container {
-        display: flex;
-        gap: 60px;
-        justify-content: center;
-        margin-top: 40px;
-      }
-      .wynik-box {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 30px;
-        border-radius: 10px;
-        min-width: 200px;
-      }
-      .wynik-box.za {
-        background-color: #d4edda;
-        border: 3px solid #28a745;
-      }
-      .wynik-box.przeciw {
-        background-color: #f8d7da;
-        border: 3px solid #dc3545;
-      }
-      .wynik-box.wstrzymuje {
-        background-color: #fff3cd;
-        border: 3px solid #ffc107;
-      }
-      .wynik-label {
-        font-size: 20px;
-        font-weight: 600;
         margin-bottom: 10px;
       }
-      .wynik-liczba {
-        font-size: 72px;
-        font-weight: 700;
+      .ekran-punkt-sub {
+        font-size: 22px;
+        color: #555555;
+        margin-bottom: 25px;
       }
-      .wynik-procent {
-        font-size: 24px;
-        margin-top: 10px;
-        opacity: 0.8;
+      .ekran-opis {
+        font-size: 22px;
+        margin-bottom: 35px;
+      }
+      .ekran-wyniki-header {
+        font-size: 26px;
+        font-weight: 600;
+        margin-bottom: 15px;
+      }
+      .ekran-wyniki-row {
+        font-size: 22px;
+        margin-bottom: 10px;
+      }
+      .ekran-progbar {
+        height: 32px;
+        font-size: 18px;
+      }
+      .ekran-bottombar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #f1f3f5;
+        border-top: 1px solid #dee2e6;
+        padding: 6px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 18px;
       }
     </style>
 </head>
 <body>
 <div class="ekran-topbar">
-  <div class="d-flex align-items-center">
-    <img src="https://via.placeholder.com/40x40" alt="Herb" class="me-3">
+  <div>
     <div class="ekran-topbar-title">
       {{ sesja.nazwa }}
     </div>
+    <div class="ekran-topbar-sub">
+      {{ sesja.data }}
+    </div>
   </div>
-  <div class="ekran-topbar-time">
-    <i class="bi bi-clock me-1"></i>
+  <div class="ekran-topbar-right">
     <span id="ekran-czas"></span>
   </div>
 </div>
 
-<div class="ekran-content">
-  <h1 id="ekran-punkt-tytul" class="ekran-punkt-title">Brak aktywnego punktu</h1>
-  <ul id="ekran-lista" class="ekran-lista"></ul>
+<div class="ekran-main">
+  <!-- Tytuł punktu i opis -->
+  <h1 id="ekran-punkt-tytul" class="ekran-punkt-tytul">Brak aktywnego punktu</h1>
+  <div id="ekran-punkt-sub" class="ekran-punkt-sub text-muted"></div>
+  <div id="ekran-opis" class="ekran-opis"></div>
 
-  <div id="ekran-wyniki" style="display:none; width: 100%;">
-    <div style="font-size: 24px; margin-bottom: 20px;">
-      <strong>Głosowanie: <span id="ekran-glosowanie-nazwa"></span></strong>
+  <!-- Wyniki głosowania -->
+  <div id="ekran-wyniki" style="display:none;">
+    <div class="ekran-wyniki-header">
+      Głosowanie: <span id="ekran-glosowanie-nazwa"></span>
     </div>
 
-    <div class="ekran-wyniki-container">
-      <div class="wynik-box za">
-        <div class="wynik-label">ZA</div>
-        <div class="wynik-liczba" id="ekran-za">0</div>
-        <div class="wynik-procent" id="ekran-za-procent">0%</div>
+    <div class="ekran-wyniki-row">
+      <div class="d-flex justify-content-between">
+        <span>Za</span>
+        <span><span id="ekran-za-liczba">0</span> (<span id="ekran-za-proc">0</span>%)</span>
       </div>
-
-      <div class="wynik-box przeciw">
-        <div class="wynik-label">PRZECIW</div>
-        <div class="wynik-liczba" id="ekran-przeciw">0</div>
-        <div class="wynik-procent" id="ekran-przeciw-procent">0%</div>
-      </div>
-
-      <div class="wynik-box wstrzymuje">
-        <div class="wynik-label">WSTRZYMUJĘ SIĘ</div>
-        <div class="wynik-liczba" id="ekran-wstrzymuje">0</div>
-        <div class="wynik-procent" id="ekran-wstrzymuje-procent">0%</div>
+      <div class="progress ekran-progbar">
+        <div id="ekran-za-prog" class="progress-bar bg-success" role="progressbar"
+             style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
     </div>
+
+    <div class="ekran-wyniki-row">
+      <div class="d-flex justify-content-between">
+        <span>Przeciw</span>
+        <span><span id="ekran-przeciw-liczba">0</span> (<span id="ekran-przeciw-proc">0</span>%)</span>
+      </div>
+      <div class="progress ekran-progbar">
+        <div id="ekran-przeciw-prog" class="progress-bar bg-danger" role="progressbar"
+             style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+    </div>
+
+    <div class="ekran-wyniki-row">
+      <div class="d-flex justify-content-between">
+        <span>Wstrzymuję się</span>
+        <span><span id="ekran-wstrzymuje-liczba">0</span> (<span id="ekran-wstrzymuje-proc">0</span>%)</span>
+      </div>
+      <div class="progress ekran-progbar">
+        <div id="ekran-wstrzymuje-prog" class="progress-bar bg-warning" role="progressbar"
+             style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ekran-bottombar">
+  <div>
+    Aktywna sesja: <strong>{{ sesja.nazwa }}</strong>
+  </div>
+  <div>
+    <span class="text-muted">System ESIR</span>
   </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
-function aktualizujCzas() {
-  const teraz = new Date();
-  const hh = String(teraz.getHours()).padStart(2, '0');
-  const mm = String(teraz.getMinutes()).padStart(2, '0');
-  document.getElementById('ekran-czas').innerText = hh + ':' + mm;
-}
+  // Zegar w prawym górnym rogu
+  function aktualizujCzas() {
+    const el = document.getElementById('ekran-czas');
+    const now = new Date();
+    const godzina = now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    const data = now.toLocaleDateString('pl-PL');
+    el.textContent = data + ' ' + godzina;
+  }
+  aktualizujCzas();
+  setInterval(aktualizujCzas, 1000);
 
-function zaladujAktywnyPunkt() {
-  $.get("{% url 'api_aktywny_punkt' sesja.id %}", function (data) {
-    const tytulEl = $('#ekran-punkt-tytul');
-    const listaEl = $('#ekran-lista');
-    const wynikiBox = $('#ekran-wyniki');
+  // Ładowanie aktywnego punktu i wyników
+  function zaladujAktywnyPunkt() {
+    $.get("{% url 'api_aktywny_punkt' sesja.id %}", function (data) {
+      const tytulEl = $('#ekran-punkt-tytul');
+      const subEl = $('#ekran-punkt-sub');
+      const opisEl = $('#ekran-opis');
+      const wynikiBox = $('#ekran-wyniki');
 
-    if (!data.aktywny) {
-      tytulEl.text('Brak aktywnego punktu');
-      listaEl.empty();
-      wynikiBox.hide();
-      return;
-    }
-
-    tytulEl.text(data.tytul || 'Punkt porządku obrad');
-    listaEl.empty();
-    if (data.opis) {
-      listaEl.append('<li>' + data.opis + '</li>');
-    }
-
-    if (data.glosowanie_id) {
-      const suma = data.za + data.przeciw + data.wstrzymuje;
-      function procent(x) {
-        return suma > 0 ? Math.round(x * 100 / suma) : 0;
+      if (!data.aktywny) {
+        tytulEl.text('Brak aktywnego punktu');
+        subEl.text('');
+        opisEl.text('');
+        wynikiBox.hide();
+        return;
       }
 
-      $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
-      $('#ekran-za').text(data.za);
-      $('#ekran-przeciw').text(data.przeciw);
-      $('#ekran-wstrzymuje').text(data.wstrzymuje);
+      tytulEl.text(data.numer + '. ' + (data.tytul || 'Punkt porządku obrad'));
+      subEl.text(data.podtytul || '');
+      opisEl.text(data.opis || '');
 
-      $('#ekran-za-procent').text(procent(data.za) + '%');
-      $('#ekran-przeciw-procent').text(procent(data.przeciw) + '%');
-      $('#ekran-wstrzymuje-procent').text(procent(data.wstrzymuje) + '%');
+      if (data.glosowanie_id) {
+        $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
+        const za = data.za || 0;
+        const przeciw = data.przeciw || 0;
+        const wstrzymuje = data.wstrzymuje || 0;
+        const suma = za + przeciw + wstrzymuje;
 
-      wynikiBox.show();
-    } else {
-      wynikiBox.hide();
-    }
-  });
-}
+        function proc(x) {
+          return suma > 0 ? Math.round(x * 100 / suma) : 0;
+        }
 
-$(function () {
-  aktualizujCzas();
-  setInterval(aktualizujCzas, 10000);
+        $('#ekran-za-liczba').text(za);
+        $('#ekran-przeciw-liczba').text(przeciw);
+        $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
 
+        $('#ekran-za-proc').text(proc(za));
+        $('#ekran-przeciw-proc').text(proc(przeciw));
+        $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
+
+        $('#ekran-za-prog').css('width', proc(za) + '%');
+        $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
+        $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
+
+        wynikiBox.show();
+      } else {
+        wynikiBox.hide();
+      }
+    });
+  }
+
+  // pierwsze załadowanie + odświeżanie jak w OpenSlides
   zaladujAktywnyPunkt();
-  setInterval(zaladujAktywnyPunkt, 3000);
-});
+  setInterval(zaladujAktywnyPunkt, 2000);
 </script>
 </body>
 </html>

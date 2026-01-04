@@ -1,0 +1,10 @@
+{% extends 'core/base.html' %}
+{% block title %}Nowa sesja{% endblock %}
+{% block content %}
+<h3>Utwórz nową sesję</h3>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-primary">Przejdź dalej</button>
+</form>
+{% endblock %}

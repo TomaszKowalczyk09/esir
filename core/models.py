@@ -39,7 +39,7 @@ class PunktObrad(models.Model):
     numer = models.IntegerField()
     tytul = models.CharField(max_length=300)
     opis = models.TextField(blank=True)
-    aktywny = models.BooleanField(default=False)  # ważne
+    aktywny = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['numer']

@@ -1,0 +1,108 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard prezydium{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Dashboard prezydium</h3>
+
+<div class="row g-3 mb-4">
+  <!-- Liczba sesji -->
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="bi bi-calendar3 text-primary" style="font-size: 2rem;"></i>
+          </div>
+          <div>
+            <div class="text-muted small">Liczba sesji</div>
+            <div class="fs-4 fw-semibold">{{ liczba_sesji }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liczba punktów -->
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="bi bi-list-ul text-success" style="font-size: 2rem;"></i>
+          </div>
+          <div>
+            <div class="text-muted small">Liczba punktów obrad</div>
+            <div class="fs-4 fw-semibold">{{ liczba_punktow }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Otwarte głosowania -->
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="bi bi-check2-square text-warning" style="font-size: 2rem;"></i>
+          </div>
+          <div>
+            <div class="text-muted small">Otwarte głosowania</div>
+            <div class="fs-4 fw-semibold">{{ liczba_glosowan_otwartych }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Najbliższa sesja -->
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <strong>Najbliższa sesja</strong>
+    </div>
+    <div>
+      <a href="{% url 'sesja_nowa' %}" class="btn btn-sm btn-primary">
+        <i class="bi bi-calendar-plus me-1"></i> Nowa sesja
+      </a>
+      <a href="{% url 'prezydium_sesje' %}" class="btn btn-sm btn-outline-secondary ms-1">
+        <i class="bi bi-list-ul me-1"></i> Wszystkie sesje
+      </a>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if najblizsza %}
+      <h5 class="card-title mb-1">{{ najblizsza.nazwa }}</h5>
+      <p class="text-muted mb-2">{{ najblizsza.data }}</p>
+      <p class="mb-2">
+        Status:
+        {% if najblizsza.aktywna %}
+          <span class="badge bg-success">Aktywna</span>
+        {% else %}
+          <span class="badge bg-secondary">Nieaktywna</span>
+        {% endif %}
+      </p>
+      <a href="{% url 'sesja_edytuj' najblizsza.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-pencil-square me-1"></i> Edytuj porządek
+      </a>
+      <a href="{% url 'prezydium' %}" class="btn btn-outline-info btn-sm ms-1">
+        <i class="bi bi-bar-chart-steps me-1"></i> Głosowania
+      </a>
+      <a href="{% url 'sesja_ekran' najblizsza.id %}" target="_blank"
+         class="btn btn-outline-dark btn-sm ms-1">
+        <i class="bi bi-tv me-1"></i> Ekran sesji
+      </a>
+    {% else %}
+      <p class="mb-3">
+        Brak utworzonych sesji. Utwórz pierwszą, aby rozpocząć pracę.
+      </p>
+      <a href="{% url 'sesja_nowa' %}" class="btn btn-primary">
+        <i class="bi bi-calendar-plus me-1"></i> Utwórz sesję
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
