@@ -93,8 +93,15 @@ path(
     views.ustaw_punkt_aktywny,
     name="ustaw_punkt_aktywny",
 ),
-
-
-
-
+path(
+    "robots.txt", 
+    views.robots_txt, 
+    name='robots_txt'
+),
+    
+path(
+    "sitemap.xml", 
+    views.dynamic_sitemap, 
+    name='dynamic_sitemap'
+),
 ]

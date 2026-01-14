@@ -11,19 +11,18 @@
             </div>
             <div class="card-body">
                 <p>
-                    Czy na pewno chcesz usunąć sesję:
+                    Usunięcie sesji z widoczności
                     <strong>{{ sesja }}</strong>?
                 </p>
                 <p class="text-muted">
-                    Sesja zniknie z listy w systemie ESIR, ale dane pozostaną w bazie
-                    (miękkie usunięcie).
+                    Czy na pewno chcesz usunąć tę sesję z listy? Sesja zniknie z systemu e-SIR, ale dane (wraz z punktami i głosami) pozostaną w bazie danych jako archiwalne (miękkie usunięcie).
                 </p>
 
                 <form method="post">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger">
                         Tak, usuń sesję
-                    </button>
+                    Kontynuuj
                     <a href="{% url 'prezydium_panel' %}" class="btn btn-secondary">
                         Anuluj
                     </a>
