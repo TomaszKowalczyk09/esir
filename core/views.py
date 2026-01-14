@@ -453,3 +453,174 @@ def prezydium_agenda(request):
         "sesja": sesja,
         "punkty": punkty,
     })
+
+# --------------------------------------------------
+# SEO :>
+# --------------------------------------------------
+
+@require_GET
+def robots_txt(request):
+    """
+    Dynamicznie generuje robots.txt
+    """
+    lines = [
+        "User-agent: *",
+        f"Sitemap: {request.scheme}://{request.get_host()}/sitemap.xml",
+        "",
+        "# Prywatne ścieżki - zablokowane dla botów",
+        "Disallow: /admin/",
+        "Disallow: /accounts/",
+        "Disallow: /private/",
+        "Disallow: /api/",
+        "",
+        "# Publiczne ścieżki - dozwolone",
+        "Allow: /$",
+        "Allow: /radny/",
+        "Allow: /wyniki/",
+        "Allow: /panel/",
+        "Allow: /prezydium/",
+    ]
+    
+    # blockdev
+    from django.conf import settings
+    if settings.DEBUG:
+        lines.insert(2, "Disallow: /")
+    
+    return HttpResponse("\n".join(lines), content_type="text/plain")
+
+
+# --------------------------------------------------
+# Sitemap - Klasy
+# --------------------------------------------------
+
+class StaticViewSitemap(Sitemap):
+    """Sitemap dla statycznych stron"""
+    changefreq = "weekly"
+    priority = 0.8
+    
+    def items(self):
+        return [
+            'panel',  # panel
+            'radny',  # radny_panel
+            'wyniki_publiczne',  # wyniki
+            'prezydium_dashboard',  # prezydium
+            'nadchodzace_sesje_prezidium',  # nadchodzące sesje
+        ]
+    
+    def location(self, item):
+        return reverse(item)
+    
+    def lastmod(self, item):
+
+        return timezone.now()
+
+
+class SessionSitemap(Sitemap):
+    """Sitemap dla sesji"""
+    changefreq = "monthly"
+    priority = 0.7
+    
+    def items(self):
+        return Sesja.objects.filter(
+            data__gte=timezone.now() - timezone.timedelta(days=30)
+        ).order_by('-data')
+    
+    def location(self, obj):
+        return reverse('nadchodzace_sesje_prezidium')
+    
+    def lastmod(self, obj):
+        return obj.updated_at or obj.created_at
+
+
+class PunktSitemap(Sitemap):
+    """Sitemap dla punktów obrad"""
+    changefreq = "weekly"
+    priority = 0.6
+    
+    def items(self):
+        return PunktObrad.objects.filter(
+            sesja__aktywna=True
+        ).select_related('sesja').order_by('-sesja__data')
+    
+    def location(self, obj):
+        return reverse('porzadek_obrad_prezidium')
+    
+    def lastmod(self, obj):
+        return obj.updated_at or obj.created_at
+
+
+sitemaps = {
+    'static': StaticViewSitemap,
+    'sessions': SessionSitemap,
+    'punkty': PunktSitemap,
+}
+
+
+# --------------------------------------------------
+# Dynamiczny sitemap
+# --------------------------------------------------
+
+@require_GET
+def dynamic_sitemap(request):
+    """
+    Dynamicznie generuje sitemap.xml z auto-discovery URL
+    """
+    root = ET.Element("urlset")
+    root.set("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9")
+    
+    base_url = f"{request.scheme}://{request.get_host()}"
+    now = datetime.now().strftime('%Y-%m-%d')
+    
+    base_urls = [
+        {'loc': '', 'name': 'panel', 'priority': '1.0', 'changefreq': 'daily'},
+        {'loc': 'radny/', 'name': 'radny', 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': 'prezydium/dashboard/', 'name': 'prezydium_dashboard', 'priority': '0.8', 'changefreq': 'daily'},
+        {'loc': 'prezydium/sesje/', 'name': 'prezydium_sesje', 'priority': '0.7', 'changefreq': 'weekly'},
+        {'loc': 'wyniki/', 'name': 'wyniki_publiczne', 'priority': '0.8', 'changefreq': 'daily'},
+        {'loc': 'prezydium/agenda/', 'name': 'prezydium_agenda', 'priority': '0.7', 'changefreq': 'daily'},
+        {'loc': 'prezydium/nadchodzace/', 'name': 'nadchodzace_sesje_prezidium', 'priority': '0.7', 'changefreq': 'weekly'},
+    ]
+    
+    #  URL
+    for url_info in base_urls:
+        url_elem = ET.SubElement(root, "url")
+        ET.SubElement(url_elem, "loc").text = f"{base_url}/{url_info['loc']}"
+        ET.SubElement(url_elem, "lastmod").text = now
+        ET.SubElement(url_elem, "changefreq").text = url_info['changefreq']
+        ET.SubElement(url_elem, "priority").text = url_info['priority']
+    
+    try:
+        sesje = Sesja.objects.filter(
+            data__gte=timezone.now() - timezone.timedelta(days=365)
+        )[:100]  
+        
+        for sesja in sesje:
+            url_elem = ET.SubElement(root, "url")
+            ET.SubElement(url_elem, "loc").text = f"{base_url}/sesja/{sesja.id}/"
+            lastmod = sesja.updated_at or sesja.created_at
+            ET.SubElement(url_elem, "lastmod").text = lastmod.strftime('%Y-%m-%d')
+            ET.SubElement(url_elem, "changefreq").text = "monthly"
+            ET.SubElement(url_elem, "priority").text = "0.6"
+    except Exception as e:
+        print(f"Błąd przy dodawaniu sesji do sitemap: {e}")
+    
+    try:
+        punkty = PunktObrad.objects.filter(
+            sesja__aktywna=True
+        ).select_related('sesja')[:100]
+        
+        for punkt in punkty:
+            url_elem = ET.SubElement(root, "url")
+            ET.SubElement(url_elem, "loc").text = f"{base_url}/punkt/{punkt.id}/"
+            lastmod = punkt.updated_at or punkt.created_at
+            ET.SubElement(url_elem, "lastmod").text = lastmod.strftime('%Y-%m-%d')
+            ET.SubElement(url_elem, "changefreq").text = "weekly"
+            ET.SubElement(url_elem, "priority").text = "0.5"
+    except Exception as e:
+        print(f"Błąd przy dodawaniu punktów do sitemap: {e}")
+    
+    # XML
+    xml_string = ET.tostring(root, encoding='unicode', method='xml')
+    
+    response = HttpResponse(xml_string, content_type='application/xml')
+    return response

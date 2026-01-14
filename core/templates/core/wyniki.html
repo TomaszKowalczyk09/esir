@@ -1,5 +1,23 @@
 {% extends 'core/base.html' %}
 
+<!-- Dostosuj Tomaszku :> -->
+<style>
+.loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
 {% block title %}Wyniki głosowań{% endblock %}
 
 {% block content %}
@@ -19,6 +37,7 @@
       <div class="card-body">
         {% if punkt.glosowanie %}
           <div id="wyniki-public-{{ punkt.glosowanie.id }}">
+            <span class="loading-spinner"></span>
             <em>Ładowanie wyników...</em>
           </div>
         {% else %}
@@ -37,8 +56,10 @@
 {% block extra_js %}
 <script>
 $(function () {
-  {% for punkt in punkty %}
+  {% for punkt in punkty %} 
+  // '(' expected.
     {% if punkt.glosowanie %}
+    // Expression expected.
       (function(glosowanieId) {
         function odswiez() {
           $.get("{% url 'api_wyniki' punkt.glosowanie.id %}", function (data) {
