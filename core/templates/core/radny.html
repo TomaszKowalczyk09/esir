@@ -2,6 +2,151 @@
 
 {% block title %}Panel Radnego{% endblock %}
 
+{% block extra_head %}
+<style>
+    .sejm-voting-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    
+    .sejm-voting-title {
+        color: white;
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .sejm-voting-subtitle {
+        color: rgba(255,255,255,0.9);
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .sejm-vote-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .sejm-vote-btn {
+        flex: 1;
+        padding: 2.5rem 1rem;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .sejm-vote-btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    
+    .sejm-vote-btn:active {
+        transform: translateY(-2px);
+    }
+    
+    .sejm-vote-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.2);
+        transition: left 0.5s ease;
+    }
+    
+    .sejm-vote-btn:hover::before {
+        left: 100%;
+    }
+    
+    .sejm-btn-za {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
+    
+    .sejm-btn-za:hover {
+        background: linear-gradient(135deg, #0e8074 0%, #2dd468 100%);
+    }
+    
+    .sejm-btn-przeciw {
+        background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        color: white;
+    }
+    
+    .sejm-btn-przeciw:hover {
+        background: linear-gradient(135deg, #d02a3e 0%, #e04a37 100%);
+    }
+    
+    .sejm-btn-wstrzymuje {
+        background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+        color: white;
+    }
+    
+    .sejm-btn-wstrzymuje:hover {
+        background: linear-gradient(135deg, #e08838 0%, #dab740 100%);
+    }
+    
+    .sejm-results {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        color: white;
+    }
+    
+    .sejm-results-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        color: white;
+    }
+    
+    .sejm-result-bar {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.8rem;
+        gap: 1rem;
+    }
+    
+    .sejm-result-label {
+        min-width: 130px;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .sejm-result-count {
+        font-weight: 700;
+        font-size: 1.3rem;
+        min-width: 40px;
+        text-align: right;
+    }
+    
+    .sejm-closed-message {
+        background: rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h3 class="mb-3">Panel radnego</h3>
 
@@ -49,48 +194,64 @@
       {% endif %}
     </div>
 
-    <!-- Głosowania radnego -->
+    <!-- Głosowania radnego - Panel Sejmowy -->
     <div class="col-md-6 mb-4">
       <h5 class="mb-3">Głosowania</h5>
 
       {% if glosowania %}
         {% for glosowanie in glosowania %}
-        <div class="card mb-3 shadow-sm">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <div id="radny-alert" class="alert alert-info d-none"></div>
-              <strong>{{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}</strong><br>
-              <small class="text-muted">{{ glosowanie.nazwa }}</small>
-            </div>
-            <span class="badge bg-{% if glosowanie.otwarte %}success{% else %}danger{% endif %}">
-              {% if glosowanie.otwarte %}Otwarte{% else %}Zamknięte{% endif %}
-            </span>
+        <div class="sejm-voting-panel mb-4">
+          <div id="radny-alert-{{ glosowanie.id }}" class="alert alert-info d-none" style="background: rgba(255,255,255,0.9); color: #333;"></div>
+          
+          <div class="sejm-voting-title">
+            {{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}
           </div>
-          <div class="card-body">
-            <div id="wyniki-{{ glosowanie.id }}" class="mb-3">
-              <em>Ładowanie wyników...</em>
-            </div>
+          <div class="sejm-voting-subtitle">
+            {{ glosowanie.nazwa }}
+          </div>
 
-            {% if glosowanie.otwarte %}
-            <form method="post"
-                  action="{% url 'oddaj_glos' glosowanie.id %}"
-                  id="form-{{ glosowanie.id }}"
-                  class="form-glosowanie">
-              {% csrf_token %}
-              <div class="btn-group w-100" role="group">
-                <button type="submit" name="glos" value="za" class="btn btn-success">ZA</button>
-<button type="submit" name="glos" value="przeciw" class="btn btn-danger">PRZECIW</button>
-<button type="submit" name="glos" value="wstrzymuje" class="btn btn-warning">WSTRZYMUJĘ SIĘ</button>
-
-
+          <div class="sejm-results">
+            <div class="sejm-results-title">Wyniki głosowania:</div>
+            <div id="wyniki-{{ glosowanie.id }}">
+              <div class="sejm-result-bar">
+                <span class="sejm-result-label">Za:</span>
+                <span class="sejm-result-count text-success" id="za-{{ glosowanie.id }}">0</span>
               </div>
-            </form>
-            {% else %}
-            <div class="alert alert-secondary mb-0">
-              Głosowanie jest zamknięte.
+              <div class="sejm-result-bar">
+                <span class="sejm-result-label">Przeciw:</span>
+                <span class="sejm-result-count text-danger" id="przeciw-{{ glosowanie.id }}">0</span>
+              </div>
+              <div class="sejm-result-bar">
+                <span class="sejm-result-label">Wstrzymuję się:</span>
+                <span class="sejm-result-count text-warning" id="wstrzymuje-{{ glosowanie.id }}">0</span>
+              </div>
             </div>
-            {% endif %}
           </div>
+
+          {% if glosowanie.otwarte %}
+          <form method="post"
+                action="{% url 'oddaj_glos' glosowanie.id %}"
+                id="form-{{ glosowanie.id }}"
+                class="form-glosowanie">
+            {% csrf_token %}
+            <div class="sejm-vote-buttons">
+              <button type="submit" name="glos" value="za" class="sejm-vote-btn sejm-btn-za">
+                ZA
+              </button>
+              <button type="submit" name="glos" value="przeciw" class="sejm-vote-btn sejm-btn-przeciw">
+                PRZECIW
+              </button>
+              <button type="submit" name="glos" value="wstrzymuje" class="sejm-vote-btn sejm-btn-wstrzymuje">
+                Wstrzymuję się
+              </button>
+            </div>
+          </form>
+          {% else %}
+          <div class="sejm-closed-message">
+            <i class="bi bi-lock-fill me-2"></i>
+            Głosowanie jest zamknięte
+          </div>
+          {% endif %}
         </div>
         {% endfor %}
       {% else %}
@@ -113,16 +274,44 @@ $(function () {
   {% for glosowanie in glosowania %}
   function odswiezWyniki{{ glosowanie.id }}() {
     $.get("{% url 'api_wyniki' glosowanie.id %}", function (data) {
-      $('#wyniki-{{ glosowanie.id }}').html(
-        '<strong>Wyniki:</strong> ' +
-        'Za: <span class="text-success fw-bold">' + data.za + '</span> | ' +
-        'Przeciw: <span class="text-danger fw-bold">' + data.przeciw + '</span> | ' +
-        'Wstrzymuję się: <span class="text-warning fw-bold">' + data.wstrzymuje + '</span>'
-      );
+      $('#za-{{ glosowanie.id }}').text(data.za);
+      $('#przeciw-{{ glosowanie.id }}').text(data.przeciw);
+      $('#wstrzymuje-{{ glosowanie.id }}').text(data.wstrzymuje);
     });
   }
   odswiezWyniki{{ glosowanie.id }}();
   setInterval(odswiezWyniki{{ glosowanie.id }}, 2000);
+  
+  // Obsługa formularza głosowania
+  $('#form-{{ glosowanie.id }}').on('submit', function(e) {
+    e.preventDefault();
+    const form = $(this);
+    const alert = $('#radny-alert-{{ glosowanie.id }}');
+    
+    $.ajax({
+      url: form.attr('action'),
+      method: 'POST',
+      data: form.serialize(),
+      success: function(response) {
+        if (response.success) {
+          alert.removeClass('d-none alert-danger').addClass('alert-success');
+          alert.text('Głos został oddany pomyślnie!');
+          form.find('button').prop('disabled', true);
+          setTimeout(() => alert.addClass('d-none'), 3000);
+        } else {
+          alert.removeClass('d-none alert-success').addClass('alert-danger');
+          alert.text(response.error || 'Wystąpił błąd podczas głosowania.');
+          setTimeout(() => alert.addClass('d-none'), 5000);
+        }
+      },
+      error: function(xhr) {
+        const response = xhr.responseJSON;
+        alert.removeClass('d-none alert-success').addClass('alert-danger');
+        alert.text(response?.error || 'Wystąpił błąd podczas głosowania.');
+        setTimeout(() => alert.addClass('d-none'), 5000);
+      }
+    });
+  });
   {% endfor %}
 });
 </script>
