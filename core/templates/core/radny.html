@@ -144,6 +144,11 @@
         font-size: 1.2rem;
         font-weight: 600;
     }
+    
+    .sejm-alert {
+        background: rgba(255,255,255,0.9);
+        color: #333;
+    }
 </style>
 {% endblock %}
 
@@ -201,7 +206,7 @@
       {% if glosowania %}
         {% for glosowanie in glosowania %}
         <div class="sejm-voting-panel mb-4">
-          <div id="radny-alert-{{ glosowanie.id }}" class="alert alert-info d-none" style="background: rgba(255,255,255,0.9); color: #333;"></div>
+          <div id="radny-alert-{{ glosowanie.id }}" class="alert alert-info sejm-alert d-none"></div>
           
           <div class="sejm-voting-title">
             {{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}
@@ -242,7 +247,7 @@
                 PRZECIW
               </button>
               <button type="submit" name="glos" value="wstrzymuje" class="sejm-vote-btn sejm-btn-wstrzymuje">
-                Wstrzymuję się
+                WSTRZYMUJĘ SIĘ
               </button>
             </div>
           </form>
@@ -270,6 +275,11 @@
 {% block extra_js %}
 <script>
 $(function () {
+  // Constants for timeout durations
+  const SUCCESS_TIMEOUT = 3000;
+  const ERROR_TIMEOUT = 5000;
+  const REFRESH_INTERVAL = 2000;
+  
   // Live wyniki dla każdego głosowania
   {% for glosowanie in glosowania %}
   function odswiezWyniki{{ glosowanie.id }}() {
@@ -280,7 +290,7 @@ $(function () {
     });
   }
   odswiezWyniki{{ glosowanie.id }}();
-  setInterval(odswiezWyniki{{ glosowanie.id }}, 2000);
+  setInterval(odswiezWyniki{{ glosowanie.id }}, REFRESH_INTERVAL);
   
   // Obsługa formularza głosowania
   $('#form-{{ glosowanie.id }}').on('submit', function(e) {
@@ -297,18 +307,18 @@ $(function () {
           alert.removeClass('d-none alert-danger').addClass('alert-success');
           alert.text('Głos został oddany pomyślnie!');
           form.find('button').prop('disabled', true);
-          setTimeout(() => alert.addClass('d-none'), 3000);
+          setTimeout(() => alert.addClass('d-none'), SUCCESS_TIMEOUT);
         } else {
           alert.removeClass('d-none alert-success').addClass('alert-danger');
           alert.text(response.error || 'Wystąpił błąd podczas głosowania.');
-          setTimeout(() => alert.addClass('d-none'), 5000);
+          setTimeout(() => alert.addClass('d-none'), ERROR_TIMEOUT);
         }
       },
       error: function(xhr) {
         const response = xhr.responseJSON;
         alert.removeClass('d-none alert-success').addClass('alert-danger');
         alert.text(response?.error || 'Wystąpił błąd podczas głosowania.');
-        setTimeout(() => alert.addClass('d-none'), 5000);
+        setTimeout(() => alert.addClass('d-none'), ERROR_TIMEOUT);
       }
     });
   });
