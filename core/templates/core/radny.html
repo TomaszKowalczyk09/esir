@@ -79,10 +79,8 @@
               {% csrf_token %}
               <div class="btn-group w-100" role="group">
                 <button type="submit" name="glos" value="za" class="btn btn-success">ZA</button>
-<button type="submit" name="glos" value="przeciw" class="btn btn-danger">PRZECIW</button>
-<button type="submit" name="glos" value="wstrzymuje" class="btn btn-warning">WSTRZYMUJĘ SIĘ</button>
-
-
+                <button type="submit" name="glos" value="przeciw" class="btn btn-danger">PRZECIW</button>
+                <button type="submit" name="glos" value="wstrzymuje" class="btn btn-warning">WSTRZYMUJĘ SIĘ</button>
               </div>
             </form>
             {% else %}
@@ -109,7 +107,7 @@
 {% block extra_js %}
 <script>
 $(function () {
-  // Live wyniki dla każdego głosowania
+  // '(' expected. 
   {% for glosowanie in glosowania %}
   function odswiezWyniki{{ glosowanie.id }}() {
     $.get("{% url 'api_wyniki' glosowanie.id %}", function (data) {

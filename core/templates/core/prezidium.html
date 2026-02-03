@@ -31,7 +31,7 @@
         {% if sesja.aktywna %}
           <span class="badge bg-success me-2">Sesja aktywna</span>
         {% else %}
-          <span class="badge bg-secondary me-2">Nieaktywna</span>
+          <span class="badge bg-secondary me-2">Sesja nieaktywna</span>
         {% endif %}
 
         <a href="{% url 'sesja_edytuj' sesja.id %}" class="btn btn-sm btn-outline-primary me-1">
@@ -107,7 +107,7 @@ $(function () {
     });
   });
 
-  // Wyniki live pod każdym głosowaniem
+  // '(' expected.
   {% for sesja in sesje %}
     {% for punkt in sesja.punkty.all %}
       {% if punkt.glosowanie %}

@@ -25,14 +25,14 @@
             {% if sesja.aktywna %}
               <span class="badge bg-success me-2">Sesja aktywna</span>
             {% else %}
-              <span class="badge bg-secondary me-2">Nieaktywna</span>
+              <span class="badge bg-secondary me-2">Sesja nieaktywna</span>
             {% endif %}
 
             {% if not sesja.aktywna %}
               <form method="post" action="{% url 'ustaw_sesje_aktywna' sesja.id %}" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-success">
-                  Ustaw jako aktywną
+                  Aktywuj
                 </button>
               </form>
               <form method="post" action="{% url 'dezaktywuj_sesje' sesja.id %}" class="d-inline">
