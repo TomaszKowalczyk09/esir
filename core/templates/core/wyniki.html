@@ -37,6 +37,7 @@
 {% block extra_js %}
 <script>
 $(function () {
+  // Expression expected.
   {% for punkt in punkty %}
     {% if punkt.glosowanie %}
       (function(glosowanieId) {

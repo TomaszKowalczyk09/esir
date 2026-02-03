@@ -60,25 +60,24 @@
                 <span class="text-muted small">{{ punkt.opis }}</span>
               {% endif %}
                 <div class="list-group-item d-flex justify-content-between align-items-center">
-  <div>
-    <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
-    {% if punkt.aktywny %}
-      <span class="badge bg-primary ms-1">Aktualnie omawiany</span>
-    {% endif %}
-    {% if punkt.opis %}
-      <div class="text-muted small">{{ punkt.opis }}</div>
-    {% endif %}
-  </div>
-  <div>
-    <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-outline-primary">
-        Ustaw jako aktywny
-      </button>
-    </form>
-  </div>
-</div>
-
+                <div>
+                  <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
+                  {% if punkt.aktywny %}
+                    <span class="badge bg-primary ms-1">Aktualnie omawiany</span>
+                  {% endif %}
+                  {% if punkt.opis %}
+                    <div class="text-muted small">{{ punkt.opis }}</div>
+                  {% endif %}
+                </div>
+                <div>
+                  <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                      Ustaw jako aktywny
+                    </button>
+                  </form>
+                </div>
+              </div>
             </div>
           </div>
 
