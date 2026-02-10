@@ -1,0 +1,93 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Obecność{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Obecność i quorum</h3>
+
+{% if not sesja %}
+  <div class="alert alert-warning">Brak aktywnej sesji.</div>
+{% else %}
+  <div class="card shadow-sm mb-3">
+    <div class="card-body d-flex justify-content-between flex-wrap">
+      <div>
+        <div class="fw-semibold">{{ sesja.nazwa }}</div>
+        <div class="text-muted small">{{ sesja.data }}</div>
+      </div>
+      <div class="text-end">
+        <div class="mb-1">
+          Obecni: <strong id="obecni">{{ obecni }}</strong> / <strong id="uprawnieni">{{ uprawnieni }}</strong>
+          (quorum: <strong id="quorum">{{ quorum }}</strong>)
+        </div>
+        <span id="badge-quorum" class="badge bg-{% if jest_quorum %}success{% else %}danger{% endif %}">
+          {% if jest_quorum %}Quorum jest{% else %}Brak quorum{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle table-hover bg-white shadow-sm">
+      <thead class="table-light">
+        <tr>
+          <th>Radny</th>
+          <th>Status</th>
+          <th class="text-end">Akcja</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in radni %}
+        {% with o=obecnosci_map|get_item:r.id %}
+        <tr data-radny-id="{{ r.id }}">
+          <td>{{ r.imie }} {{ r.nazwisko }}</td>
+          <td>
+            <span class="badge status-badge bg-{% if o and o.obecny %}success{% else %}secondary{% endif %}">
+              {% if o and o.obecny %}Obecny{% else %}Niepotwierdzony{% endif %}
+            </span>
+          </td>
+          <td class="text-end">
+            <button type="button" class="btn btn-sm btn-outline-primary toggle-obecnosc">
+              Przełącz
+            </button>
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(function () {
+  $('.toggle-obecnosc').click(function () {
+    const row = $(this).closest('tr');
+    const radnyId = row.data('radny-id');
+    const url = '/prezydium/sesja/{{ sesja.id }}/obecnosci/' + radnyId + '/toggle/';
+
+    $.post(url, {'csrfmiddlewaretoken': '{{ csrf_token }}'}, function (data) {
+      const badge = row.find('.status-badge');
+      if (data.obecny) {
+        badge.removeClass('bg-secondary').addClass('bg-success').text('Obecny');
+      } else {
+        badge.removeClass('bg-success').addClass('bg-secondary').text('Niepotwierdzony');
+      }
+
+      $('#obecni').text(data.obecni);
+      $('#uprawnieni').text(data.uprawnieni);
+      $('#quorum').text(data.quorum);
+
+      const badgeQ = $('#badge-quorum');
+      if (data.jest_quorum) {
+        badgeQ.removeClass('bg-danger').addClass('bg-success').text('Quorum jest');
+      } else {
+        badgeQ.removeClass('bg-success').addClass('bg-danger').text('Brak quorum');
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

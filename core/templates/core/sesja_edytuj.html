@@ -81,21 +81,43 @@
               <div>
                 <div class="text-muted small">Głosowanie</div>
                 <div class="fw-semibold">{{ punkt.glosowanie.nazwa }}</div>
+                <div class="text-muted small">
+                  {{ punkt.glosowanie.get_jawnosc_display }} • {{ punkt.glosowanie.get_wiekszosc_display }}
+                  {% if punkt.glosowanie.liczba_uprawnionych %} • Uprawnieni: {{ punkt.glosowanie.liczba_uprawnionych }}{% endif %}
+                </div>
               </div>
               <span class="badge bg-{% if punkt.glosowanie.otwarte %}success{% else %}secondary{% endif %}">
                 {% if punkt.glosowanie.otwarte %}Otwarte{% else %}Zamknięte{% endif %}
               </span>
             </div>
           {% else %}
-            <form method="post" class="d-flex gap-2 align-items-center">
+            <form method="post" class="row g-2 align-items-end">
               {% csrf_token %}
               <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
-              <div class="flex-grow-1">
-                {{ glosowanie_form.nazwa }}
+
+              <div class="col-12">
+                <div class="alert alert-info py-2 mb-0">
+                  Nazwa głosowania zostanie ustawiona automatycznie na podstawie tytułu punktu.
+                </div>
               </div>
-              <button type="submit" name="dodaj_glosowanie" class="btn btn-outline-success btn-sm">
-                <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
-              </button>
+
+              <div class="col-md-6">
+                <label class="form-label mb-1">Jawność</label>
+                {{ glosowanie_form.jawnosc }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label mb-1">Większość</label>
+                {{ glosowanie_form.wiekszosc }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label mb-1">Uprawnieni (opcjonalnie)</label>
+                {{ glosowanie_form.liczba_uprawnionych }}
+              </div>
+              <div class="col-md-6">
+                <button type="submit" name="dodaj_glosowanie" class="btn btn-outline-success btn-sm w-100">
+                  <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
+                </button>
+              </div>
             </form>
             <div class="text-muted small mt-2">Brak głosowania dla tego punktu.</div>
           {% endif %}

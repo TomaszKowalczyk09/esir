@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek
 from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm
+from accounts.models import Uzytkownik
 
 
 # --------------------------------------------------
@@ -121,6 +122,7 @@ def sesja_edytuj(request, sesja_id):
                 )
                 gl = glosowanie_form.save(commit=False)
                 gl.punkt_obrad = punkt
+                gl.nazwa = punkt.tytul
                 gl.save()
                 messages.success(request, "Głosowanie zostało dodane.")
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
@@ -347,8 +349,20 @@ def oddaj_glos(request, glosowanie_id):
 def api_wyniki(request, glosowanie_id):
     """
     API z podsumowaniem wyników głosowania (Za / Przeciw / Wstrzymuję).
+
+    Dla głosowań tajnych: w trakcie (otwarte=True) zwracamy zagregowaną informację bez rozbicia.
     """
     glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
+
+    # Tajne: w trakcie nie ujawniamy wyników szczegółowych
+    if (glosowanie.jawnosc == "tajne" and glosowanie.otwarte):
+        total = Glos.objects.filter(glosowanie=glosowanie).count()
+        return JsonResponse({
+            "tajne": True,
+            "otwarte": True,
+            "oddano": total,
+        })
+
     wyniki = (
         Glos.objects.filter(glosowanie=glosowanie)
         .values("glos")
@@ -359,7 +373,16 @@ def api_wyniki(request, glosowanie_id):
     for wynik in wyniki:
         dane[wynik["glos"]] = wynik["count"]
 
-    return JsonResponse(dane)
+    podsumowanie = glosowanie.wynik_podsumowanie()
+
+    return JsonResponse({
+        **dane,
+        "tajne": glosowanie.jawnosc == "tajne",
+        "otwarte": glosowanie.otwarte,
+        "wiekszosc": glosowanie.wiekszosc,
+        "przeszedl": podsumowanie["przeszedl"],
+        "prog": podsumowanie["prog"],
+    })
 
 
 # --------------------------------------------------
@@ -639,3 +662,100 @@ def reset_danych_testowych(request):
         return redirect("prezydium_sesje")
 
     return render(request, "core/reset_danych_testowych.html")
+
+
+@login_required
+@require_http_methods(["GET"])
+def obecnosci_prezidium(request):
+    """Panel prezydium do sprawdzania obecności i quorum w aktywnej sesji."""
+    if request.user.rola != "prezydium":
+        return redirect("radny")
+
+    sesja = Sesja.objects.filter(aktywna=True).first()
+    # Uprawnieni: radni + prezydium
+    uprawnieni_qs = Uzytkownik.objects.filter(rola__in=["radny", "prezydium"]).order_by("rola", "nazwisko", "imie")
+    radni = uprawnieni_qs
+
+    obecnosci_map = {}
+    if sesja:
+        obecnosci_map = {o.radny_id: o for o in sesja.obecnosci.select_related("radny").all()}
+
+    uprawnieni = radni.count()
+    obecni = sum(1 for r in radni if getattr(obecnosci_map.get(r.id), "obecny", False))
+    quorum = (uprawnieni // 2) + 1
+    jest_quorum = obecni >= quorum
+
+    return render(
+        request,
+        "core/obecnosci_prezidium.html",
+        {
+            "sesja": sesja,
+            "radni": radni,
+            "obecnosci_map": obecnosci_map,
+            "uprawnieni": uprawnieni,
+            "obecni": obecni,
+            "quorum": quorum,
+            "jest_quorum": jest_quorum,
+        },
+    )
+
+
+@login_required
+@require_POST
+def ustaw_obecnosc(request):
+    """Radny potwierdza obecność w aktywnej sesji."""
+    if request.user.rola != "radny":
+        return redirect("prezydium_dashboard")
+
+    sesja = Sesja.objects.filter(aktywna=True).first()
+    if not sesja:
+        messages.error(request, "Brak aktywnej sesji.")
+        return redirect("radny")
+
+    obecny = request.POST.get("obecny")
+    obecny_flag = True if obecny in ["1", "true", "True", "on"] else False
+
+    from .models import Obecnosc
+
+    Obecnosc.objects.update_or_create(
+        sesja=sesja,
+        radny=request.user,
+        defaults={"obecny": obecny_flag},
+    )
+
+    if obecny_flag:
+        messages.success(request, "Potwierdzono obecność.")
+    else:
+        messages.info(request, "Ustawiono status: nieobecny.")
+
+    return redirect("radny")
+
+
+@login_required
+@require_POST
+def obecnosci_toggle_prezidium(request, sesja_id, radny_id):
+    """Prezydium ręcznie przełącza obecność danego uprawnionego w danej sesji."""
+    if request.user.rola != "prezydium":
+        return JsonResponse({"error": "Brak uprawnień"}, status=403)
+
+    sesja = get_object_or_404(Sesja, id=sesja_id)
+    radny = get_object_or_404(Uzytkownik, id=radny_id, rola__in=["radny", "prezydium"])
+
+    from .models import Obecnosc
+
+    obj, _ = Obecnosc.objects.get_or_create(sesja=sesja, radny=radny)
+    obj.obecny = not obj.obecny
+    obj.save(update_fields=["obecny", "timestamp"])
+
+    uprawnieni = Uzytkownik.objects.filter(rola__in=["radny", "prezydium"]).count()
+    obecni = Obecnosc.objects.filter(sesja=sesja, obecny=True).count()
+    quorum = (uprawnieni // 2) + 1
+
+    return JsonResponse({
+        "radny_id": radny.id,
+        "obecny": obj.obecny,
+        "obecni": obecni,
+        "uprawnieni": uprawnieni,
+        "quorum": quorum,
+        "jest_quorum": obecni >= quorum,
+    })

@@ -39,15 +39,22 @@ class PunktForm(forms.ModelForm):
 
 
 class GlosowanieForm(forms.ModelForm):
-    """Tworzenie głosowania dla wybranego punktu obrad."""
+    """Tworzenie głosowania dla wybranego punktu obrad.
+
+    Nazwa głosowania jest automatycznie ustawiana na podstawie tytułu punktu obrad.
+    """
     class Meta:
         model = Glosowanie
-        fields = ["nazwa"]
+        fields = ["jawnosc", "wiekszosc", "liczba_uprawnionych"]
         widgets = {
-            "nazwa": forms.TextInput(attrs={"class": "form-control"}),
+            "jawnosc": forms.Select(attrs={"class": "form-select"}),
+            "wiekszosc": forms.Select(attrs={"class": "form-select"}),
+            "liczba_uprawnionych": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
         }
         labels = {
-            "nazwa": "Nazwa głosowania",
+            "jawnosc": "Jawność",
+            "wiekszosc": "Rodzaj większości",
+            "liczba_uprawnionych": "Liczba uprawnionych (opcjonalnie)",
         }
 
 

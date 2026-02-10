@@ -103,6 +103,15 @@ path(
     path("prezydium/wnioski/", views.wnioski_prezidium, name="wnioski_prezidium"),
     path("prezydium/wnioski/<int:wniosek_id>/zatwierdz/", views.wniosek_zatwierdz, name="wniosek_zatwierdz"),
 
+    # OBECNOŚĆ / QUORUM
+    path("prezydium/obecnosci/", views.obecnosci_prezidium, name="obecnosci_prezidium"),
+    path("radny/obecnosc/", views.ustaw_obecnosc, name="ustaw_obecnosc"),
+    path(
+        "prezydium/sesja/<int:sesja_id>/obecnosci/<int:radny_id>/toggle/",
+        views.obecnosci_toggle_prezidium,
+        name="obecnosci_toggle_prezidium",
+    ),
+
     # TESTY / reset danych
     path("prezydium/reset/", views.reset_danych_testowych, name="reset_danych_testowych"),
 ]
