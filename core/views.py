@@ -540,48 +540,42 @@ def prezydium_agenda(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def wnioski_radny(request):
-    """Panel radnego do składania i podglądu własnych wniosków w aktywnej sesji.
+    """Panel radnego do składania i podglądu własnych wniosków.
 
-    Wniosek jest składany do aktualnie aktywnego punktu obrad.
+    Wniosek może być:
+    - przypięty do aktywnego punktu (jeśli istnieje), albo
+    - złożony poza sesją (punkt_obrad=NULL), nawet gdy sesja jest aktywna.
+
+    System automatycznie nadaje sygnaturę przy zapisie.
     """
     if request.user.rola != "radny":
         return redirect("prezydium_dashboard")
 
     sesja = Sesja.objects.filter(aktywna=True).first()
     punkt = None
-
     if sesja:
         punkt = sesja.punkty.filter(aktywny=True).order_by("numer").first()
-
-    if not sesja or not punkt:
-        form = WniosekForm()
-        wnioski = Wniosek.objects.none()
-        return render(
-            request,
-            "core/wnioski_radny.html",
-            {
-                "sesja": sesja,
-                "punkt": punkt,
-                "form": form,
-                "wnioski": wnioski,
-            },
-        )
 
     if request.method == "POST":
         form = WniosekForm(request.POST)
         if form.is_valid():
             wniosek = form.save(commit=False)
-            wniosek.punkt_obrad = punkt
+
+            # jeśli użytkownik zaznaczy "poza sesją" lub nie ma aktywnego punktu
+            poza_sesja = (request.POST.get("poza_sesja") in ["1", "true", "True", "on"]) \
+                         or (punkt is None)
+            wniosek.punkt_obrad = None if poza_sesja else punkt
+
             wniosek.radny = request.user
             wniosek.save()
-            messages.success(request, "Wniosek został złożony.")
+            messages.success(request, f"Wniosek został złożony. Sygnatura: {wniosek.sygnatura}")
             return redirect("wnioski_radny")
     else:
         form = WniosekForm()
 
     wnioski = (
-        Wniosek.objects.filter(punkt_obrad__sesja=sesja, radny=request.user)
-        .select_related("punkt_obrad", "radny")
+        Wniosek.objects.filter(radny=request.user)
+        .select_related("punkt_obrad", "punkt_obrad__sesja")
         .order_by("-data")
     )
 
@@ -593,6 +587,7 @@ def wnioski_radny(request):
             "punkt": punkt,
             "form": form,
             "wnioski": wnioski,
+            "mozna_przypiac": punkt is not None,
         },
     )
 
@@ -740,7 +735,12 @@ def obecnosci_prezidium(request):
 @login_required
 @require_POST
 def ustaw_obecnosc(request):
-    """Radny potwierdza obecność w aktywnej sesji."""
+    """Radny potwierdza obecność w aktywnej sesji.
+
+    Zasada:
+    - radny może zgłosić obecność/nieobecność tylko raz (pierwszy zapis dla danej sesji)
+    - po zgłoszeniu, zmiany może dokonywać wyłącznie prezydium
+    """
     if request.user.rola != "radny":
         return redirect("prezydium_dashboard")
 
@@ -749,21 +749,26 @@ def ustaw_obecnosc(request):
         messages.error(request, "Brak aktywnej sesji.")
         return redirect("radny")
 
+    from .models import Obecnosc
+
+    # jeśli już zgłoszono obecność/nieobecność, blokujemy zmianę przez radnego
+    if Obecnosc.objects.filter(sesja=sesja, radny=request.user).exists():
+        messages.warning(request, "Status obecności został już zgłoszony. Zmiany może wprowadzić tylko prezydium.")
+        return redirect("radny")
+
     obecny = request.POST.get("obecny")
     obecny_flag = True if obecny in ["1", "true", "True", "on"] else False
 
-    from .models import Obecnosc
-
-    Obecnosc.objects.update_or_create(
+    Obecnosc.objects.create(
         sesja=sesja,
         radny=request.user,
-        defaults={"obecny": obecny_flag},
+        obecny=obecny_flag,
     )
 
     if obecny_flag:
         messages.success(request, "Potwierdzono obecność.")
     else:
-        messages.info(request, "Ustawiono status: nieobecny.")
+        messages.info(request, "Zgłoszono nieobecność.")
 
     return redirect("radny")
 

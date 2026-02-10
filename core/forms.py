@@ -62,12 +62,14 @@ class WniosekForm(forms.ModelForm):
     """Formularz wniosku radnego (jeśli będziesz chciał go użyć w panelu)."""
     class Meta:
         model = Wniosek
-        fields = ["tresc"]
+        fields = ["typ", "tresc"]
         widgets = {
+            "typ": forms.Select(attrs={"class": "form-select"}),
             "tresc": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
         labels = {
-            "tresc": "Treść wniosku",
+            "typ": "Rodzaj",
+            "tresc": "Treść",
         }
 
 

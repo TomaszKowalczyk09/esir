@@ -5,11 +5,7 @@
 {% block content %}
 <h3 class="mb-3">Wnioski</h3>
 
-{% if not sesja %}
-  <div class="alert alert-warning">Brak aktywnej sesji.</div>
-{% elif not punkt %}
-  <div class="alert alert-warning">Brak aktywnego punktu obrad. Poczekaj aż prezydium ustawi omawiany punkt.</div>
-{% else %}
+{% if sesja and punkt %}
   <div class="card mb-3 shadow-sm">
     <div class="card-body">
       <div class="d-flex justify-content-between flex-wrap">
@@ -21,35 +17,70 @@
       </div>
     </div>
   </div>
-
-  <div class="card mb-4 shadow-sm">
-    <div class="card-header">Złóż wniosek do aktualnego punktu</div>
-    <div class="card-body">
-      <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Złóż wniosek</button>
-      </form>
-    </div>
+{% else %}
+  <div class="alert alert-info">
+    Możesz składać wnioski również poza sesją. Jeśli nie ma aktywnego punktu obrad, wniosek zostanie zapisany jako „poza sesją”.
   </div>
 {% endif %}
 
-<h5 class="mb-2">Twoje wnioski{% if sesja %} (aktywny okres: sesja){% endif %}</h5>
+<div class="card mb-4 shadow-sm">
+  <div class="card-header">
+    {% if sesja and punkt %}
+      Złóż wniosek do aktualnego punktu
+    {% else %}
+      Złóż wniosek (poza sesją)
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+
+      {% if mozna_przypiac %}
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" value="1" id="pozaSesja" name="poza_sesja">
+          <label class="form-check-label" for="pozaSesja">
+            Złóż poza sesją (nie przypinaj do aktualnego punktu)
+          </label>
+        </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary mt-3">Złóż wniosek</button>
+    </form>
+  </div>
+</div>
+
+<h5 class="mb-2">Twoje wnioski</h5>
 
 {% if wnioski %}
   <div class="list-group shadow-sm">
     {% for w in wnioski %}
       <div class="list-group-item">
-        <div class="d-flex justify-content-between">
-          <div class="small text-muted">{{ w.data }}</div>
-          {% if w.zatwierdzony %}
-            <span class="badge bg-success">Zatwierdzony</span>
-          {% else %}
-            <span class="badge bg-secondary">Oczekuje</span>
-          {% endif %}
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+          <div>
+            <div class="fw-semibold">Sygnatura: {{ w.sygnatura }}</div>
+            <div class="small text-muted">{{ w.data }}</div>
+          </div>
+          <div class="text-end">
+            {% if w.zatwierdzony %}
+              <span class="badge bg-success">Zatwierdzony</span>
+            {% else %}
+              <span class="badge bg-secondary">Oczekuje</span>
+            {% endif %}
+          </div>
         </div>
+
         <div class="mt-2">{{ w.tresc|linebreaksbr }}</div>
-        <div class="small text-muted mt-2">Punkt: {{ w.punkt_obrad.numer }}. {{ w.punkt_obrad.tytul }}</div>
+
+        {% if w.punkt_obrad %}
+          <div class="small text-muted mt-2">
+            Sesja: {{ w.punkt_obrad.sesja.nazwa }} • Punkt: {{ w.punkt_obrad.numer }}. {{ w.punkt_obrad.tytul }}
+          </div>
+        {% else %}
+          <div class="small text-muted mt-2">
+            Poza sesją
+          </div>
+        {% endif %}
       </div>
     {% endfor %}
   </div>

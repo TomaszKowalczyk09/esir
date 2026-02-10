@@ -121,14 +121,67 @@ class Glos(models.Model):
 
 
 class Wniosek(models.Model):
-    punkt_obrad = models.ForeignKey(PunktObrad, on_delete=models.CASCADE, related_name='wnioski')
+    TYP_CHOICES = [
+        ("wniosek", "Wniosek"),
+        ("zwo_sesji", "Zwołanie sesji"),
+        ("proj_uchwaly", "Projekt uchwały"),
+        ("zapytanie", "Zapytanie"),
+    ]
+
+    punkt_obrad = models.ForeignKey(
+        PunktObrad,
+        on_delete=models.CASCADE,
+        related_name='wnioski',
+        null=True,
+        blank=True,
+        help_text="Jeśli puste, wniosek jest złożony poza sesją.",
+    )
     radny = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE)
+
+    # automatyczna sygnatura, np. W/2026/0012
+    sygnatura = models.CharField(max_length=32, unique=True, blank=True)
+
     tresc = models.TextField()
     data = models.DateTimeField(auto_now_add=True)
     zatwierdzony = models.BooleanField(default=False)
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default="wniosek")
+
+    class Meta:
+        ordering = ["-data"]
 
     def __str__(self):
-        return f"Wniosek {self.radny} - {self.tresc[:50]}"
+        sig = self.sygnatura or "(bez sygnatury)"
+        return f"{sig} - {self.radny} - {self.tresc[:50]}"
+
+    def _next_sygnatura(self):
+        year = timezone.localdate().year
+        prefix = f"W/{year}/"
+        last = (
+            Wniosek.objects.filter(sygnatura__startswith=prefix)
+            .order_by("-sygnatura")
+            .values_list("sygnatura", flat=True)
+            .first()
+        )
+        if not last:
+            n = 1
+        else:
+            try:
+                n = int(last.split("/")[-1]) + 1
+            except Exception:
+                n = 1
+        return f"{prefix}{n:04d}"
+
+    def save(self, *args, **kwargs):
+        if not self.sygnatura:
+            # prosta generacja sygnatury; przy ewentualnym konflikcie dociągamy kolejną
+            for _ in range(20):
+                cand = self._next_sygnatura()
+                if not Wniosek.objects.filter(sygnatura=cand).exists():
+                    self.sygnatura = cand
+                    break
+            else:
+                raise ValueError("Nie udało się wygenerować unikalnej sygnatury wniosku")
+        super().save(*args, **kwargs)
 
 
 class Obecnosc(models.Model):
