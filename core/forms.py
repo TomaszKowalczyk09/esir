@@ -1,5 +1,5 @@
 from django import forms
-from .models import Sesja, PunktObrad, Glosowanie, Wniosek
+from .models import Sesja, PunktObrad, Glosowanie, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek
 
 
 class SesjaCreateForm(forms.ModelForm):
@@ -68,4 +68,34 @@ class WniosekForm(forms.ModelForm):
         }
         labels = {
             "tresc": "Treść wniosku",
+        }
+
+
+class KomisjaForm(forms.ModelForm):
+    class Meta:
+        model = Komisja
+        fields = ["nazwa", "opis", "przewodniczacy", "czlonkowie", "aktywna"]
+        widgets = {
+            "czlonkowie": forms.CheckboxSelectMultiple,
+        }
+
+
+class KomisjaSesjaForm(forms.ModelForm):
+    class Meta:
+        model = KomisjaSesja
+        fields = ["nazwa", "data", "aktywna"]
+
+
+class KomisjaPunktForm(forms.ModelForm):
+    class Meta:
+        model = KomisjaPunktObrad
+        fields = ["numer", "tytul", "opis"]
+
+
+class KomisjaWniosekForm(forms.ModelForm):
+    class Meta:
+        model = KomisjaWniosek
+        fields = ["typ", "tresc"]
+        widgets = {
+            "tresc": forms.Textarea(attrs={"rows": 4}),
         }

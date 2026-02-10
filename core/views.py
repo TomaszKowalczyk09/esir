@@ -6,8 +6,8 @@ from django.views.decorators.http import require_http_methods, require_POST, req
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek
-from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm
+from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek
+from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm
 from accounts.models import Uzytkownik
 
 
@@ -796,3 +796,76 @@ def obecnosci_toggle_prezidium(request, sesja_id, radny_id):
         "quorum": quorum,
         "jest_quorum": obecni >= quorum,
     })
+
+
+# --------------------------------------------------
+# Widoki KOMISJI
+# --------------------------------------------------
+
+@login_required
+def komisje_moje(request):
+    if request.user.rola not in ["radny", "prezydium"]:
+        return redirect("panel")
+
+    komisje = Komisja.objects.filter(Q(czlonkowie=request.user) | Q(przewodniczacy=request.user)).distinct()
+    return render(request, "core/komisje_moje.html", {"komisje": komisje})
+
+
+@login_required
+def komisja_szczegoly(request, komisja_id):
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    if request.user not in komisja.czlonkowie.all() and request.user != komisja.przewodniczacy and request.user.rola != "prezydium":
+        return HttpResponseForbidden("Brak uprawnień")
+
+    sesje = komisja.sesje.all()
+    return render(request, "core/komisja_szczegoly.html", {"komisja": komisja, "sesje": sesje})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def komisja_wnioski(request, komisja_id):
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    if request.user not in komisja.czlonkowie.all() and request.user != komisja.przewodniczacy:
+        return HttpResponseForbidden("Brak uprawnień")
+
+    if request.method == "POST":
+        form = KomisjaWniosekForm(request.POST)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.komisja = komisja
+            obj.autor = request.user
+            obj.save()
+            messages.success(request, "Wniosek komisji zapisany.")
+            return redirect("komisja_wnioski", komisja_id=komisja.id)
+    else:
+        form = KomisjaWniosekForm()
+
+    wnioski = komisja.wnioski.select_related("autor").all()
+    return render(request, "core/komisja_wnioski.html", {"komisja": komisja, "form": form, "wnioski": wnioski})
+
+
+@login_required
+def komisja_skrzynka_rady(request):
+    """Skrzynka prezydium: wnioski komisji do zatwierdzenia/wysłania do rady."""
+    if request.user.rola != "prezydium":
+        return redirect("panel")
+
+    qs = KomisjaWniosek.objects.select_related("komisja", "autor").all()
+    return render(request, "core/komisja_skrzynka_rady.html", {"wnioski": qs})
+
+
+@login_required
+@require_POST
+def komisja_wniosek_wyslij_do_rady(request, wniosek_id):
+    if request.user.rola != "prezydium":
+        return HttpResponseForbidden("Brak uprawnień")
+
+    obj = get_object_or_404(KomisjaWniosek, id=wniosek_id)
+    obj.zatwierdzony_przez_prezydium = True
+    obj.data_zatwierdzenia = timezone.now()
+    obj.wyslany_do_rady = True
+    obj.data_wyslania = timezone.now()
+    obj.save(update_fields=["zatwierdzony_przez_prezydium", "data_zatwierdzenia", "wyslany_do_rady", "data_wyslania"])
+
+    messages.success(request, "Wniosek komisji został wysłany do rady.")
+    return redirect("komisja_skrzynka_rady")

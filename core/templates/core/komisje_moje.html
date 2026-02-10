@@ -1,0 +1,27 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Komisje{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Moje komisje</h3>
+
+{% if komisje %}
+  <div class="list-group shadow-sm">
+    {% for k in komisje %}
+      <a class="list-group-item list-group-item-action" href="{% url 'komisja_szczegoly' k.id %}">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="fw-semibold">{{ k.nazwa }}</div>
+            <div class="small text-muted">Przewodniczący: {{ k.przewodniczacy.imie }} {{ k.przewodniczacy.nazwisko }}</div>
+          </div>
+          {% if user == k.przewodniczacy %}
+            <span class="badge bg-primary align-self-center">Przewodniczący</span>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Nie należysz do żadnej komisji.</div>
+{% endif %}
+{% endblock %}

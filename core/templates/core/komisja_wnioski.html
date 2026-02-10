@@ -1,0 +1,46 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Wnioski komisji{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">{{ komisja.nazwa }} – wnioski / zapytania / postulaty</h3>
+
+<div class="card mb-4 shadow-sm">
+  <div class="card-header">Nowy dokument do rady</div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Zapisz</button>
+    </form>
+  </div>
+</div>
+
+<h5 class="mb-2">Historia</h5>
+{% if wnioski %}
+  <div class="list-group shadow-sm">
+    {% for w in wnioski %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between flex-wrap">
+          <div>
+            <div class="fw-semibold">{{ w.get_typ_display }}</div>
+            <div class="small text-muted">{{ w.data }} • Autor: {{ w.autor.imie }} {{ w.autor.nazwisko }}</div>
+          </div>
+          <div class="text-end">
+            {% if w.wyslany_do_rady %}
+              <span class="badge bg-success">Wysłany do rady</span>
+            {% elif w.zatwierdzony_przez_prezydium %}
+              <span class="badge bg-info">Zatwierdzony</span>
+            {% else %}
+              <span class="badge bg-secondary">Szkic</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="mt-2">{{ w.tresc|linebreaksbr }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Brak dokumentów komisji.</div>
+{% endif %}
+{% endblock %}

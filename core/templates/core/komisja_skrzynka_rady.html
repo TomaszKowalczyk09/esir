@@ -1,0 +1,35 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Komisje – skrzynka{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Komisje – skrzynka do rady</h3>
+
+{% if wnioski %}
+  <div class="list-group shadow-sm">
+    {% for w in wnioski %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+          <div>
+            <div class="fw-semibold">{{ w.komisja.nazwa }} • {{ w.get_typ_display }}</div>
+            <div class="small text-muted">{{ w.data }} • Autor: {{ w.autor.imie }} {{ w.autor.nazwisko }}</div>
+          </div>
+          <div class="text-end">
+            {% if w.wyslany_do_rady %}
+              <span class="badge bg-success">Wysłany</span>
+            {% else %}
+              <form method="post" action="{% url 'komisja_wniosek_wyslij_do_rady' w.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary">Wyślij do rady</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+        <div class="mt-2">{{ w.tresc|linebreaksbr }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Brak dokumentów od komisji.</div>
+{% endif %}
+{% endblock %}

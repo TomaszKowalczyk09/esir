@@ -143,3 +143,83 @@ class Obecnosc(models.Model):
 
     def __str__(self):
         return f"{self.radny} @ {self.sesja} = {'obecny' if self.obecny else 'nieobecny'}"
+
+
+class Komisja(models.Model):
+    nazwa = models.CharField(max_length=200)
+    opis = models.TextField(blank=True)
+    przewodniczacy = models.ForeignKey(
+        Uzytkownik,
+        on_delete=models.PROTECT,
+        related_name="komisje_przewodniczy",
+        limit_choices_to={"rola": "radny"},
+    )
+    czlonkowie = models.ManyToManyField(
+        Uzytkownik,
+        related_name="komisje",
+        blank=True,
+        limit_choices_to={"rola": "radny"},
+    )
+    aktywna = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["nazwa"]
+
+    def __str__(self):
+        return self.nazwa
+
+
+class KomisjaSesja(models.Model):
+    komisja = models.ForeignKey(Komisja, on_delete=models.CASCADE, related_name="sesje")
+    nazwa = models.CharField(max_length=200)
+    data = models.DateTimeField(default=timezone.now)
+    aktywna = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-data"]
+
+    def __str__(self):
+        return f"{self.komisja.nazwa}: {self.nazwa}"
+
+
+class KomisjaPunktObrad(models.Model):
+    sesja = models.ForeignKey(KomisjaSesja, on_delete=models.CASCADE, related_name="punkty")
+    numer = models.IntegerField()
+    tytul = models.CharField(max_length=300)
+    opis = models.TextField(blank=True)
+    aktywny = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["numer"]
+
+    def __str__(self):
+        return f"{self.numer}. {self.tytul}"
+
+
+class KomisjaWniosek(models.Model):
+    TYP_CHOICES = [
+        ("wniosek", "Wniosek"),
+        ("zapytanie", "Zapytanie"),
+        ("postulat", "Postulat"),
+    ]
+
+    komisja = models.ForeignKey(Komisja, on_delete=models.CASCADE, related_name="wnioski")
+    sesja = models.ForeignKey(KomisjaSesja, on_delete=models.SET_NULL, null=True, blank=True)
+    punkt_obrad = models.ForeignKey(KomisjaPunktObrad, on_delete=models.SET_NULL, null=True, blank=True)
+
+    autor = models.ForeignKey(Uzytkownik, on_delete=models.PROTECT, related_name="komisja_wnioski")
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default="wniosek")
+    tresc = models.TextField()
+    data = models.DateTimeField(auto_now_add=True)
+
+    # workflow do "centrali" (rada)
+    wyslany_do_rady = models.BooleanField(default=False)
+    data_wyslania = models.DateTimeField(null=True, blank=True)
+    zatwierdzony_przez_prezydium = models.BooleanField(default=False)
+    data_zatwierdzenia = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-data"]
+
+    def __str__(self):
+        return f"{self.get_typ_display()} ({self.komisja})"

@@ -1,0 +1,32 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{{ komisja.nazwa }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h3 class="mb-1">{{ komisja.nazwa }}</h3>
+    {% if komisja.opis %}<div class="text-muted">{{ komisja.opis }}</div>{% endif %}
+    <div class="small text-muted mt-1">Przewodniczący: {{ komisja.przewodniczacy.imie }} {{ komisja.przewodniczacy.nazwisko }}</div>
+  </div>
+  <div>
+    <a href="{% url 'komisja_wnioski' komisja.id %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-send me-1"></i> Wnioski / postulaty do rady
+    </a>
+  </div>
+</div>
+
+<h5 class="mb-2">Sesje komisji</h5>
+{% if sesje %}
+  <div class="list-group shadow-sm">
+    {% for s in sesje %}
+      <div class="list-group-item">
+        <div class="fw-semibold">{{ s.nazwa }}</div>
+        <div class="small text-muted">{{ s.data }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Brak sesji komisji.</div>
+{% endif %}
+{% endblock %}
