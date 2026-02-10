@@ -1,0 +1,59 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Wnioski (prezydium){% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Wnioski – panel prezydium</h3>
+
+{% if not sesja %}
+  <div class="alert alert-warning">Brak aktywnej sesji.</div>
+{% else %}
+  <div class="card mb-3 shadow-sm">
+    <div class="card-body d-flex justify-content-between flex-wrap">
+      <div>
+        <div class="fw-semibold">{{ sesja.nazwa }}</div>
+        {% if punkt %}
+          <div class="text-muted small">Filtr: aktywny punkt {{ punkt.numer }}. {{ punkt.tytul }}</div>
+        {% else %}
+          <div class="text-muted small">Brak aktywnego punktu – pokazuję wszystkie wnioski z sesji.</div>
+        {% endif %}
+      </div>
+      <span class="badge bg-success align-self-center">Sesja aktywna</span>
+    </div>
+  </div>
+
+  {% if wnioski %}
+    <div class="list-group shadow-sm">
+      {% for w in wnioski %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between flex-wrap">
+            <div>
+              <div class="fw-semibold">{{ w.radny.imie }} {{ w.radny.nazwisko }}</div>
+              <div class="small text-muted">{{ w.data }} • Punkt: {{ w.punkt_obrad.numer }}. {{ w.punkt_obrad.tytul }}</div>
+            </div>
+            <div class="text-end">
+              {% if w.zatwierdzony %}
+                <span class="badge bg-success">Zatwierdzony</span>
+              {% else %}
+                <span class="badge bg-secondary">Oczekuje</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mt-2">{{ w.tresc|linebreaksbr }}</div>
+
+          <form method="post" action="{% url 'wniosek_zatwierdz' w.id %}" class="mt-3">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm {% if w.zatwierdzony %}btn-outline-secondary{% else %}btn-outline-success{% endif %}">
+              {% if w.zatwierdzony %}Cofnij zatwierdzenie{% else %}Zatwierdź wniosek{% endif %}
+            </button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">Brak wniosków w aktywnej sesji.</div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

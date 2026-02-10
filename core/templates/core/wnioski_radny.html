@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Wnioski{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Wnioski</h3>
+
+{% if not sesja %}
+  <div class="alert alert-warning">Brak aktywnej sesji.</div>
+{% elif not punkt %}
+  <div class="alert alert-warning">Brak aktywnego punktu obrad. Poczekaj aż prezydium ustawi omawiany punkt.</div>
+{% else %}
+  <div class="card mb-3 shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between flex-wrap">
+        <div>
+          <div class="fw-semibold">{{ sesja.nazwa }}</div>
+          <div class="text-muted small">Punkt: {{ punkt.numer }}. {{ punkt.tytul }}</div>
+        </div>
+        <span class="badge bg-success align-self-center">Sesja aktywna</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header">Złóż wniosek do aktualnego punktu</div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Złóż wniosek</button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+<h5 class="mb-2">Twoje wnioski{% if sesja %} (aktywny okres: sesja){% endif %}</h5>
+
+{% if wnioski %}
+  <div class="list-group shadow-sm">
+    {% for w in wnioski %}
+      <div class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <div class="small text-muted">{{ w.data }}</div>
+          {% if w.zatwierdzony %}
+            <span class="badge bg-success">Zatwierdzony</span>
+          {% else %}
+            <span class="badge bg-secondary">Oczekuje</span>
+          {% endif %}
+        </div>
+        <div class="mt-2">{{ w.tresc|linebreaksbr }}</div>
+        <div class="small text-muted mt-2">Punkt: {{ w.punkt_obrad.numer }}. {{ w.punkt_obrad.tytul }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Nie złożyłeś jeszcze żadnych wniosków.</div>
+{% endif %}
+
+{% endblock %}

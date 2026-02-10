@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods, require_POST
-from django.db.models import Count
+from django.http import JsonResponse, HttpResponseForbidden
+from django.views.decorators.http import require_http_methods, require_POST, require_GET
+from django.db.models import Count, Q
+from django.utils import timezone
 
-from .models import Sesja, PunktObrad, Glosowanie, Glos
+from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek
 from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm
 
 
@@ -279,6 +280,7 @@ def radny(request):
     }
     return render(request, "core/radny.html", context)
 
+
 # --------------------------------------------------
 # Operacje na głosowaniach
 # --------------------------------------------------
@@ -359,9 +361,6 @@ def wyniki_publiczne(request, sesja_id=None):
 
     return render(request, "core/wyniki.html", {"punkty": punkty})
 
-from django.views.decorators.http import require_GET
-from django.utils import timezone
-from django.db.models import Q
 
 @login_required
 def sesja_ekran(request, sesja_id):
@@ -371,6 +370,7 @@ def sesja_ekran(request, sesja_id):
     sesja = get_object_or_404(Sesja, id=sesja_id)
     return render(request, "core/sesja_ekran.html", {"sesja": sesja})
 
+
 @require_GET
 def api_aktywny_punkt(request, sesja_id):
     """
@@ -379,10 +379,8 @@ def api_aktywny_punkt(request, sesja_id):
     """
     sesja = get_object_or_404(Sesja, id=sesja_id)
 
-    # Tu możesz dopasować logikę wyboru aktywnego punktu:
-    # np. dodatkowe pole 'aktywny' w modelu PunktObrad.
     punkt = (
-        sesja.punkty.filter(Q(aktywny=True) | Q())  # TODO: dopasuj do swojej logiki
+        sesja.punkty.filter(Q(aktywny=True) | Q())
         .select_related("glosowanie")
         .order_by("numer")
         .first()
@@ -422,6 +420,7 @@ def api_aktywny_punkt(request, sesja_id):
 
     return JsonResponse(data)
 
+
 @login_required
 @require_POST
 def ustaw_punkt_aktywny(request, punkt_id):
@@ -453,3 +452,114 @@ def prezydium_agenda(request):
         "sesja": sesja,
         "punkty": punkty,
     })
+
+
+# --------------------------------------------------
+# Wnioski
+# --------------------------------------------------
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def wnioski_radny(request):
+    """Panel radnego do składania i podglądu własnych wniosków w aktywnej sesji.
+
+    Wniosek jest składany do aktualnie aktywnego punktu obrad.
+    """
+    if request.user.rola != "radny":
+        return redirect("prezydium_dashboard")
+
+    sesja = Sesja.objects.filter(aktywna=True).first()
+    punkt = None
+
+    if sesja:
+        punkt = sesja.punkty.filter(aktywny=True).order_by("numer").first()
+
+    if not sesja or not punkt:
+        form = WniosekForm()
+        wnioski = Wniosek.objects.none()
+        return render(
+            request,
+            "core/wnioski_radny.html",
+            {
+                "sesja": sesja,
+                "punkt": punkt,
+                "form": form,
+                "wnioski": wnioski,
+            },
+        )
+
+    if request.method == "POST":
+        form = WniosekForm(request.POST)
+        if form.is_valid():
+            wniosek = form.save(commit=False)
+            wniosek.punkt_obrad = punkt
+            wniosek.radny = request.user
+            wniosek.save()
+            messages.success(request, "Wniosek został złożony.")
+            return redirect("wnioski_radny")
+    else:
+        form = WniosekForm()
+
+    wnioski = (
+        Wniosek.objects.filter(punkt_obrad__sesja=sesja, radny=request.user)
+        .select_related("punkt_obrad", "radny")
+        .order_by("-data")
+    )
+
+    return render(
+        request,
+        "core/wnioski_radny.html",
+        {
+            "sesja": sesja,
+            "punkt": punkt,
+            "form": form,
+            "wnioski": wnioski,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def wnioski_prezidium(request):
+    """Panel prezydium do przeglądu i zatwierdzania wniosków w aktywnej sesji."""
+    if request.user.rola != "prezydium":
+        return redirect("radny")
+
+    sesja = Sesja.objects.filter(aktywna=True).first()
+    punkt = None
+    if sesja:
+        punkt = sesja.punkty.filter(aktywny=True).order_by("numer").first()
+
+    if not sesja:
+        return render(request, "core/wnioski_prezidium.html", {"sesja": None, "punkt": None, "wnioski": []})
+
+    qs = Wniosek.objects.filter(punkt_obrad__sesja=sesja).select_related("punkt_obrad", "radny")
+    if punkt:
+        # domyślnie filtruj do aktywnego punktu, jeśli istnieje
+        qs = qs.filter(punkt_obrad=punkt)
+
+    wnioski = qs.order_by("zatwierdzony", "-data")
+
+    return render(
+        request,
+        "core/wnioski_prezidium.html",
+        {
+            "sesja": sesja,
+            "punkt": punkt,
+            "wnioski": wnioski,
+        },
+    )
+
+
+@login_required
+@require_POST
+def wniosek_zatwierdz(request, wniosek_id):
+    """Zatwierdź/odrzuć wniosek (toggle) - tylko prezydium."""
+    if request.user.rola != "prezydium":
+        return HttpResponseForbidden("Brak uprawnień")
+
+    wniosek = get_object_or_404(Wniosek, id=wniosek_id)
+    wniosek.zatwierdzony = not wniosek.zatwierdzony
+    wniosek.save(update_fields=["zatwierdzony"])
+
+    return redirect("wnioski_prezidium")

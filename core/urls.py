@@ -94,7 +94,9 @@ path(
     name="ustaw_punkt_aktywny",
 ),
 
-
-
+    # WNIOSKI
+    path("radny/wnioski/", views.wnioski_radny, name="wnioski_radny"),
+    path("prezydium/wnioski/", views.wnioski_prezidium, name="wnioski_prezidium"),
+    path("prezydium/wnioski/<int:wniosek_id>/zatwierdz/", views.wniosek_zatwierdz, name="wniosek_zatwierdz"),
 
 ]
