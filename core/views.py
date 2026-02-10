@@ -608,3 +608,34 @@ def api_glosowanie_status(request, glosowanie_id):
     """API: zwraca status głosowania (otwarte/closed)."""
     glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
     return JsonResponse({"otwarte": glosowanie.otwarte})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def reset_danych_testowych(request):
+    """Reset danych sesji/głosowań (tylko do testów) – usuwa wszystkie sesje i dane powiązane.
+
+    Bezpieczniki:
+    - tylko rola prezydium
+    - dodatkowe potwierdzenie frazą w formularzu
+    """
+    if request.user.rola != "prezydium":
+        return redirect("radny")
+
+    if request.method == "POST":
+        confirm = (request.POST.get("confirm") or "").strip()
+        if confirm != "USUN WSZYSTKO":
+            messages.error(request, "Aby wykonać reset wpisz dokładnie: USUN WSZYSTKO")
+            return redirect("reset_danych_testowych")
+
+        # kasuj od najniższych zależności
+        Glos.objects.all().delete()
+        Wniosek.objects.all().delete()
+        Glosowanie.objects.all().delete()
+        PunktObrad.objects.all().delete()
+        Sesja.objects.all().delete()
+
+        messages.success(request, "Usunięto wszystkie sesje, punkty, głosowania, głosy i wnioski. Możesz zacząć od zera.")
+        return redirect("prezydium_sesje")
+
+    return render(request, "core/reset_danych_testowych.html")

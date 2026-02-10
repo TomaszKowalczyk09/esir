@@ -103,4 +103,6 @@ path(
     path("prezydium/wnioski/", views.wnioski_prezidium, name="wnioski_prezidium"),
     path("prezydium/wnioski/<int:wniosek_id>/zatwierdz/", views.wniosek_zatwierdz, name="wniosek_zatwierdz"),
 
+    # TESTY / reset danych
+    path("prezydium/reset/", views.reset_danych_testowych, name="reset_danych_testowych"),
 ]
