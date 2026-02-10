@@ -8,18 +8,35 @@
 {% if punkty %}
   {% for punkt in punkty %}
     <div class="card mb-3 shadow-sm">
-      <div class="card-header">
-        <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
+          {% if punkt.glosowanie %}
+            <span class="badge bg-secondary ms-2">{{ punkt.glosowanie.nazwa }}</span>
+            <span class="badge bg-outline ms-1"></span>
+          {% endif %}
+        </div>
         {% if punkt.glosowanie %}
-          <span class="badge bg-secondary ms-2">
-            {{ punkt.glosowanie.nazwa }}
-          </span>
+          <div class="small text-muted">
+            {{ punkt.glosowanie.get_jawnosc_display }} • {{ punkt.glosowanie.get_wiekszosc_display }}
+          </div>
         {% endif %}
       </div>
+
       <div class="card-body">
         {% if punkt.glosowanie %}
-          <div id="wyniki-public-{{ punkt.glosowanie.id }}">
-            <em>Ładowanie wyników...</em>
+          <div class="row g-3">
+            <div class="col-12 col-xl-4">
+              <div id="wyniki-public-{{ punkt.glosowanie.id }}" class="fs-5">
+                <em>Ładowanie wyników...</em>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-8">
+              <div id="lista-public-{{ punkt.glosowanie.id }}" class="border rounded p-2 bg-light">
+                <div class="text-muted small">Ładowanie listy imiennej...</div>
+              </div>
+            </div>
           </div>
         {% else %}
           <span class="text-muted">Brak głosowania dla tego punktu.</span>
@@ -34,25 +51,117 @@
 {% endif %}
 {% endblock %}
 
+{% block extra_head %}
+<style>
+  /* Lista imienna – układ wielokolumnowy, zoptymalizowany pod rzutnik */
+  .rollcall {
+    column-gap: 18px;
+  }
+  @media (min-width: 1200px) {
+    .rollcall { columns: 3; }
+  }
+  @media (min-width: 1600px) {
+    .rollcall { columns: 4; }
+  }
+  .rollcall-item {
+    break-inside: avoid;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 2px 0;
+    border-bottom: 1px dashed rgba(0,0,0,.07);
+    font-size: 14px;
+  }
+  .rollcall-name {
+    font-weight: 600;
+    color: #212529;
+    padding-right: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rollcall-vote {
+    font-weight: 700;
+    min-width: 88px;
+    text-align: right;
+  }
+  .vote-za { color: #198754; }
+  .vote-przeciw { color: #dc3545; }
+  .vote-wstrzymuje { color: #ffc107; }
+  .vote-brak { color: #6c757d; font-weight: 600; }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 $(function () {
-  // Expression expected.
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"]/g, function(c) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);
+    });
+  }
+
+  function renderRollcall(items) {
+    let html = '<div class="d-flex justify-content-between align-items-center mb-2">' +
+      '<div class="fw-semibold">Lista imienna (radni)</div>' +
+      '<div class="text-muted small">Nazwisko, imię • głos</div>' +
+      '</div>';
+    html += '<div class="rollcall">';
+
+    for (const it of items) {
+      const nazw = escapeHtml(it.nazwisko);
+      const imie = escapeHtml(it.imie);
+      const glos = it.glos;
+
+      let voteText = 'BRAK';
+      let voteClass = 'vote-brak';
+      if (glos === 'za') { voteText = 'ZA'; voteClass = 'vote-za'; }
+      else if (glos === 'przeciw') { voteText = 'PRZECIW'; voteClass = 'vote-przeciw'; }
+      else if (glos === 'wstrzymuje') { voteText = 'WSTRZ.'; voteClass = 'vote-wstrzymuje'; }
+
+      html += '<div class="rollcall-item">' +
+        '<div class="rollcall-name">' + nazw + ', ' + imie + '</div>' +
+        '<div class="rollcall-vote ' + voteClass + '">' + voteText + '</div>' +
+      '</div>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
   {% for punkt in punkty %}
     {% if punkt.glosowanie %}
       (function(glosowanieId) {
-        function odswiez() {
+        function odswiezWyniki() {
           $.get("{% url 'api_wyniki' punkt.glosowanie.id %}", function (data) {
+            if (data.tajne && data.otwarte) {
+              $('#wyniki-public-' + glosowanieId).html('<strong>Głosowanie tajne</strong> — oddano: <span class="fw-bold">' + (data.oddano || 0) + '</span>');
+              $('#lista-public-' + glosowanieId).html('<div class="text-muted">Głosowanie tajne — lista imienna niedostępna.</div>');
+              return;
+            }
+
             $('#wyniki-public-' + glosowanieId).html(
-              '<strong>Wyniki:</strong> ' +
-              'Za: <span class="text-success fw-bold">' + data.za + '</span> | ' +
-              'Przeciw: <span class="text-danger fw-bold">' + data.przeciw + '</span> | ' +
-              'Wstrzymuję się: <span class="text-warning fw-bold">' + data.wstrzymuje + '</span>'
+              '<div class="mb-1"><strong>Wyniki:</strong></div>' +
+              '<div>Za: <span class="text-success fw-bold">' + data.za + '</span></div>' +
+              '<div>Przeciw: <span class="text-danger fw-bold">' + data.przeciw + '</span></div>' +
+              '<div>Wstrzymuję się: <span class="text-warning fw-bold">' + data.wstrzymuje + '</span></div>'
             );
           });
         }
-        odswiez();
-        setInterval(odswiez, 2000);
+
+        function odswiezListe() {
+          $.get("{% url 'api_lista_glosow_jawne' punkt.glosowanie.id %}", function (data) {
+            $('#lista-public-' + glosowanieId).html(renderRollcall(data.items || []));
+          }).fail(function () {
+            // np. gdy głosowanie jest tajne
+            $('#lista-public-' + glosowanieId).html('<div class="text-muted">Lista imienna niedostępna dla tego głosowania.</div>');
+          });
+        }
+
+        odswiezWyniki();
+        odswiezListe();
+        setInterval(odswiezWyniki, 2000);
+        setInterval(odswiezListe, 2000);
       })({{ punkt.glosowanie.id }});
     {% endif %}
   {% endfor %}

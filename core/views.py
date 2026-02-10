@@ -385,6 +385,43 @@ def api_wyniki(request, glosowanie_id):
     })
 
 
+@require_GET
+def api_lista_glosow_jawne(request, glosowanie_id):
+    """API: lista głosów imiennych dla głosowania jawnego.
+
+    Zwraca wszystkich uprawnionych do głosowania (radni + prezydium)
+    w kolejności: nazwisko, imię wraz z informacją jak zagłosowali:
+    za/przeciw/wstrzymuje lub null (brak).
+
+    Dla głosowań tajnych zwraca 403.
+    """
+    glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
+    if glosowanie.jawnosc != "jawne":
+        return JsonResponse({"error": "Głosowanie nie jest jawne"}, status=403)
+
+    uprawnieni = Uzytkownik.objects.filter(rola__in=["radny", "prezydium"]).order_by("nazwisko", "imie")
+    glosy = {
+        g.uzytkownik_id: g.glos
+        for g in Glos.objects.filter(glosowanie=glosowanie).select_related("uzytkownik")
+    }
+
+    items = []
+    for r in uprawnieni:
+        items.append({
+            "id": r.id,
+            "imie": r.imie,
+            "nazwisko": r.nazwisko,
+            "rola": r.rola,
+            "glos": glosy.get(r.id),
+        })
+
+    return JsonResponse({
+        "jawne": True,
+        "glosowanie_id": glosowanie.id,
+        "items": items,
+    })
+
+
 # --------------------------------------------------
 # Widok wyników publicznych
 # --------------------------------------------------

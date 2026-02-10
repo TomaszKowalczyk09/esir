@@ -52,9 +52,7 @@ class Command(BaseCommand):
             ("Tomasz", "Kowalczyk", "radny"),
             ("Łukasz", "Majka", "radny"),
             ("Kacper", "Romuk", "radny"),
-            ("Gabriela", "Ulitko", "radny"),
-            # Julia Czajka jest w prezydium
-        ]
+            ("Gabriela", "Ulitko", "radny"),        ]
 
         created = []
         skipped = []

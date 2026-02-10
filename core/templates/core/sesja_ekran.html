@@ -84,6 +84,91 @@
         align-items: center;
         font-size: 18px;
       }
+      .ekran-rollcall-wrap {
+        margin-top: 18px;
+        background: #ffffff;
+        border: 1px solid #dfe3e7;
+        border-radius: 10px;
+        padding: 0;
+        overflow: hidden;
+      }
+      .ekran-rollcall-head {
+        background: #0b5ed7;
+        color: #fff;
+        padding: 10px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .ekran-rollcall-head .title {
+        font-weight: 800;
+        font-size: 20px;
+        letter-spacing: .2px;
+      }
+      .ekran-rollcall-head .sub {
+        font-size: 16px;
+        opacity: .9;
+      }
+      .ekran-rollcall-banner {
+        background: #e55353;
+        color: #fff;
+        font-weight: 900;
+        letter-spacing: 1px;
+        text-align: center;
+        padding: 8px 16px;
+        font-size: 18px;
+      }
+      .ekran-rollcall-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .ekran-rollcall-col {
+        border-right: 1px solid #e9ecef;
+      }
+      .ekran-rollcall-col:last-child {
+        border-right: 0;
+      }
+      .ekran-rollcall-row {
+        display: grid;
+        grid-template-columns: 52px 1fr 140px;
+        align-items: center;
+        padding: 7px 12px;
+        border-bottom: 1px solid #edf0f2;
+        font-size: 18px;
+      }
+      .ekran-rollcall-row:nth-child(even) {
+        background: #f8f9fa;
+      }
+      .ekran-rollcall-lp {
+        font-weight: 800;
+        color: #495057;
+        text-align: right;
+        padding-right: 10px;
+      }
+      .ekran-rollcall-name {
+        font-weight: 800;
+        color: #212529;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ekran-rollcall-vote {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .vote-badge {
+        display: inline-block;
+        min-width: 120px;
+        text-align: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 900;
+        font-size: 16px;
+      }
+      .vb-za { background: rgba(25,135,84,.15); color: #198754; border: 1px solid rgba(25,135,84,.35); }
+      .vb-przeciw { background: rgba(220,53,69,.12); color: #dc3545; border: 1px solid rgba(220,53,69,.30); }
+      .vb-wstrzymuje { background: rgba(255,193,7,.18); color: #8a6d00; border: 1px solid rgba(255,193,7,.45); }
+      .vb-brak { background: rgba(108,117,125,.10); color: #6c757d; border: 1px solid rgba(108,117,125,.25); }
     </style>
 </head>
 <body>
@@ -146,6 +231,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Lista imienna (jawne) -->
+  <div id="ekran-rollcall-wrap" class="ekran-rollcall-wrap" style="display:none;">
+    <div class="ekran-rollcall-head">
+      <div class="title">Lista imienna</div>
+      <div class="sub">Nazwisko, imię • głos</div>
+    </div>
+    <div class="ekran-rollcall-banner" id="ekran-rollcall-banner">GŁOSOWANIE W TRAKCIE</div>
+    <div class="ekran-rollcall-grid">
+      <div class="ekran-rollcall-col"><div id="ekran-rollcall-left"></div></div>
+      <div class="ekran-rollcall-col"><div id="ekran-rollcall-right"></div></div>
+    </div>
+  </div>
 </div>
 
 <div class="ekran-bottombar">
@@ -170,6 +268,63 @@
   aktualizujCzas();
   setInterval(aktualizujCzas, 1000);
 
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>\"]/g, function(c) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c] || c);
+    });
+  }
+
+  function normalize(s) {
+    return String(s || '')
+      .toLocaleLowerCase('pl-PL')
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '');
+  }
+
+  function voteMeta(glos) {
+    if (glos === 'za') return {t: 'ZA', c: 'vb-za'};
+    if (glos === 'przeciw') return {t: 'PRZECIW', c: 'vb-przeciw'};
+    if (glos === 'wstrzymuje') return {t: 'WSTRZYM.', c: 'vb-wstrzymuje'};
+    return {t: 'BRAK', c: 'vb-brak'};
+  }
+
+  function renderRollcall(list) {
+    const items = [...(list || [])].sort((a, b) => {
+      const an = normalize(a.nazwisko);
+      const bn = normalize(b.nazwisko);
+      if (an < bn) return -1;
+      if (an > bn) return 1;
+      const ai = normalize(a.imie);
+      const bi = normalize(b.imie);
+      if (ai < bi) return -1;
+      if (ai > bi) return 1;
+      return 0;
+    });
+
+    const half = Math.ceil(items.length / 2);
+    const left = items.slice(0, half);
+    const right = items.slice(half);
+
+    function build(colItems, startIndex) {
+      let html = '';
+      colItems.forEach((it, idx) => {
+        const lp = startIndex + idx + 1;
+        const nazw = escapeHtml(it.nazwisko);
+        const imie = escapeHtml(it.imie);
+        const v = voteMeta(it.glos);
+        html += '<div class="ekran-rollcall-row">' +
+          '<div class="ekran-rollcall-lp">' + lp + '.</div>' +
+          '<div class="ekran-rollcall-name">' + nazw + ' ' + imie + '</div>' +
+          '<div class="ekran-rollcall-vote"><span class="vote-badge ' + v.c + '">' + v.t + '</span></div>' +
+        '</div>';
+      });
+      return html;
+    }
+
+    $('#ekran-rollcall-left').html(build(left, 0));
+    $('#ekran-rollcall-right').html(build(right, half));
+  }
+
   // Ładowanie aktywnego punktu i wyników
   function zaladujAktywnyPunkt() {
     $.get("{% url 'api_aktywny_punkt' sesja.id %}", function (data) {
@@ -177,12 +332,15 @@
       const subEl = $('#ekran-punkt-sub');
       const opisEl = $('#ekran-opis');
       const wynikiBox = $('#ekran-wyniki');
+      const rollWrap = $('#ekran-rollcall-wrap');
+      const rollEl = $('#ekran-rollcall');
 
       if (!data.aktywny) {
         tytulEl.text('Brak aktywnego punktu');
         subEl.text('');
         opisEl.text('');
         wynikiBox.hide();
+        rollWrap.hide();
         return;
       }
 
@@ -191,31 +349,66 @@
       opisEl.text(data.opis || '');
 
       if (data.glosowanie_id) {
+        // Zawsze ustaw nazwę głosowania
         $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
-        const za = data.za || 0;
-        const przeciw = data.przeciw || 0;
-        const wstrzymuje = data.wstrzymuje || 0;
-        const suma = za + przeciw + wstrzymuje;
 
-        function proc(x) {
-          return suma > 0 ? Math.round(x * 100 / suma) : 0;
-        }
+        // Najpierw próbujemy pobrać wyniki (API zwraca też flagi tajne/otwarte)
+        $.get("/api/wyniki/" + data.glosowanie_id + "/", function (wyn) {
+          const tajne = !!wyn.tajne;
+          const otwarte = !!wyn.otwarte;
 
-        $('#ekran-za-liczba').text(za);
-        $('#ekran-przeciw-liczba').text(przeciw);
-        $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
+          if (otwarte) {
+            // W trakcie: NIE pokazujemy wyników. Jeśli jawne -> pokazujemy tylko listę imienną.
+            wynikiBox.hide();
 
-        $('#ekran-za-proc').text(proc(za));
-        $('#ekran-przeciw-proc').text(proc(przeciw));
-        $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
+            if (!tajne) {
+              $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
+                renderRollcall(rollData.items || []);
+                rollWrap.show();
+              }).fail(function () {
+                rollWrap.hide();
+              });
+            } else {
+              // tajne: w trakcie bez listy i bez wyników
+              rollWrap.hide();
+            }
 
-        $('#ekran-za-prog').css('width', proc(za) + '%');
-        $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
-        $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
+            return;
+          }
 
-        wynikiBox.show();
+          // Po zamknięciu: pokazujemy wyniki zbiorcze, a listę chowamy.
+          rollWrap.hide();
+
+          const za = wyn.za || 0;
+          const przeciw = wyn.przeciw || 0;
+          const wstrzymuje = wyn.wstrzymuje || 0;
+          const suma = za + przeciw + wstrzymuje;
+
+          function proc(x) {
+            return suma > 0 ? Math.round(x * 100 / suma) : 0;
+          }
+
+          $('#ekran-za-liczba').text(za);
+          $('#ekran-przeciw-liczba').text(przeciw);
+          $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
+
+          $('#ekran-za-proc').text(proc(za));
+          $('#ekran-przeciw-proc').text(proc(przeciw));
+          $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
+
+          $('#ekran-za-prog').css('width', proc(za) + '%');
+          $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
+          $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
+
+          wynikiBox.show();
+        }).fail(function () {
+          // Jeśli coś nie działa z API, nie pokazujemy nic wrażliwego
+          wynikiBox.hide();
+          rollWrap.hide();
+        });
       } else {
         wynikiBox.hide();
+        rollWrap.hide();
       }
     });
   }
