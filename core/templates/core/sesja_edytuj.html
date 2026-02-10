@@ -53,59 +53,51 @@
       {% for punkt in punkty %}
       <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex justify-content-between align-items-start">
             <div>
-              <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong><br>
-              {% if punkt.opis %}
-                <span class="text-muted small">{{ punkt.opis }}</span>
-              {% endif %}
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                  <strong>{{ punkt.numer }}. {{ punkt.tytul }}</strong>
-                  {% if punkt.aktywny %}
-                    <span class="badge bg-primary ms-1">Aktualnie omawiany</span>
-                  {% endif %}
-                  {% if punkt.opis %}
-                    <div class="text-muted small">{{ punkt.opis }}</div>
-                  {% endif %}
-                </div>
-                <div>
-                  <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                      Ustaw jako aktywny
-                    </button>
-                  </form>
-                </div>
+              <div class="fw-semibold">
+                {{ punkt.numer }}. {{ punkt.tytul }}
+                {% if punkt.aktywny %}
+                  <span class="badge bg-primary ms-1">Aktualnie omawiany</span>
+                {% endif %}
               </div>
+              {% if punkt.opis %}
+                <div class="text-muted small">{{ punkt.opis }}</div>
+              {% endif %}
             </div>
+
+            <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-primary">
+                Ustaw jako aktywny
+              </button>
+            </form>
           </div>
 
+          <hr class="my-3" />
+
           {% if punkt.glosowanie %}
-            <div class="mt-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center">
               <div>
-                <span class="text-muted small">Głosowanie:</span><br>
-                <strong>{{ punkt.glosowanie.nazwa }}</strong>
+                <div class="text-muted small">Głosowanie</div>
+                <div class="fw-semibold">{{ punkt.glosowanie.nazwa }}</div>
               </div>
               <span class="badge bg-{% if punkt.glosowanie.otwarte %}success{% else %}secondary{% endif %}">
                 {% if punkt.glosowanie.otwarte %}Otwarte{% else %}Zamknięte{% endif %}
               </span>
             </div>
           {% else %}
-            <div class="mt-2">
-              <form method="post" class="d-flex gap-2 align-items-center">
-                {% csrf_token %}
-                <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
-                <div class="flex-grow-1">
-                  {{ glosowanie_form.nazwa }}
-                </div>
-                <button type="submit" name="dodaj_glosowanie"
-                        class="btn btn-outline-success btn-sm">
-                  <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
-                </button>
-              </form>
-              <small class="text-muted">Brak głosowania dla tego punktu.</small>
-            </div>
+            <form method="post" class="d-flex gap-2 align-items-center">
+              {% csrf_token %}
+              <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
+              <div class="flex-grow-1">
+                {{ glosowanie_form.nazwa }}
+              </div>
+              <button type="submit" name="dodaj_glosowanie" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
+              </button>
+            </form>
+            <div class="text-muted small mt-2">Brak głosowania dla tego punktu.</div>
           {% endif %}
         </div>
       </div>
