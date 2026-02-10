@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -874,3 +874,150 @@ def komisja_wniosek_wyslij_do_rady(request, wniosek_id):
 
     messages.success(request, "Wniosek komisji został wysłany do rady.")
     return redirect("komisja_skrzynka_rady")
+
+
+@login_required
+@require_GET
+def wnioski_radny_pdf(request):
+    if request.user.rola != "radny":
+        return redirect("prezydium_dashboard")
+
+    wnioski = (
+        Wniosek.objects.filter(radny=request.user)
+        .select_related("punkt_obrad", "punkt_obrad__sesja", "radny")
+        .order_by("-data")
+    )
+
+    return _wnioski_pdf_response(
+        title=f"Wnioski radnego: {request.user.imie} {request.user.nazwisko}",
+        wnioski=list(wnioski),
+        filename="wnioski_moje.pdf",
+    )
+
+
+@login_required
+@require_GET
+def wniosek_pdf(request, wniosek_id):
+    """PDF pojedynczego wniosku.
+
+    Dostęp:
+    - radny: tylko własny
+    - prezydium: wszystkie
+    """
+    w = get_object_or_404(Wniosek, id=wniosek_id)
+
+    if request.user.rola == "radny" and w.radny_id != request.user.id:
+        return HttpResponseForbidden("Brak uprawnień")
+    if request.user.rola not in ["radny", "prezydium"]:
+        return HttpResponseForbidden("Brak uprawnień")
+
+    safe_sig = (w.sygnatura or str(w.id)).replace("/", "-")
+    return _wnioski_pdf_response(
+        title=f"Wniosek {w.sygnatura}",
+        wnioski=[w],
+        filename=f"wniosek_{safe_sig}.pdf",
+    )
+
+
+def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
+    """Generuje PDF dla listy wniosków. Wykorzystuje ReportLab."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
+
+    # fonty z obsługą polskich znaków (TTF)
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # Rejestracja fontu (jeśli plik istnieje)
+    font_regular = "Helvetica"
+    font_bold = "Helvetica-Bold"
+    try:
+        import os
+        from django.conf import settings
+
+        font_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "fonts", "DejaVuSans.ttf")
+        font_bold_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "fonts", "DejaVuSans-Bold.ttf")
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
+            font_regular = "DejaVuSans"
+        if os.path.exists(font_bold_path):
+            pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", font_bold_path))
+            font_bold = "DejaVuSans-Bold"
+    except Exception:
+        # fallback do Helvetica (bez PL znaków) jeśli coś pójdzie nie tak
+        pass
+
+    y = height - 20 * mm
+    c.setFont(font_bold, 14)
+    c.drawString(20 * mm, y, title)
+    y -= 10 * mm
+
+    c.setFont(font_regular, 9)
+    c.drawString(20 * mm, y, f"Wygenerowano: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
+    y -= 12 * mm
+
+    for w in wnioski:
+        if y < 25 * mm:
+            c.showPage()
+            y = height - 20 * mm
+
+        c.setFont(font_bold, 11)
+        c.drawString(20 * mm, y, f"Sygnatura: {w.sygnatura}   |   Typ: {w.get_typ_display()}   |   Data: {w.data.strftime('%Y-%m-%d %H:%M')}")
+        y -= 6 * mm
+
+        c.setFont(font_regular, 10)
+        c.drawString(20 * mm, y, f"Autor: {w.radny.imie} {w.radny.nazwisko}")
+        y -= 6 * mm
+
+        if w.punkt_obrad_id:
+            sesja_nazwa = getattr(getattr(w.punkt_obrad, "sesja", None), "nazwa", "")
+            c.setFont(font_regular, 9)
+            c.drawString(20 * mm, y, f"Sesja: {sesja_nazwa} | Punkt: {w.punkt_obrad.numer}. {w.punkt_obrad.tytul}")
+            y -= 6 * mm
+        else:
+            c.setFont(font_regular, 9)
+            c.drawString(20 * mm, y, "Poza sesją")
+            y -= 6 * mm
+
+        # treść (proste łamanie wierszy)
+        c.setFont(font_regular, 10)
+        max_chars = 110
+        text = (w.tresc or "").replace("\r\n", "\n").replace("\r", "\n")
+        for para in text.split("\n"):
+            para = para.strip()
+            if not para:
+                y -= 4 * mm
+                continue
+            while len(para) > max_chars:
+                line = para[:max_chars]
+                para = para[max_chars:]
+                c.drawString(20 * mm, y, line)
+                y -= 5 * mm
+                if y < 25 * mm:
+                    c.showPage()
+                    y = height - 20 * mm
+                    c.setFont(font_regular, 10)
+            c.drawString(20 * mm, y, para)
+            y -= 5 * mm
+            if y < 25 * mm:
+                c.showPage()
+                y = height - 20 * mm
+                c.setFont(font_regular, 10)
+
+        y -= 6 * mm
+
+    c.showPage()
+    c.save()
+
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp

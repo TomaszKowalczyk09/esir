@@ -105,6 +105,8 @@ path(
 
     # WNIOSKI
     path("radny/wnioski/", views.wnioski_radny, name="wnioski_radny"),
+    path("radny/wnioski/pdf/", views.wnioski_radny_pdf, name="wnioski_radny_pdf"),
+    path("wnioski/<int:wniosek_id>/pdf/", views.wniosek_pdf, name="wniosek_pdf"),
     path("prezydium/wnioski/", views.wnioski_prezidium, name="wnioski_prezidium"),
     path("prezydium/wnioski/<int:wniosek_id>/zatwierdz/", views.wniosek_zatwierdz, name="wniosek_zatwierdz"),
 

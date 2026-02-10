@@ -5,6 +5,10 @@
 {% block content %}
 <h3 class="mb-3">Wnioski</h3>
 
+<div class="d-flex justify-content-end mb-3">
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'wnioski_radny_pdf' %}">Pobierz PDF (wszystkie)</a>
+</div>
+
 {% if sesja and punkt %}
   <div class="card mb-3 shadow-sm">
     <div class="card-body">
@@ -62,6 +66,9 @@
             <div class="small text-muted">{{ w.data }}</div>
           </div>
           <div class="text-end">
+            <div class="mb-1">
+              <a class="btn btn-outline-secondary btn-sm" href="{% url 'wniosek_pdf' w.id %}">PDF</a>
+            </div>
             {% if w.zatwierdzony %}
               <span class="badge bg-success">Zatwierdzony</span>
             {% else %}
