@@ -107,6 +107,23 @@
 {% block extra_js %}
 <script>
 $(function () {
+  // auto-otwieranie panelu pełnoekranowego dla nowych/otwartych głosowań
+  function otworzEkranGlosowania(glosowanieId) {
+    const key = 'opened_glosowanie_' + glosowanieId;
+    if (sessionStorage.getItem(key) === '1') return;
+
+    sessionStorage.setItem(key, '1');
+    const url = "{% url 'glosowanie_ekran' 0 %}".replace('/0/', '/' + glosowanieId + '/');
+    window.open(url, '_blank');
+  }
+
+  {% for glosowanie in glosowania %}
+    // jeśli głosowanie jest otwarte, otwórz ekran (tylko raz na sesję przeglądarki)
+    {% if glosowanie.otwarte %}
+      otworzEkranGlosowania({{ glosowanie.id }});
+    {% endif %}
+  {% endfor %}
+
   // '(' expected. 
   {% for glosowanie in glosowania %}
   function odswiezWyniki{{ glosowanie.id }}() {

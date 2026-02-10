@@ -304,14 +304,26 @@ def toggle_glosowanie(request, glosowanie_id):
 def oddaj_glos(request, glosowanie_id):
     """
     Radny oddaje głos – blokada wielokrotnego głosowania.
+
+    Zwraca JSON dla żądań AJAX, a dla zwykłych POST-ów zwraca czytelny komunikat HTML.
     """
     glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
+
+    def is_ajax(req):
+        return req.headers.get("x-requested-with") == "XMLHttpRequest"
+
     if not glosowanie.otwarte:
-        return JsonResponse({"error": "Głosowanie zamknięte"})
+        if is_ajax(request):
+            return JsonResponse({"error": "Głosowanie zamknięte"})
+        messages.error(request, "Głosowanie jest zamknięte.")
+        return redirect("radny")
 
     wartosc = request.POST.get("glos")
     if wartosc not in ["za", "przeciw", "wstrzymuje"]:
-        return JsonResponse({"error": "Nieprawidłowa wartość głosu"})
+        if is_ajax(request):
+            return JsonResponse({"error": "Nieprawidłowa wartość głosu"})
+        messages.error(request, "Nieprawidłowa wartość głosu.")
+        return redirect("radny")
 
     glos, created = Glos.objects.get_or_create(
         glosowanie=glosowanie,
@@ -320,9 +332,16 @@ def oddaj_glos(request, glosowanie_id):
     )
 
     if not created:
-        return JsonResponse({"error": "Już oddałeś głos w tym głosowaniu"})
+        if is_ajax(request):
+            return JsonResponse({"error": "Już oddałeś głos w tym głosowaniu"})
+        messages.warning(request, "Już oddałeś głos w tym głosowaniu.")
+        return redirect("radny")
 
-    return JsonResponse({"success": True})
+    if is_ajax(request):
+        return JsonResponse({"success": True})
+
+    messages.success(request, "Głos został zapisany.")
+    return redirect("radny")
 
 
 def api_wyniki(request, glosowanie_id):
@@ -563,3 +582,29 @@ def wniosek_zatwierdz(request, wniosek_id):
     wniosek.save(update_fields=["zatwierdzony"])
 
     return redirect("wnioski_prezidium")
+
+
+@login_required
+def glosowanie_ekran(request, glosowanie_id):
+    """Pełnoekranowy ekran głosowania (wyniki na żywo) – tylko dla radnych."""
+    if request.user.rola != "radny":
+        messages.info(request, "Ekran pełnoekranowy jest dostępny tylko dla radnych.")
+        return redirect("panel")
+
+    glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
+    punkt = glosowanie.punkt_obrad
+    sesja = punkt.sesja
+
+    return render(
+        request,
+        "core/glosowanie_ekran.html",
+        {"sesja": sesja, "punkt": punkt, "glosowanie": glosowanie},
+    )
+
+
+@require_GET
+@login_required
+def api_glosowanie_status(request, glosowanie_id):
+    """API: zwraca status głosowania (otwarte/closed)."""
+    glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
+    return JsonResponse({"otwarte": glosowanie.otwarte})

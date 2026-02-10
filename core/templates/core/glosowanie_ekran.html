@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pl-PL">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Głosowanie – {{ glosowanie.nazwa }}</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { background: #fff; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .topbar { background: #0d6efd; color: #fff; padding: 14px 28px; }
+    .title { font-size: 28px; font-weight: 700; margin: 0; }
+    .subtitle { opacity: .9; }
+    .main { padding: 28px; }
+    .counter { font-size: 64px; font-weight: 800; }
+    .label { font-size: 24px; font-weight: 650; }
+    .muted { color: #6c757d; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <div class="title">{{ glosowanie.nazwa }}</div>
+        <div class="subtitle">{{ sesja.nazwa }} • Punkt {{ punkt.numer }}. {{ punkt.tytul }}</div>
+      </div>
+      <div class="text-end">
+        <span id="status" class="badge bg-secondary">Ładowanie...</span>
+        <button id="btnFull" class="btn btn-light btn-sm ms-2">Pełny ekran</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main container-fluid">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="card border-success shadow-sm">
+          <div class="card-header bg-success text-white"><span class="label">ZA</span></div>
+          <div class="card-body text-center">
+            <div id="za" class="counter text-success">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-danger shadow-sm">
+          <div class="card-header bg-danger text-white"><span class="label">PRZECIW</span></div>
+          <div class="card-body text-center">
+            <div id="przeciw" class="counter text-danger">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-warning shadow-sm">
+          <div class="card-header bg-warning"><span class="label">WSTRZYMUJĘ SIĘ</span></div>
+          <div class="card-body text-center">
+            <div id="wstrzymuje" class="counter text-warning">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3 muted">
+      Wyniki odświeżają się automatycznie co 2 sek.
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script>
+    const glosowanieId = {{ glosowanie.id }};
+
+    function requestFullscreen() {
+      const el = document.documentElement;
+      if (el.requestFullscreen) return el.requestFullscreen();
+      if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+      if (el.msRequestFullscreen) return el.msRequestFullscreen();
+    }
+
+    $('#btnFull').on('click', function () {
+      requestFullscreen();
+    });
+
+    function refresh() {
+      $.get('/api/wyniki/' + glosowanieId + '/', function (data) {
+        $('#za').text(data.za);
+        $('#przeciw').text(data.przeciw);
+        $('#wstrzymuje').text(data.wstrzymuje);
+      });
+
+      $.get('/api/glosowanie/' + glosowanieId + '/status/', function (data) {
+        if (data.otwarte) {
+          $('#status').removeClass('bg-secondary bg-danger').addClass('bg-success').text('OTWARTE');
+        } else {
+          $('#status').removeClass('bg-secondary bg-success').addClass('bg-danger').text('ZAMKNIĘTE');
+        }
+      });
+    }
+
+    refresh();
+    setInterval(refresh, 2000);
+
+    // Uwaga: przeglądarki zwykle blokują auto-fullscreen bez akcji użytkownika.
+    // Podpowiadamy użytkownikowi kliknięcie w dowolne miejsce, żeby wejść w fullscreen.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'f' || e.key === 'F') requestFullscreen();
+    });
+  </script>
+</body>
+</html>

@@ -73,6 +73,10 @@ urlpatterns = [
         name="api_wyniki",
     ),
 
+    # Pełnoekranowy ekran głosowania
+    path("glosowanie/<int:glosowanie_id>/ekran/", views.glosowanie_ekran, name="glosowanie_ekran"),
+    path("api/glosowanie/<int:glosowanie_id>/status/", views.api_glosowanie_status, name="api_glosowanie_status"),
+
     # Wyniki publiczne
     path("wyniki/", views.wyniki_publiczne, name="wyniki"),
     # Ekran sesji
