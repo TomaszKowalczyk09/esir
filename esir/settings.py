@@ -3,9 +3,16 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'q0egpzkd)sw27*-cw507o=6c0y=_7pk&ixu6y@95cq_e#6aa0v'
-DEBUG = True
-ALLOWED_HOSTS = []
+# --- Bezpieczne ustawienia z ENV (nie commitujemy sekretów) ---
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    # dev fallback (nie używać na produkcji)
+    SECRET_KEY = "dev-only-change-me"
+
+DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+
+# ALLOWED_HOSTS jako lista rozdzielona przecinkami
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -23,8 +30,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -38,8 +43,6 @@ INSTALLED_APPS = [
     'core',
 ]
 
-
-
 AUTH_USER_MODEL = 'accounts.Uzytkownik'
 
 MIDDLEWARE = [
@@ -51,7 +54,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
 
 ROOT_URLCONF = 'esir.urls'
 TEMPLATES = [
@@ -78,7 +80,6 @@ USE_I18N = True
 TIMEZONE = 'Europe/Warsaw'
 USE_TZ = True
 
-
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/panel/'
 LOGOUT_REDIRECT_URL = '/login/'
@@ -90,5 +91,27 @@ DATABASES = {
     }
 }
 
+# Security hardening (ma sens przy HTTPS / produkcji)
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+
+# Cookies
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
+
+# Włącz wtedy, gdy serwer działa po HTTPS
+SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "0") == "1"
+CSRF_COOKIE_SECURE = os.environ.get("DJANGO_CSRF_COOKIE_SECURE", "0") == "1"
+SESSION_COOKIE_SECURE = os.environ.get("DJANGO_SESSION_COOKIE_SECURE", "0") == "1"
+
+# HSTS (tylko dla HTTPS)
+SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+SECURE_HSTS_PRELOAD = os.environ.get("DJANGO_SECURE_HSTS_PRELOAD", "0") == "1"
+
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
