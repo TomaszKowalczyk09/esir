@@ -2,8 +2,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Landing page (public)
+    path("", views.landing, name="landing"),
     # Panel główny (przekierowuje wg roli)
-    path("", views.panel, name="panel"),
+    path("panel/", views.panel, name="panel"),
 
     # PREZYDIUM
     path(

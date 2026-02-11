@@ -27,6 +27,18 @@ def panel(request):
     return redirect("radny")
 
 
+def landing(request):
+    """Public landing page.
+
+    - pokazuje opis systemu
+    - dopiero potem CTA do logowania
+    - jeżeli użytkownik jest zalogowany, przekieruj do panelu
+    """
+    if request.user.is_authenticated:
+        return redirect("panel")
+    return render(request, "core/landing.html")
+
+
 # --------------------------------------------------
 # Widoki PREZYDIUM
 # --------------------------------------------------
