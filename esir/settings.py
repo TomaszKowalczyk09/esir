@@ -12,7 +12,10 @@ if not SECRET_KEY:
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 
 # ALLOWED_HOSTS jako lista rozdzielona przecinkami
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get(
+    "DJANGO_ALLOWED_HOSTS",
+    "localhost,127.0.0.1,sesja.gminagryfino.pl",
+).split(",") if h.strip()]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -111,6 +114,20 @@ SESSION_COOKIE_SECURE = os.environ.get("DJANGO_SESSION_COOKIE_SECURE", "0") == "
 SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
 SECURE_HSTS_PRELOAD = os.environ.get("DJANGO_SECURE_HSTS_PRELOAD", "0") == "1"
+
+# Cloudflare / reverse proxy
+# Jeśli aplikacja stoi za Cloudflare (Flexible/Full) i reverse proxy ustawia X-Forwarded-Proto,
+# Django musi to respektować, żeby poprawnie oznaczać request.is_secure() i wystawiać ciasteczka.
+BEHIND_CLOUDFLARE = os.environ.get("DJANGO_BEHIND_CLOUDFLARE", "0") == "1"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+# Włącz wtedy, gdy serwer działa po HTTPS (za CF najlepiej włączyć)
+if BEHIND_CLOUDFLARE and os.environ.get("DJANGO_SECURE_SSL_REDIRECT") is None:
+    SECURE_SSL_REDIRECT = True
+
+# dodatkowe nagłówki
+REFERRER_POLICY = "same-origin"
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
