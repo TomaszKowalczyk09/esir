@@ -105,6 +105,9 @@ path(
     name="ustaw_punkt_aktywny",
 ),
 
+    # PROTOKÓŁ SESJI (PDF)
+    path("prezydium/protokol/pdf/", views.protokol_sesji_pdf, name="protokol_sesji_pdf"),
+
     # WNIOSKI
     path("radny/wnioski/", views.wnioski_radny, name="wnioski_radny"),
     path("radny/wnioski/pdf/", views.wnioski_radny_pdf, name="wnioski_radny_pdf"),
