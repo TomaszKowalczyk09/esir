@@ -1063,3 +1063,150 @@ def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
     resp = HttpResponse(pdf, content_type="application/pdf")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
+
+
+@login_required
+@require_GET
+def protokol_sesji_pdf(request):
+    """Podstawowy protokół PDF dla aktywnej sesji.
+
+    Zawiera:
+    - nagłówek (nazwa sesji, data)
+    - listę punktów
+    - podsumowania głosowań (za/przeciw/wstrzymuje, typ większości, czy przeszło)
+
+    Dostęp: prezydium oraz administrator.
+    """
+    if not _can_manage_session(request.user):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    sesja = Sesja.objects.filter(aktywna=True).first()
+    if not sesja:
+        return HttpResponse("Brak aktywnej sesji.", content_type="text/plain")
+
+    punkty = (
+        sesja.punkty
+        .select_related("glosowanie")
+        .order_by("numer")
+    )
+
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # fonty PL (jak w _wnioski_pdf_response)
+    font_regular = "Helvetica"
+    font_bold = "Helvetica-Bold"
+    try:
+        import os
+        from django.conf import settings
+
+        font_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "fonts", "DejaVuSans.ttf")
+        font_bold_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "fonts", "DejaVuSans-Bold.ttf")
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
+            font_regular = "DejaVuSans"
+        if os.path.exists(font_bold_path):
+            pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", font_bold_path))
+            font_bold = "DejaVuSans-Bold"
+    except Exception:
+        pass
+
+    def new_page(y_start=None):
+        c.showPage()
+        y0 = (height - 20 * mm) if y_start is None else y_start
+        return y0
+
+    y = height - 20 * mm
+
+    c.setFont(font_bold, 14)
+    c.drawString(20 * mm, y, "Protokół z posiedzenia")
+    y -= 8 * mm
+
+    c.setFont(font_bold, 12)
+    c.drawString(20 * mm, y, sesja.nazwa)
+    y -= 6 * mm
+
+    c.setFont(font_regular, 10)
+    c.drawString(20 * mm, y, f"Data: {timezone.localtime(sesja.data).strftime('%Y-%m-%d %H:%M')}")
+    y -= 6 * mm
+
+    c.setFont(font_regular, 9)
+    c.drawString(20 * mm, y, f"Wygenerowano: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
+    y -= 10 * mm
+
+    c.setFont(font_bold, 11)
+    c.drawString(20 * mm, y, "Porządek obrad i wyniki głosowań")
+    y -= 8 * mm
+
+    for p in punkty:
+        if y < 30 * mm:
+            y = new_page()
+
+        c.setFont(font_bold, 10)
+        c.drawString(20 * mm, y, f"{p.numer}. {p.tytul}")
+        y -= 5 * mm
+
+        if p.opis:
+            c.setFont(font_regular, 9)
+            # proste łamanie opisu
+            max_chars = 115
+            text = (p.opis or "").replace("\r\n", "\n").replace("\r", "\n")
+            for para in text.split("\n"):
+                para = para.strip()
+                if not para:
+                    y -= 3 * mm
+                    continue
+                while len(para) > max_chars:
+                    line, para = para[:max_chars], para[max_chars:]
+                    c.drawString(22 * mm, y, line)
+                    y -= 4.5 * mm
+                    if y < 30 * mm:
+                        y = new_page()
+                        c.setFont(font_regular, 9)
+                c.drawString(22 * mm, y, para)
+                y -= 4.5 * mm
+                if y < 30 * mm:
+                    y = new_page()
+                    c.setFont(font_regular, 9)
+
+        gl = getattr(p, "glosowanie", None)
+        if gl:
+            r = gl.wynik_podsumowanie()
+            c.setFont(font_regular, 9)
+            meta = f"Głosowanie: {gl.nazwa} | Jawność: {gl.get_jawnosc_display()} | Większość: {gl.get_wiekszosc_display()}"
+            c.drawString(22 * mm, y, meta)
+            y -= 4.8 * mm
+
+            wynik = f"Za: {r['za']}  Przeciw: {r['przeciw']}  Wstrzymuje: {r['wstrzymuje']}"
+            if r.get("prog"):
+                wynik += f"  |  Próg: {r['prog']}"
+            wynik += f"  |  Wynik: {'PRZESZŁO' if r['przeszedl'] else 'NIE PRZESZŁO'}"
+            c.drawString(22 * mm, y, wynik)
+            y -= 6 * mm
+        else:
+            c.setFont(font_regular, 9)
+            c.drawString(22 * mm, y, "Brak głosowania")
+            y -= 6 * mm
+
+        y -= 2 * mm
+
+    c.showPage()
+    c.save()
+
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    safe_name = (sesja.nazwa or "sesja").replace("/", "-")
+    filename = f"protokol_{safe_name}_{timezone.localtime(sesja.data).strftime('%Y-%m-%d')}.pdf"
+
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp
