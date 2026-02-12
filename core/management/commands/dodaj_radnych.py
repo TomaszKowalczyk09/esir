@@ -40,6 +40,11 @@ class Command(BaseCommand):
         print_passwords = options.get("print_passwords", False)
         count = options.get("count", 15)
 
+        # create demo administrator (session operator)
+        admin_username = "demo.administrator"
+        admin_defaults = dict(imie="Demo", nazwisko="Administrator", rola="administrator")
+        self._create_user(admin_username, admin_defaults, options)
+
         # KONTA DEMO (bez danych radnych). Prezydium = 1 konto.
         demo_users = [("Demo", "Prezydium", "prezydium")]
         for i in range(1, count + 1):
@@ -96,3 +101,30 @@ class Command(BaseCommand):
 
         self.stdout.write("=" * 110)
         self.stdout.write(f"\nUtworzono: {len(created)} | Pominięto (istniały): {len(skipped)}\n")
+
+    def _create_user(self, username, defaults, options):
+        dry_run = options.get("dry_run", False)
+        print_passwords = options.get("print_passwords", False)
+
+        if Uzytkownik.objects.filter(username=username).exists():
+            self.stdout.write(self.style.WARNING(f"Użytkownik {username} już istnieje."))
+            return
+
+        password = "".join(random.choices(string.ascii_letters + string.digits, k=16))
+
+        if not dry_run:
+            Uzytkownik.objects.create_user(
+                username=username,
+                password=password,
+                imie=defaults["imie"],
+                nazwisko=defaults["nazwisko"],
+                first_name=defaults["imie"],
+                last_name=defaults["nazwisko"],
+                rola=defaults["rola"],
+                must_change_password=True,
+            )
+
+        if print_passwords:
+            self.stdout.write(f"Utworzono użytkownika: {username} z hasłem: {password}")
+        else:
+            self.stdout.write(f"Utworzono użytkownika: {username} (hasło ukryte)")

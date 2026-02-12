@@ -117,6 +117,27 @@
                         <i class="bi bi-diagram-3 me-2"></i> Komisje
                     </a>
 
+                {% elif user.rola == 'administrator' %}
+                    <!-- Menu administrator (operator sesji) -->
+                    <a href="{% url 'panel' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-speedometer2 me-2"></i> Panel
+                    </a>
+                    <a href="{% url 'prezydium_agenda' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-list-ul me-2"></i> Sterowanie sesją
+                    </a>
+                    <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-calendar-event me-2"></i> Sesje
+                    </a>
+                    <a href="{% url 'prezydium' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-bar-chart-steps me-2"></i> Głosowania
+                    </a>
+                    <a href="{% url 'wyniki' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-bar-chart-line me-2"></i> Wyniki
+                    </a>
+                    <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-diagram-3 me-2"></i> Moje komisje
+                    </a>
+
                 {% else %}
                     <!-- Menu radnego (tylko podgląd) -->
                     <a href="{% url 'panel' %}" class="list-group-item list-group-item-action">
