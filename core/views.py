@@ -361,6 +361,12 @@ def oddaj_glos(request, glosowanie_id):
     def is_ajax(req):
         return req.headers.get("x-requested-with") == "XMLHttpRequest"
 
+    # Uprawnieni do oddania głosu (radny + administrator + prezydium)
+    if getattr(request.user, "rola", None) not in {"radny", "administrator", "prezydium"}:
+        if is_ajax(request):
+            return JsonResponse({"error": "Brak uprawnień do głosowania"}, status=403)
+        return HttpResponseForbidden("Brak uprawnień do głosowania")
+
     if not glosowanie.otwarte:
         if is_ajax(request):
             return JsonResponse({"error": "Głosowanie zamknięte"})

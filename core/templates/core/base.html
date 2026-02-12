@@ -119,10 +119,10 @@
 
                 {% elif user.rola == 'administrator' %}
                     <!-- Menu administrator (operator sesji) -->
-                    <a href="{% url 'panel' %}" class="list-group-item list-group-item-action">
+                    <a href="{% url 'radny' %}" class="list-group-item list-group-item-action">
                         <i class="bi bi-speedometer2 me-2"></i> Panel
                     </a>
-                    <a href="{% url 'prezydium_agenda' %}" class="list-group-item list-group-item-action">
+                    <a href="{% url 'admin_sesja_panel' %}" class="list-group-item list-group-item-action">
                         <i class="bi bi-list-ul me-2"></i> Sterowanie sesją
                     </a>
                     <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action">

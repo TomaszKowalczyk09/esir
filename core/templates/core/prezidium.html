@@ -74,6 +74,20 @@
                 {% if punkt.glosowanie.otwarte %}Zamknij{% else %}Otwórz{% endif %}
               </button>
             </div>
+
+            {# Opcja oddania głosu dla prezydium #}
+            <div class="mt-2" id="glosowanie-prez-{{ punkt.glosowanie.id }}">
+              {% if punkt.glosowanie.otwarte %}
+                <div class="btn-group btn-group-sm" role="group" aria-label="Oddaj głos">
+                  <button type="button" class="btn btn-outline-primary btn-oddaj-glos" data-id="{{ punkt.glosowanie.id }}" data-glos="za">ZA</button>
+                  <button type="button" class="btn btn-outline-danger btn-oddaj-glos" data-id="{{ punkt.glosowanie.id }}" data-glos="przeciw">PRZECIW</button>
+                  <button type="button" class="btn btn-outline-secondary btn-oddaj-glos" data-id="{{ punkt.glosowanie.id }}" data-glos="wstrzymuje">WSTRZYMUJĘ</button>
+                </div>
+                <small class="ms-2 text-muted" id="glos-info-{{ punkt.glosowanie.id }}"></small>
+              {% else %}
+                <small class="text-muted">Głosowanie zamknięte.</small>
+              {% endif %}
+            </div>
           </div>
           {% else %}
             <small class="text-muted">Brak głosowania dla tego punktu.</small>
@@ -94,6 +108,21 @@
 {% block extra_js %}
 <script>
 $(function () {
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
   // Otwieranie / zamykanie głosowania
   $('.toggle-glosowanie').click(function () {
     const id = $(this).data('id');
@@ -101,13 +130,47 @@ $(function () {
     $.get('/glosowanie/' + id + '/toggle/', function (data) {
       if (data.otwarte) {
         btn.text('Zamknij');
+        $('#glosowanie-prez-' + id).html(
+          '<div class="btn-group btn-group-sm" role="group" aria-label="Oddaj głos">' +
+          '<button type="button" class="btn btn-outline-primary btn-oddaj-glos" data-id="' + id + '" data-glos="za">ZA</button>' +
+          '<button type="button" class="btn btn-outline-danger btn-oddaj-glos" data-id="' + id + '" data-glos="przeciw">PRZECIW</button>' +
+          '<button type="button" class="btn btn-outline-secondary btn-oddaj-glos" data-id="' + id + '" data-glos="wstrzymuje">WSTRZYMUJĘ</button>' +
+          '</div>' +
+          '<small class="ms-2 text-muted" id="glos-info-' + id + '"></small>'
+        );
       } else {
         btn.text('Otwórz');
+        $('#glosowanie-prez-' + id).html('<small class="text-muted">Głosowanie zamknięte.</small>');
       }
     });
   });
 
-  // '(' expected.
+  // Oddanie głosu (AJAX) – działa też dla prezydium
+  $(document).on('click', '.btn-oddaj-glos', function () {
+    const glosowanieId = $(this).data('id');
+    const glos = $(this).data('glos');
+
+    const info = $('#glos-info-' + glosowanieId);
+    info.removeClass('text-danger text-success').addClass('text-muted').text('Zapisywanie...');
+
+    $.ajax({
+      url: '/glosowanie/' + glosowanieId + '/glosuj/',
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      data: { glos: glos },
+      success: function () {
+        info.removeClass('text-muted text-danger').addClass('text-success').text('Głos zapisany.');
+      },
+      error: function (xhr) {
+        const msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Błąd zapisu głosu.';
+        info.removeClass('text-muted text-success').addClass('text-danger').text(msg);
+      }
+    });
+  });
+
   {% for sesja in sesje %}
     {% for punkt in sesja.punkty.all %}
       {% if punkt.glosowanie %}
