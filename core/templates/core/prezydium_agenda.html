@@ -12,7 +12,27 @@
         <h5 class="mb-1">{{ sesja.nazwa }}</h5>
         <p class="mb-0 text-muted">{{ sesja.data }}</p>
       </div>
-      <span class="badge bg-success align-self-center">Sesja aktywna</span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-success">Sesja aktywna</span>
+        <a
+          class="btn btn-sm btn-primary"
+          href="{% url 'sesja_ekran_aktywna' %}"
+          target="_blank"
+          rel="noopener"
+          title="Otwiera widok na rzutnik w nowej karcie"
+        >
+          Otwórz ekran sesji
+        </a>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          id="copy-screen-link"
+          data-url="{% url 'sesja_ekran_aktywna' %}"
+          title="Kopiuje link do ekranu sesji do schowka"
+        >
+          Kopiuj link
+        </button>
+      </div>
     </div>
   </div>
 
@@ -82,6 +102,26 @@ $(function () {
         btn.text('Otwórz głosowanie');
       }
     });
+  });
+
+  $('#copy-screen-link').click(async function () {
+    const path = $(this).data('url');
+    const absoluteUrl = new URL(path, window.location.origin).toString();
+    try {
+      await navigator.clipboard.writeText(absoluteUrl);
+      $(this).text('Skopiowano');
+      setTimeout(() => $(this).text('Kopiuj link'), 1200);
+    } catch (e) {
+      // fallback: stary sposób
+      const tmp = document.createElement('input');
+      tmp.value = absoluteUrl;
+      document.body.appendChild(tmp);
+      tmp.select();
+      document.execCommand('copy');
+      document.body.removeChild(tmp);
+      $(this).text('Skopiowano');
+      setTimeout(() => $(this).text('Kopiuj link'), 1200);
+    }
   });
 });
 </script>

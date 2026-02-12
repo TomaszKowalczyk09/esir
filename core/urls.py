@@ -135,4 +135,8 @@ path(
         views.admin_sesja_panel,
         name="admin_sesja_panel",
     ),
+
+    # Łatwy dostęp do ekranu sesji
+    path("ekran/sesja/", views.sesja_ekran_aktywna, name="sesja_ekran_aktywna"),
+    path("ekran/sesja/<int:sesja_id>/", views.sesja_ekran, name="sesja_ekran_alias"),
 ]

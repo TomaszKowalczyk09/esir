@@ -497,6 +497,24 @@ def sesja_ekran(request, sesja_id):
     return render(request, "core/sesja_ekran.html", {"sesja": sesja})
 
 
+@login_required
+def sesja_ekran_aktywna(request):
+    """Łatwy entrypoint do ekranu sesji.
+
+    Użycie: /ekran/sesja/
+    - gdy istnieje aktywna sesja -> przekieruj na ekran tej sesji
+    - gdy brak aktywnej sesji -> wróć do agendy/panelu z komunikatem
+    """
+    sesja = Sesja.objects.filter(aktywna=True).order_by("-data").first()
+    if not sesja:
+        messages.warning(request, "Brak aktywnej sesji. Ustaw sesję jako aktywną.")
+        if _can_manage_session(request.user):
+            return redirect("prezydium_agenda")
+        return redirect("panel")
+
+    return redirect("sesja_ekran", sesja_id=sesja.id)
+
+
 @require_GET
 def api_aktywny_punkt(request, sesja_id):
     """
