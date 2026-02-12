@@ -57,7 +57,7 @@
     <!-- Górny pasek -->
     <nav class="navbar navbar-expand-lg navbar-dark esir-topbar">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if user.is_authenticated %}{% url 'panel' %}{% else %}{% url 'landing' %}{% endif %}">ESIR</a>
+            <a class="navbar-brand" href="{% if user.is_authenticated %}{% url 'panel' %}{% else %}{% url 'landing' %}{% endif %}">e-SIR</a>
             <div class="d-flex align-items-center ms-auto">
                 {% if user.is_authenticated %}
                     <span class="me-3 esir-username">

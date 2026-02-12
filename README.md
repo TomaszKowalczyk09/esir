@@ -1,4 +1,4 @@
-# Elektroniczny System Informacji i Rady
+# e-SIR
 
 System do obsługi głosowań dla **Młodzieżowej Rady Miejskiej w Gryfinie**.
 

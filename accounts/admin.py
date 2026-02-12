@@ -24,11 +24,11 @@ def action_set_role_prezydium(modeladmin, request, queryset):
 class UzytkownikAdmin(UserAdmin):
     # Keep built-in auth admin behavior but expose custom fields
     fieldsets = UserAdmin.fieldsets + (
-        (_("Dane ESIR"), {"fields": ("imie", "nazwisko", "rola", "must_change_password")}),
+        (_("Dane e-SIR"), {"fields": ("imie", "nazwisko", "rola", "must_change_password")}),
     )
 
     add_fieldsets = UserAdmin.add_fieldsets + (
-        (_("Dane ESIR"), {"fields": ("imie", "nazwisko", "rola", "must_change_password")}),
+        (_("Dane e-SIR"), {"fields": ("imie", "nazwisko", "rola", "must_change_password")}),
     )
 
     list_display = (
