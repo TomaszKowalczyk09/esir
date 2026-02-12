@@ -199,10 +199,6 @@
     </div>
 
     <!-- Wykres wyników (pokazywany po zamknięciu, gdy są głosy) -->
-    <div id="ekran-wykres-wrap" class="mb-3" style="display:none; max-width: 760px;">
-      <canvas id="ekran-wykres" height="140"></canvas>
-    </div>
-
     <div class="ekran-wyniki-row">
       <div class="d-flex justify-content-between">
         <span>Za</span>
@@ -261,7 +257,6 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
   // Zegar w prawym górnym rogu
   function aktualizujCzas() {
@@ -358,7 +353,6 @@
         // Domyślnie: dopóki głosowanie nie jest otwarte – nic nie pokazujemy.
         wynikiBox.hide();
         rollWrap.hide();
-        $('#ekran-wykres-wrap').hide();
         $('#ekran-glosowanie-nazwa').text('');
 
         // Pobieramy statusy z API wyników (zwraca m.in. otwarte/tajne)
@@ -369,7 +363,7 @@
           if (otwarte) {
             // W trakcie: ukryj opis i nie pokazuj wyników; jawne -> pokazujemy listę imienną.
             opisEl.text('');
-            $('#ekran-wykres-wrap').hide();
+            // brak wykresu
 
             if (!tajne) {
               $('#ekran-rollcall-banner').text('GŁOSOWANIE W TRAKCIE');
@@ -417,14 +411,11 @@
           $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
           $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
 
-          updateChart(za, przeciw, wstrzymuje);
-          $('#ekran-wykres-wrap').show();
           wynikiBox.show();
         }).fail(function () {
           // Jeśli coś nie działa z API, nie pokazujemy nic wrażliwego
           wynikiBox.hide();
           rollWrap.hide();
-          $('#ekran-wykres-wrap').hide();
           $('#ekran-glosowanie-nazwa').text('');
 
           // Zachowaj opis (bezpieczne domyślne zachowanie)
@@ -433,65 +424,12 @@
       } else {
         wynikiBox.hide();
         rollWrap.hide();
-        $('#ekran-wykres-wrap').hide();
         $('#ekran-glosowanie-nazwa').text('');
 
         // Brak głosowania -> opis widoczny
         opisEl.text(data.opis || '');
       }
     });
-  }
-
-  let ekranChart = null;
-  function ensureChart() {
-    const ctx = document.getElementById('ekran-wykres');
-    if (!ctx) return null;
-    if (ekranChart) return ekranChart;
-
-    ekranChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['Za', 'Przeciw', 'Wstrzymuję'],
-        datasets: [{
-          label: 'Liczba głosów',
-          data: [0, 0, 0],
-          backgroundColor: [
-            'rgba(25, 135, 84, 0.75)',
-            'rgba(220, 53, 69, 0.75)',
-            'rgba(255, 193, 7, 0.75)'
-          ],
-          borderColor: [
-            'rgba(25, 135, 84, 1)',
-            'rgba(220, 53, 69, 1)',
-            'rgba(255, 193, 7, 1)'
-          ],
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: true }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0 }
-          }
-        }
-      }
-    });
-
-    return ekranChart;
-  }
-
-  function updateChart(za, przeciw, wstrzymuje) {
-    const chart = ensureChart();
-    if (!chart) return;
-    chart.data.datasets[0].data = [za, przeciw, wstrzymuje];
-    chart.update('none');
   }
 
   zaladujAktywnyPunkt();
