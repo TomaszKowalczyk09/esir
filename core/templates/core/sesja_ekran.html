@@ -326,108 +326,168 @@
     $('#ekran-rollcall-right').html(build(right, half));
   }
 
+  // --- Anty-miganie: cache stanu + anulowanie poprzedniego requestu ---
+  let lastRenderKey = null;
+  let lastVotesKey = null;
+  let aktywnyPunktXhr = null;
+
+  function sameKey(a, b) { return a === b; }
+
   // Ładowanie aktywnego punktu i wyników
   function zaladujAktywnyPunkt() {
-    $.get("{% url 'api_aktywny_punkt' sesja.id %}", function (data) {
+    // anuluj poprzedni request, jeśli jeszcze trwa
+    if (aktywnyPunktXhr && aktywnyPunktXhr.readyState !== 4) {
+      try { aktywnyPunktXhr.abort(); } catch (e) {}
+    }
+
+    aktywnyPunktXhr = $.get("{% url 'api_aktywny_punkt' sesja.id %}", function (data) {
       const tytulEl = $('#ekran-punkt-tytul');
       const subEl = $('#ekran-punkt-sub');
       const opisEl = $('#ekran-opis');
       const wynikiBox = $('#ekran-wyniki');
       const rollWrap = $('#ekran-rollcall-wrap');
-      const rollEl = $('#ekran-rollcall');
+
+      // klucz dla głównego widoku (punkt + głosowanie)
+      const renderKey = JSON.stringify({
+        aktywny: !!data.aktywny,
+        numer: data.numer || null,
+        tytul: data.tytul || null,
+        podtytul: data.podtytul || null,
+        opis: data.opis || null,
+        glosowanie_id: data.glosowanie_id || null,
+        glosowanie_nazwa: data.glosowanie_nazwa || null
+      });
 
       if (!data.aktywny) {
-        tytulEl.text('Brak aktywnego punktu');
-        subEl.text('');
-        opisEl.text('');
-        wynikiBox.hide();
-        rollWrap.hide();
+        if (!sameKey(lastRenderKey, renderKey)) {
+          tytulEl.text('Brak aktywnego punktu');
+          subEl.text('');
+          opisEl.text('');
+          wynikiBox.hide();
+          rollWrap.hide();
+          $('#ekran-glosowanie-nazwa').text('');
+          lastVotesKey = null;
+          lastRenderKey = renderKey;
+        }
         return;
       }
 
-      tytulEl.text(data.numer + '. ' + (data.tytul || 'Punkt porządku obrad'));
-      subEl.text(data.podtytul || '');
-      opisEl.text(data.opis || '');
+      // aktualizuj nagłówki/opis tylko jeśli zmienił się punkt
+      if (!sameKey(lastRenderKey, renderKey)) {
+        tytulEl.text(data.numer + '. ' + (data.tytul || 'Punkt porządku obrad'));
+        subEl.text(data.podtytul || '');
+        opisEl.text(data.opis || '');
+        lastRenderKey = renderKey;
+      }
 
       if (data.glosowanie_id) {
-        // Domyślnie: dopóki głosowanie nie jest otwarte – nic nie pokazujemy.
-        wynikiBox.hide();
-        rollWrap.hide();
-        $('#ekran-glosowanie-nazwa').text('');
-
-        // Pobieramy statusy z API wyników (zwraca m.in. otwarte/tajne)
+        // nie chowaj/pokazuj na starcie każdego ticka; ustawimy po danych z API
         $.get("/api/wyniki/" + data.glosowanie_id + "/", function (wyn) {
           const tajne = !!wyn.tajne;
           const otwarte = !!wyn.otwarte;
 
-          if (otwarte) {
-            // W trakcie: ukryj opis i nie pokazuj wyników; jawne -> pokazujemy listę imienną.
-            opisEl.text('');
-            // brak wykresu
+          // klucz dla części "wyniki"
+          const votesKey = JSON.stringify({
+            gid: data.glosowanie_id,
+            otwarte,
+            tajne,
+            za: wyn.za || 0,
+            przeciw: wyn.przeciw || 0,
+            wstrzymuje: wyn.wstrzymuje || 0
+          });
 
-            if (!tajne) {
-              $('#ekran-rollcall-banner').text('GŁOSOWANIE W TRAKCIE');
-              $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
-                renderRollcall(rollData.items || []);
-                rollWrap.show();
-              }).fail(function () {
+          if (otwarte) {
+            // w trakcie: bez wyników; jawne -> list imienna
+            if (!sameKey(lastVotesKey, votesKey)) {
+              wynikiBox.hide();
+              $('#ekran-glosowanie-nazwa').text('');
+
+              // w trakcie głosowania opis ma być pusty
+              opisEl.text('');
+
+              if (!tajne) {
+                $('#ekran-rollcall-banner').text('GŁOSOWANIE W TRAKCIE');
+                $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
+                  renderRollcall(rollData.items || []);
+                  rollWrap.show();
+                }).fail(function () {
+                  rollWrap.hide();
+                });
+              } else {
                 rollWrap.hide();
-              });
+              }
+
+              lastVotesKey = votesKey;
             }
             return;
           }
 
-          // Jeżeli NIE jest otwarte: albo jeszcze nie otwarto, albo już zamknięte.
-          // Wyniki pokazujemy tylko, jeśli API zwróci jakiekolwiek głosy (czyli po zamknięciu).
           const za = wyn.za || 0;
           const przeciw = wyn.przeciw || 0;
           const wstrzymuje = wyn.wstrzymuje || 0;
           const suma = za + przeciw + wstrzymuje;
 
           if (suma <= 0) {
-            // Najpewniej jeszcze nie otwarto / brak danych -> nie pokazujemy nic.
+            // jeszcze nie otwarto / brak danych -> nic nie pokazuj
+            if (!sameKey(lastVotesKey, votesKey)) {
+              wynikiBox.hide();
+              rollWrap.hide();
+              $('#ekran-glosowanie-nazwa').text('');
+              // opis wraca
+              opisEl.text(data.opis || '');
+              lastVotesKey = votesKey;
+            }
             return;
           }
 
-          // Po zamknięciu: pokazujemy wyniki zbiorcze + wykres.
-          // Opis wraca po zamknięciu.
-          opisEl.text(data.opis || '');
+          // po zamknięciu: pokazujemy wyniki zbiorcze
+          if (!sameKey(lastVotesKey, votesKey)) {
+            rollWrap.hide();
+            $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
 
-          $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
+            function proc(x) {
+              return suma > 0 ? Math.round(x * 100 / suma) : 0;
+            }
 
-          function proc(x) {
-            return suma > 0 ? Math.round(x * 100 / suma) : 0;
+            $('#ekran-za-liczba').text(za);
+            $('#ekran-przeciw-liczba').text(przeciw);
+            $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
+
+            $('#ekran-za-proc').text(proc(za));
+            $('#ekran-przeciw-proc').text(proc(przeciw));
+            $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
+
+            $('#ekran-za-prog').css('width', proc(za) + '%');
+            $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
+            $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
+
+            // opis wraca po zamknięciu
+            opisEl.text(data.opis || '');
+
+            wynikiBox.show();
+            lastVotesKey = votesKey;
           }
-
-          $('#ekran-za-liczba').text(za);
-          $('#ekran-przeciw-liczba').text(przeciw);
-          $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
-
-          $('#ekran-za-proc').text(proc(za));
-          $('#ekran-przeciw-proc').text(proc(przeciw));
-          $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
-
-          $('#ekran-za-prog').css('width', proc(za) + '%');
-          $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
-          $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
-
-          wynikiBox.show();
         }).fail(function () {
-          // Jeśli coś nie działa z API, nie pokazujemy nic wrażliwego
+          // Jeśli coś nie działa z API, nie migaj - tylko schowaj jeśli to zmiana
+          const votesKey = 'ERR:' + (data.glosowanie_id || '');
+          if (!sameKey(lastVotesKey, votesKey)) {
+            wynikiBox.hide();
+            rollWrap.hide();
+            $('#ekran-glosowanie-nazwa').text('');
+            opisEl.text(data.opis || '');
+            lastVotesKey = votesKey;
+          }
+        });
+      } else {
+        // brak głosowania
+        const votesKey = 'NO_VOTE';
+        if (!sameKey(lastVotesKey, votesKey)) {
           wynikiBox.hide();
           rollWrap.hide();
           $('#ekran-glosowanie-nazwa').text('');
-
-          // Zachowaj opis (bezpieczne domyślne zachowanie)
           opisEl.text(data.opis || '');
-        });
-      } else {
-        wynikiBox.hide();
-        rollWrap.hide();
-        $('#ekran-glosowanie-nazwa').text('');
-
-        // Brak głosowania -> opis widoczny
-        opisEl.text(data.opis || '');
+          lastVotesKey = votesKey;
+        }
       }
     });
   }
