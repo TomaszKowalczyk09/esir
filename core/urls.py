@@ -99,11 +99,6 @@ path(
     views.prezydium_agenda,
     name="prezydium_agenda",
 ),
-path(
-    "punkty/<int:punkt_id>/ustaw-aktywny/",
-    views.ustaw_punkt_aktywny,
-    name="ustaw_punkt_aktywny",
-),
 
     # PROTOKÓŁ SESJI (PDF)
     path("prezydium/protokol/pdf/", views.protokol_sesji_pdf, name="protokol_sesji_pdf"),
@@ -133,4 +128,11 @@ path(
     path("komisje/<int:komisja_id>/wnioski/", views.komisja_wnioski, name="komisja_wnioski"),
     path("prezydium/komisje/skrzynka/", views.komisja_skrzynka_rady, name="komisja_skrzynka_rady"),
     path("prezydium/komisje/wniosek/<int:wniosek_id>/wyslij/", views.komisja_wniosek_wyslij_do_rady, name="komisja_wniosek_wyslij_do_rady"),
+
+    # ADMINISTRATOR – panel sterowania sesją (jedno miejsce)
+    path(
+        "administrator/sesja/",
+        views.admin_sesja_panel,
+        name="admin_sesja_panel",
+    ),
 ]

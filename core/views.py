@@ -332,14 +332,19 @@ def radny(request):
 # --------------------------------------------------
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def toggle_glosowanie(request, glosowanie_id):
-    """Otwieranie / zamykanie głosowania – prezydium lub administrator."""
+    """Otwieranie / zamykanie głosowania – prezydium lub administrator.
+
+    Preferowane jest POST (bezpieczniejsze). Dla kompatybilności
+    stary JS używający GET nadal zadziała.
+    """
     if not _can_manage_session(request.user):
         return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
     glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
     glosowanie.otwarte = not glosowanie.otwarte
-    glosowanie.save()
+    glosowanie.save(update_fields=["otwarte"])
     return JsonResponse({"otwarte": glosowanie.otwarte})
 
 
@@ -573,6 +578,22 @@ def prezydium_agenda(request):
         "sesja": sesja,
         "punkty": punkty,
     })
+
+
+@login_required
+def admin_sesja_panel(request):
+    """Panel sterowania sesją dla administratora.
+
+    Wymaganie: w jednym miejscu administrator ma:
+    - przełączanie aktywnego punktu obrad,
+    - otwieranie/zamykanie głosowania.
+
+    Technicznie wykorzystuje te same dane co agenda prezydium.
+    """
+    if getattr(request.user, "rola", None) != "administrator":
+        return redirect("panel")
+    # współdzielony ekran z prezydium (render ten sam template)
+    return prezydium_agenda(request)
 
 
 # --------------------------------------------------
