@@ -129,6 +129,18 @@ if BEHIND_CLOUDFLARE and os.environ.get("DJANGO_SECURE_SSL_REDIRECT") is None:
 # dodatkowe nagłówki
 REFERRER_POLICY = "same-origin"
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
+# --- Static files ---
+# URL pod jakim serwowane są statyki
+STATIC_URL = "/static/"
+
+# Źródła statyków w repo (ten katalog ma być w Git)
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+# Katalog wyjściowy dla `collectstatic` (nie commitować)
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# (opcjonalnie) media upload
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

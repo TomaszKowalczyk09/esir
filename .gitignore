@@ -1,27 +1,31 @@
 # Django / Python
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+*.log
 *.sqlite3
 
-# Local database
-/db.sqlite3
+# Local settings / secrets
+.env
+.env.*
 
-# Virtualenv
+# Virtual environments
 .venv/
 venv/
+ENV/
 
 # IDE
 .idea/
 .vscode/
 
-# Environment
-.env
-.env.*
+# OS
+.DS_Store
+Thumbs.db
 
-# Media/static build artifacts
-/media/
-/staticfiles/
+# Django static/media outputs
+staticfiles/
+media/
 
-# Python bytecode caches
-**/__pycache__/
-*.pyc
+# Database (explicit)
+db.sqlite3
