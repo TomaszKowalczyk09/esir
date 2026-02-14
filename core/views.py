@@ -75,6 +75,15 @@ def landing(request):
     return render(request, "core/landing.html")
 
 
+@login_required
+def pomoc(request):
+    """Strona pomocy (FAQ + skróty).
+
+    Celowo prosta: jeden template, bez logiki biznesowej.
+    """
+    return render(request, "core/pomoc.html")
+
+
 # --------------------------------------------------
 # Widoki PREZYDIUM
 # --------------------------------------------------

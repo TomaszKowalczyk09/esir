@@ -7,6 +7,9 @@ urlpatterns = [
     # Panel główny (przekierowuje wg roli)
     path("panel/", views.panel, name="panel"),
 
+    # Pomoc
+    path("pomoc/", views.pomoc, name="pomoc"),
+
     # PREZYDIUM
     path(
         "prezydium/dashboard/",

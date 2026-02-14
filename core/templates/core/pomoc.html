@@ -1,0 +1,110 @@
+{% extends "core/base.html" %}
+
+{% block title %}Pomoc{% endblock %}
+
+{% block content %}
+<h1 class="esir-page-title">Pomoc</h1>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <h5 class="mb-3">Najczęstsze pytania</h5>
+
+                <div class="accordion" id="pomocFaq">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="h1">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#c1" aria-expanded="true" aria-controls="c1">
+                                Jak rozpocząć pracę po zalogowaniu?
+                            </button>
+                        </h2>
+                        <div id="c1" class="accordion-collapse collapse show" aria-labelledby="h1" data-bs-parent="#pomocFaq">
+                            <div class="accordion-body">
+                                Po zalogowaniu system automatycznie przekieruje Cię do panelu odpowiedniego dla Twojej roli.
+                                Jeśli chcesz wrócić do panelu, wybierz w menu po lewej <strong>Panel główny</strong>.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="h2">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#c2" aria-expanded="false" aria-controls="c2">
+                                Gdzie znajdę porządek obrad i aktywny punkt?
+                            </button>
+                        </h2>
+                        <div id="c2" class="accordion-collapse collapse" aria-labelledby="h2" data-bs-parent="#pomocFaq">
+                            <div class="accordion-body">
+                                Porządek obrad jest dostępny w menu po lewej. W trakcie sesji aktywny punkt jest wskazywany przez prowadzącego.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="h3">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#c3" aria-expanded="false" aria-controls="c3">
+                                Jak oddać głos?
+                            </button>
+                        </h2>
+                        <div id="c3" class="accordion-collapse collapse" aria-labelledby="h3" data-bs-parent="#pomocFaq">
+                            <div class="accordion-body">
+                                Wejdź w <strong>Głosowania</strong> i wybierz jedną z opcji: <em>Za</em>, <em>Przeciw</em> lub <em>Wstrzymuję</em>.
+                                Głos można oddać tylko raz dla danego głosowania.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="h4">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#c4" aria-expanded="false" aria-controls="c4">
+                                Jak zgłosić problem?
+                            </button>
+                        </h2>
+                        <div id="c4" class="accordion-collapse collapse" aria-labelledby="h4" data-bs-parent="#pomocFaq">
+                            <div class="accordion-body">
+                                Skontaktuj się z administratorem systemu w swojej jednostce. Jeśli problem dotyczy logowania lub dostępu,
+                                podaj: imię i nazwisko, rolę oraz krótki opis sytuacji.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body p-4">
+                <h5 class="mb-2">Skróty i podpowiedzi</h5>
+                <ul class="mb-0">
+                    <li><strong>Panel główny</strong> – start i szybki dostęp do najważniejszych funkcji.</li>
+                    <li><strong>Wnioski</strong> – składanie i podgląd wniosków (dla radnego) lub zatwierdzanie (dla prezydium).</li>
+                    <li><strong>Obecność / quorum</strong> – szybka weryfikacja liczby obecnych w trakcie sesji.</li>
+                    <li><strong>Wyniki</strong> – podgląd wyników głosowań (publiczny ekran i zestawienia).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card">
+            <div class="card-body p-4">
+                <h5 class="mb-3">Kontakt</h5>
+                <p class="mb-2">W razie pytań skontaktuj się z administratorem systemu.</p>
+                <div class="small text-muted">
+                    Wersja interfejsu: <strong>2026-02</strong><br>
+                    Ostatnia aktualizacja: <strong>2026-02-14</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body p-4">
+                <h5 class="mb-3">Szybkie akcje</h5>
+                <div class="d-grid gap-2">
+                    <a class="btn btn-primary" href="{% url 'panel' %}">Powrót do panelu</a>
+                    <a class="btn btn-outline-secondary" href="{% url 'logout' %}">Wyloguj</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

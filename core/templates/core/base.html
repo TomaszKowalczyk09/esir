@@ -11,171 +11,305 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
+        :root {
+            --esir-sidebar-w: 260px;
+            --esir-sidebar-bg1: #0b2a55;
+            --esir-sidebar-bg2: #071f3f;
+            --esir-surface: #ffffff;
+            --esir-muted: #8aa0c2;
+            --esir-text: #0f172a;
+            --esir-border: rgba(15, 23, 42, 0.08);
+            --esir-shadow: 0 10px 25px rgba(2, 6, 23, 0.08);
+            --esir-radius: 14px;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
         body {
             min-height: 100vh;
+            background: #eef3fb;
+            color: var(--esir-text);
         }
-        .esir-topbar {
-            background-color: #0d6efd;
-            color: #fff;
-        }
-        .esir-topbar .navbar-brand {
-            font-weight: 600;
-        }
+
+        /* Layout */
         .esir-layout {
             display: flex;
-            min-height: calc(100vh - 56px); /* 56px – wysokość navbaru */
+            min-height: 100vh;
         }
+
+        /* Sidebar */
         .esir-sidebar {
-            width: 240px;
-            background-color: #212529;
+            width: var(--esir-sidebar-w);
+            background: linear-gradient(180deg, var(--esir-sidebar-bg1) 0%, var(--esir-sidebar-bg2) 100%);
             color: #fff;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
         }
+
+        .esir-sidebar::-webkit-scrollbar {
+            width: 10px;
+        }
+        .esir-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.12);
+            border-radius: 10px;
+        }
+
+        .esir-sidebar .esir-brand {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            padding: .9rem .9rem .75rem .9rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .esir-sidebar .esir-brand .mark {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+        }
+        .esir-sidebar .esir-brand .name {
+            line-height: 1.1;
+        }
+        .esir-sidebar .esir-brand .name strong {
+            display: block;
+            font-size: 1rem;
+            letter-spacing: .2px;
+        }
+        .esir-sidebar .esir-brand .name span {
+            display: block;
+            font-size: .78rem;
+            color: rgba(255,255,255,0.70);
+        }
+
+        .esir-sidebar .esir-section-title {
+            margin: 1rem .9rem .35rem .9rem;
+            font-size: .72rem;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+        }
+
+        .esir-sidebar .list-group {
+            --bs-list-group-bg: transparent;
+            --bs-list-group-border-color: transparent;
+        }
+
         .esir-sidebar .list-group-item {
             background-color: transparent;
-            color: #ced4da;
+            color: rgba(255,255,255,0.82);
             border: 0;
-            border-radius: 0;
+            border-radius: 12px;
+            margin: .15rem .55rem;
+            padding: .62rem .75rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
         }
-        .esir-sidebar .list-group-item.active,
+
+        .esir-sidebar .list-group-item i {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.70);
+        }
+
         .esir-sidebar .list-group-item:hover {
-            background-color: #343a40;
+            background: rgba(255,255,255,0.10);
             color: #fff;
         }
+
+        .esir-sidebar .list-group-item.active,
+        .esir-sidebar .list-group-item:focus {
+            background: rgba(255,255,255,0.14);
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(2, 6, 23, 0.20);
+        }
+
+        .esir-sidebar .esir-sidebar-footer {
+            margin-top: auto;
+            padding: .9rem;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .esir-sidebar .esir-sidebar-footer a {
+            color: rgba(255,255,255,0.78);
+            text-decoration: none;
+        }
+        .esir-sidebar .esir-sidebar-footer a:hover {
+            color: #fff;
+        }
+
+        /* Content */
         .esir-content {
             flex: 1;
-            padding: 1.5rem;
-            background-color: #f8f9fa;
+            padding: 1.75rem;
+            background: #eef3fb;
         }
-        .esir-username {
-            font-size: 0.9rem;
+
+        .esir-page-title {
+            font-weight: 750;
+            letter-spacing: .2px;
+            margin-bottom: 1rem;
+        }
+
+        /* Common “cards” look to match screenshot */
+        .card, .alert {
+            border-radius: var(--esir-radius);
+        }
+        .card {
+            border: 1px solid var(--esir-border);
+            box-shadow: var(--esir-shadow);
+        }
+
+        /* Footer */
+        .esir-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--esir-border);
+            color: #64748b;
+        }
+
+        /* Responsive */
+        @media (max-width: 991.98px) {
+            .esir-layout {
+                flex-direction: column;
+            }
+            .esir-sidebar {
+                position: relative;
+                top: 0;
+                height: auto;
+                width: 100%;
+            }
         }
     </style>
 
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Górny pasek -->
-    <nav class="navbar navbar-expand-lg navbar-dark esir-topbar">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% if user.is_authenticated %}{% url 'panel' %}{% else %}{% url 'landing' %}{% endif %}">e-SIR</a>
-            <div class="d-flex align-items-center ms-auto">
-                {% if user.is_authenticated %}
-                    <span class="me-3 esir-username">
-                        {{ user.imie }} {{ user.nazwisko }} ({{ user.rola }})
-                    </span>
-                    <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">
-                        Wyloguj
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-    </nav>
-
     <div class="esir-layout">
         <!-- Sidebar -->
         {% if user.is_authenticated %}
-        <div class="esir-sidebar d-flex flex-column p-2">
-            <div class="mb-2 text-uppercase small text-muted px-2">
-                Nawigacja
+        <aside class="esir-sidebar d-flex flex-column">
+            <div class="esir-brand">
+                <div class="mark">e</div>
+                <div class="name">
+                    <strong>e-SIR</strong>
+                    <span>System obsługi sesji</span>
+                </div>
             </div>
+
+            <div class="esir-section-title">Zarządzanie</div>
+
             <div class="list-group list-group-flush">
 
                 {% if user.rola == 'prezydium' %}
                     <!-- Menu prezydium -->
                     <a href="{% url 'panel' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-speedometer2 me-2"></i> Panel
+                        <i class="bi bi-speedometer2"></i> Panel główny
                     </a>
                     <a href="{% url 'prezydium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-steps me-2"></i> Głosowania
+                        <i class="bi bi-bar-chart-steps"></i> Głosowania
                     </a>
                     <a href="{% url 'prezydium_agenda' %}" class="list-group-item list-group-item-action">
-                    <i class="bi bi-list-ul me-2"></i> Porządek obrad
-                </a>
+                        <i class="bi bi-list-ul"></i> Porządek obrad
+                    </a>
 
                     {% url 'nadchodzace_sesje_prezidium' as url_nadchodzace %}
                     {% if url_nadchodzace %}
                     <a href="{{ url_nadchodzace }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar-event me-2"></i> Nadchodzące sesje
+                        <i class="bi bi-calendar-event"></i> Nadchodzące sesje
                     </a>
                     {% endif %}
                     {% url 'prezydium_uczestnicy' as url_uczestnicy %}
                     {% if url_uczestnicy %}
                     <a href="{{ url_uczestnicy }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people me-2"></i> Uczestnicy
+                        <i class="bi bi-people"></i> Uczestnicy
                     </a>
                     {% endif %}
                     <a href="{% url 'prezydium_uczestnicy' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people me-2"></i> Radni
+                        <i class="bi bi-people"></i> Radni
                     </a>
                     <a href="{% url 'wnioski_prezidium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-journal-text me-2"></i> Wnioski
+                        <i class="bi bi-journal-text"></i> Wnioski
                     </a>
                     <a href="{% url 'obecnosci_prezidium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-person-check me-2"></i> Obecność / quorum
+                        <i class="bi bi-person-check"></i> Obecność / quorum
                     </a>
                     <a href="{% url 'komisja_skrzynka_rady' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-inbox me-2"></i> Komisje – skrzynka
+                        <i class="bi bi-inbox"></i> Komisje – skrzynka
                     </a>
                     <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-diagram-3 me-2"></i> Komisje
+                        <i class="bi bi-diagram-3"></i> Komisje
                     </a>
                     <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar-range me-2"></i> Sesje
+                        <i class="bi bi-calendar-range"></i> Sesje
                     </a>
 
                 {% elif user.rola == 'administrator' %}
                     <!-- Menu administrator (operator sesji) -->
                     <a href="{% url 'radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-speedometer2 me-2"></i> Panel
+                        <i class="bi bi-speedometer2"></i> Panel główny
                     </a>
                     <a href="{% url 'admin_sesja_panel' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-list-ul me-2"></i> Sterowanie sesją
+                        <i class="bi bi-list-ul"></i> Sterowanie sesją
                     </a>
                     <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar-range me-2"></i> Sesje
+                        <i class="bi bi-calendar-range"></i> Sesje
                     </a>
                     <a href="{% url 'prezydium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-steps me-2"></i> Głosowania
+                        <i class="bi bi-bar-chart-steps"></i> Głosowania
                     </a>
                     <a href="{% url 'wyniki' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-line me-2"></i> Wyniki
+                        <i class="bi bi-bar-chart-line"></i> Wyniki
                     </a>
                     <a href="{% url 'wnioski_radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-journal-text me-2"></i> Wnioski
+                        <i class="bi bi-journal-text"></i> Wnioski
                     </a>
                     <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-diagram-3 me-2"></i> Moje komisje
+                        <i class="bi bi-diagram-3"></i> Moje komisje
                     </a>
                     <a href="{% url 'prezydium_uczestnicy' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people me-2"></i> Radni
+                        <i class="bi bi-people"></i> Radni
                     </a>
 
                 {% else %}
                     <!-- Menu radnego (tylko podgląd) -->
                     <a href="{% url 'panel' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-speedometer2 me-2"></i> Panel
+                        <i class="bi bi-speedometer2"></i> Panel główny
                     </a>
                     <a href="{% url 'radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-check2-square me-2"></i> Głosowania
+                        <i class="bi bi-check2-square"></i> Głosowania
                     </a>
                     {% url 'porzadek_obrad' as url_porzadek_radny %}
                     {% if url_porzadek_radny %}
                     <a href="{{ url_porzadek_radny }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-list-ul me-2"></i> Porządek obrad
+                        <i class="bi bi-list-ul"></i> Porządek obrad
                     </a>
                     {% endif %}
                     <a href="{% url 'wyniki' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-line me-2"></i> Wyniki
+                        <i class="bi bi-bar-chart-line"></i> Wyniki
                     </a>
                     <a href="{% url 'wnioski_radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-journal-text me-2"></i> Wnioski
+                        <i class="bi bi-journal-text"></i> Wnioski
                     </a>
                     <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-diagram-3 me-2"></i> Komisje
+                        <i class="bi bi-diagram-3"></i> Komisje
                     </a>
                 {% endif %}
             </div>
-        </div>
+
+            <div class="esir-sidebar-footer">
+                <div class="d-flex flex-column gap-2">
+                    <a href="{% url 'pomoc' %}" class="small"><i class="bi bi-question-circle me-2"></i>Pomoc</a>
+                    <a href="{% url 'logout' %}" class="small"><i class="bi bi-box-arrow-right me-2"></i>Wyloguj się</a>
+                </div>
+            </div>
+        </aside>
         {% endif %}
 
         <!-- Główna treść -->
@@ -191,7 +325,7 @@
 
             {% block content %}{% endblock %}
 
-            <footer class="text-center text-muted small mt-4 pt-3 border-top">
+            <footer class="text-center small esir-footer">
                 Developed by Tomasz Kowalczyk<br>
                 Maintained by Łukasz Majka
             </footer>
