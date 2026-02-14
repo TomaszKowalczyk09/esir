@@ -265,122 +265,111 @@
         <!-- Sidebar -->
         {% if user.is_authenticated %}
         <aside class="esir-sidebar d-flex flex-column" aria-label="Nawigacja">
-            <div class="esir-brand">
-                <div class="mark">e</div>
-                <div class="name">
-                    <strong>e-SIR</strong>
-                    <span>System obsługi sesji</span>
-                </div>
+          <div class="esir-brand">
+            <div class="mark">e</div>
+            <div class="name">
+              <strong>e-SIR</strong>
+              <span>System obsługi sesji</span>
             </div>
+          </div>
 
-            <div class="esir-section-title">Zarządzanie</div>
-
+          {% if user.rola == 'prezydium' %}
+            <div class="esir-section-title">Nawigacja</div>
             <div class="list-group list-group-flush">
-
-                {% if user.rola == 'prezydium' %}
-                    <!-- Menu prezydium -->
-                    <a href="{% url 'panel' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-speedometer2"></i> Panel główny
-                    </a>
-                    <a href="{% url 'prezydium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-steps"></i> Głosowania
-                    </a>
-                    <a href="{% url 'prezydium_agenda' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-list-ul"></i> Porządek obrad
-                    </a>
-
-                    {% url 'nadchodzace_sesje_prezidium' as url_nadchodzace %}
-                    {% if url_nadchodzace %}
-                    <a href="{{ url_nadchodzace }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar-event"></i> Nadchodzące sesje
-                    </a>
-                    {% endif %}
-                    {% url 'prezydium_uczestnicy' as url_uczestnicy %}
-                    {% if url_uczestnicy %}
-                    <a href="{{ url_uczestnicy }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people"></i> Uczestnicy
-                    </a>
-                    {% endif %}
-                    <a href="{% url 'prezydium_uczestnicy' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people"></i> Radni
-                    </a>
-                    <a href="{% url 'wnioski_prezidium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-journal-text"></i> Wnioski
-                    </a>
-                    <a href="{% url 'obecnosci_prezidium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-person-check"></i> Obecność / quorum
-                    </a>
-                    <a href="{% url 'komisja_skrzynka_rady' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-inbox"></i> Komisje – skrzynka
-                    </a>
-                    <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-diagram-3"></i> Komisje
-                    </a>
-                    <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar-range"></i> Sesje
-                    </a>
-
-                {% elif user.rola == 'administrator' %}
-                    <!-- Menu administrator (operator sesji) -->
-                    <a href="{% url 'radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-speedometer2"></i> Panel główny
-                    </a>
-                    <a href="{% url 'admin_sesja_panel' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-list-ul"></i> Sterowanie sesją
-                    </a>
-                    <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar-range"></i> Sesje
-                    </a>
-                    <a href="{% url 'prezydium' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-steps"></i> Głosowania
-                    </a>
-                    <a href="{% url 'wyniki' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-line"></i> Wyniki
-                    </a>
-                    <a href="{% url 'wnioski_radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-journal-text"></i> Wnioski
-                    </a>
-                    <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-diagram-3"></i> Moje komisje
-                    </a>
-                    <a href="{% url 'prezydium_uczestnicy' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people"></i> Radni
-                    </a>
-
-                {% else %}
-                    <!-- Menu radnego (tylko podgląd) -->
-                    <a href="{% url 'panel' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-speedometer2"></i> Panel główny
-                    </a>
-                    <a href="{% url 'radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-check2-square"></i> Głosowania
-                    </a>
-                    {% url 'porzadek_obrad' as url_porzadek_radny %}
-                    {% if url_porzadek_radny %}
-                    <a href="{{ url_porzadek_radny }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-list-ul"></i> Porządek obrad
-                    </a>
-                    {% endif %}
-                    <a href="{% url 'wyniki' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-bar-chart-line"></i> Wyniki
-                    </a>
-                    <a href="{% url 'wnioski_radny' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-journal-text"></i> Wnioski
-                    </a>
-                    <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-diagram-3"></i> Komisje
-                    </a>
-                {% endif %}
+              <a href="{% url 'panel' %}" class="list-group-item list-group-item-action"><i class="bi bi-speedometer2"></i> Panel</a>
+              <a href="{% url 'prezydium_dashboard' %}" class="list-group-item list-group-item-action"><i class="bi bi-grid-1x2"></i> Dashboard</a>
             </div>
 
-            <div class="esir-sidebar-footer">
-                <div class="d-flex flex-column gap-2">
-                    <a href="{% url 'pomoc' %}" class="small"><i class="bi bi-question-circle me-2"></i>Pomoc</a>
-                    <a href="{% url 'logout' %}" class="small"><i class="bi bi-box-arrow-right me-2"></i>Wyloguj się</a>
-                </div>
+            <div class="esir-section-title">Sesja</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action"><i class="bi bi-calendar-range"></i> Sesje</a>
+              <a href="{% url 'prezydium_agenda' %}" class="list-group-item list-group-item-action"><i class="bi bi-list-ul"></i> Agenda</a>
+              <a href="{% url 'prezydium' %}" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-steps"></i> Głosowania</a>
+              {% url 'nadchodzace_sesje_prezidium' as url_nadchodzace %}
+              {% if url_nadchodzace %}
+                <a href="{{ url_nadchodzace }}" class="list-group-item list-group-item-action"><i class="bi bi-calendar-event"></i> Nadchodzące</a>
+              {% endif %}
+              <a href="{% url 'obecnosci_prezidium' %}" class="list-group-item list-group-item-action"><i class="bi bi-person-check"></i> Obecność / quorum</a>
             </div>
+
+            <div class="esir-section-title">Radni</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'prezydium_uczestnicy' %}" class="list-group-item list-group-item-action"><i class="bi bi-people"></i> Lista radnych</a>
+            </div>
+
+            <div class="esir-section-title">Wnioski</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'wnioski_prezidium' %}" class="list-group-item list-group-item-action"><i class="bi bi-journal-text"></i> Wnioski</a>
+            </div>
+
+            <div class="esir-section-title">Komisje</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action"><i class="bi bi-diagram-3"></i> Komisje</a>
+              <a href="{% url 'komisja_skrzynka_rady' %}" class="list-group-item list-group-item-action"><i class="bi bi-inbox"></i> Skrzynka rady</a>
+            </div>
+
+          {% elif user.rola == 'administrator' %}
+            <div class="esir-section-title">Nawigacja</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'panel' %}" class="list-group-item list-group-item-action"><i class="bi bi-speedometer2"></i> Panel</a>
+              <a href="{% url 'radny' %}" class="list-group-item list-group-item-action"><i class="bi bi-check2-square"></i> Głosowania (radny)</a>
+            </div>
+
+            <div class="esir-section-title">Sesja</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'admin_sesja_panel' %}" class="list-group-item list-group-item-action"><i class="bi bi-list-ul"></i> Sterowanie sesją</a>
+              <a href="{% url 'prezydium_agenda' %}" class="list-group-item list-group-item-action"><i class="bi bi-lightning-charge"></i> Agenda</a>
+              <a href="{% url 'prezydium_sesje' %}" class="list-group-item list-group-item-action"><i class="bi bi-calendar-range"></i> Sesje</a>
+              <a href="{% url 'prezydium' %}" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-steps"></i> Głosowania (operator)</a>
+            </div>
+
+            <div class="esir-section-title">Wnioski</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'wnioski_radny' %}" class="list-group-item list-group-item-action"><i class="bi bi-journal-text"></i> Moje wnioski</a>
+            </div>
+
+            <div class="esir-section-title">Komisje</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action"><i class="bi bi-diagram-3"></i> Moje komisje</a>
+            </div>
+
+            <div class="esir-section-title">Radni</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'prezydium_uczestnicy' %}" class="list-group-item list-group-item-action"><i class="bi bi-people"></i> Lista radnych</a>
+            </div>
+
+          {% else %}
+            <div class="esir-section-title">Nawigacja</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'panel' %}" class="list-group-item list-group-item-action"><i class="bi bi-speedometer2"></i> Panel</a>
+              <a href="{% url 'radny' %}" class="list-group-item list-group-item-action"><i class="bi bi-check2-square"></i> Głosowania</a>
+            </div>
+
+            <div class="esir-section-title">Wnioski</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'wnioski_radny' %}" class="list-group-item list-group-item-action"><i class="bi bi-journal-text"></i> Wnioski</a>
+            </div>
+
+            <div class="esir-section-title">Wyniki</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'wyniki' %}" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-line"></i> Wyniki</a>
+            </div>
+
+            <div class="esir-section-title">Komisje</div>
+            <div class="list-group list-group-flush">
+              <a href="{% url 'komisje_moje' %}" class="list-group-item list-group-item-action"><i class="bi bi-diagram-3"></i> Komisje</a>
+            </div>
+          {% endif %}
+
+          <div class="esir-sidebar-footer">
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'pomoc' %}" class="small"><i class="bi bi-question-circle me-2"></i>Pomoc</a>
+              <a href="{% url 'logout' %}" class="small"><i class="bi bi-box-arrow-right me-2"></i>Wyloguj się</a>
+            </div>
+          </div>
         </aside>
         {% endif %}
+        <!-- Sidebar -->
 
         <!-- Główna treść -->
         <main class="esir-content">
