@@ -25,6 +25,7 @@
 
         html, body {
             height: 100%;
+            overflow-x: hidden;
         }
 
         body {
@@ -37,6 +38,7 @@
         .esir-layout {
             display: flex;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* Sidebar */
@@ -49,6 +51,7 @@
             height: 100vh;
             overflow-y: auto;
             border-right: 1px solid rgba(255, 255, 255, 0.06);
+            overflow-x: hidden;
         }
 
         .esir-sidebar::-webkit-scrollbar {
@@ -150,6 +153,7 @@
             padding: 1.75rem;
             background: #eef3fb;
             min-width: 0; /* ważne dla overflow na flex */
+            overflow-x: hidden;
         }
 
         .esir-page-title {
@@ -240,6 +244,76 @@
                 display: block;
             }
         }
+
+        /* Zwijanie całego sidebara (desktop) */
+        body.esir-sidebar-collapsed .esir-sidebar {
+            width: 76px;
+        }
+
+        body.esir-sidebar-collapsed .esir-sidebar .esir-brand {
+            justify-content: center;
+        }
+        body.esir-sidebar-collapsed .esir-sidebar .esir-brand .name {
+            display: none;
+        }
+
+        body.esir-sidebar-collapsed .esir-sidebar .esir-sidebar-footer {
+            display: none;
+        }
+
+        body.esir-sidebar-collapsed .esir-sidebar .esir-sidebar-collapse {
+            justify-content: center;
+        }
+
+        body.esir-sidebar-collapsed .esir-sidebar .esir-section-title {
+            display: none;
+        }
+
+        body.esir-sidebar-collapsed .esir-sidebar .list-group-item {
+            justify-content: center;
+            gap: 0;
+            padding: .7rem .6rem;
+            margin: .25rem .45rem;
+        }
+
+        body.esir-sidebar-collapsed .esir-sidebar .list-group-item {
+            font-size: 0;
+        }
+        body.esir-sidebar-collapsed .esir-sidebar .list-group-item i {
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 991.98px) {
+            body.esir-sidebar-collapsed .esir-sidebar {
+                width: var(--esir-sidebar-w);
+            }
+        }
+
+        /* Przycisk zwijania sidebara – poprawiona widoczność */
+        .esir-sidebar-collapse {
+            padding: .4rem .75rem .6rem .75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        #esirSidebarCollapseBtn {
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.22);
+            color: #fff;
+            border-radius: 10px;
+            padding: .25rem .5rem;
+            line-height: 1;
+        }
+
+        #esirSidebarCollapseBtn:hover {
+            background: rgba(255,255,255,0.16);
+        }
+
+        @media (max-width: 991.98px) {
+            /* na mobile zwijanie desktopowe nie ma sensu */
+            .esir-sidebar-collapse { display: none; }
+        }
     </style>
 
     {% block extra_head %}{% endblock %}
@@ -271,6 +345,12 @@
               <strong>e-SIR</strong>
               <span>System obsługi sesji</span>
             </div>
+          </div>
+
+          <div class="esir-sidebar-collapse">
+            <button type="button" class="btn btn-sm" id="esirSidebarCollapseBtn" aria-label="Zwiń/rozwiń menu">
+              <i class="bi bi-layout-sidebar-inset"></i>
+            </button>
           </div>
 
           {% if user.rola == 'prezydium' %}
@@ -420,6 +500,54 @@
           const a = e.target.closest('a');
           if (a && a.closest('.esir-sidebar')) closeNav();
         });
+
+        // Zwijanie całego sidebara (desktop)
+        const collapseBtn = document.getElementById('esirSidebarCollapseBtn');
+        const collapseKey = 'esir_sidebar_collapsed_v1';
+
+        function applyCollapsedState(collapsed) {
+          document.body.classList.toggle('esir-sidebar-collapsed', !!collapsed);
+          setupCollapsedTooltips();
+        }
+
+        try {
+          const saved = localStorage.getItem(collapseKey);
+          if (saved === '1') applyCollapsedState(true);
+        } catch (e) {
+          // ignore
+        }
+
+        if (collapseBtn) {
+          collapseBtn.addEventListener('click', function () {
+            const collapsed = document.body.classList.contains('esir-sidebar-collapsed');
+            applyCollapsedState(!collapsed);
+            try {
+              localStorage.setItem(collapseKey, collapsed ? '0' : '1');
+            } catch (e) {
+              // ignore
+            }
+          });
+        }
+
+        // Tooltipy w trybie zwiniętym (desktop)
+        function setupCollapsedTooltips() {
+          const sidebar = document.querySelector('.esir-sidebar');
+          if (!sidebar) return;
+
+          const collapsed = document.body.classList.contains('esir-sidebar-collapsed');
+          sidebar.querySelectorAll('.list-group-item').forEach(function (a) {
+            const text = (a.textContent || '').trim();
+            if (!text) return;
+            if (collapsed) {
+              a.setAttribute('title', text);
+            } else {
+              a.removeAttribute('title');
+            }
+          });
+        }
+
+        // po wczytaniu
+        setupCollapsedTooltips();
       })();
     </script>
 
