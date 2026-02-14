@@ -5,6 +5,65 @@
 {% block content %}
 <h3 class="mb-3">Panel radnego</h3>
 
+<!-- Kafelki z najważniejszymi funkcjami -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-6 col-xl-3">
+    <a href="{% url 'radny' %}" class="text-decoration-none">
+      <div class="card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small">Głosowania</div>
+            <div class="fs-5 fw-semibold">Otwartych: {{ glosowania|length }}</div>
+          </div>
+          <div class="fs-2 text-primary"><i class="bi bi-check2-square"></i></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-12 col-md-6 col-xl-3">
+    <a href="{% url 'wnioski_radny' %}" class="text-decoration-none">
+      <div class="card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small">Wnioski</div>
+            <div class="fs-5 fw-semibold">Złóż / podgląd</div>
+          </div>
+          <div class="fs-2 text-primary"><i class="bi bi-journal-text"></i></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-12 col-md-6 col-xl-3">
+    <a href="{% url 'wyniki' %}" class="text-decoration-none">
+      <div class="card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small">Wyniki</div>
+            <div class="fs-5 fw-semibold">Zobacz wyniki</div>
+          </div>
+          <div class="fs-2 text-primary"><i class="bi bi-bar-chart-line"></i></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-12 col-md-6 col-xl-3">
+    <a href="{% url 'komisje_moje' %}" class="text-decoration-none">
+      <div class="card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small">Komisje</div>
+            <div class="fs-5 fw-semibold">Moje komisje</div>
+          </div>
+          <div class="fs-2 text-primary"><i class="bi bi-diagram-3"></i></div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
 {% if sesja %}
   <!-- Informacje o sesji -->
   <div class="card mb-4 shadow-sm">
