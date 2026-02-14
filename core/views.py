@@ -27,6 +27,10 @@ def _can_manage_session(user):
     return getattr(user, "rola", None) in {"prezydium", "administrator"}
 
 
+def _is_prezydium_or_admin(user):
+    return getattr(user, "rola", None) in {"prezydium", "administrator"}
+
+
 def _radny_like_qs():
     """Queryset of users who are allowed to vote like councillors (excluding prezydium)."""
     return Uzytkownik.objects.filter(rola__in=["radny", "administrator"])
@@ -279,6 +283,28 @@ def nadchodzace_sesje_prezidium(request):
 
     sesje = Sesja.objects.all().order_by("data")
     return render(request, "core/nadchodzace_sesje_prezidium.html", {"sesje": sesje})
+
+
+@login_required
+def prezydium_uczestnicy(request):
+    """Lista wszystkich radnych (dla prezydium i administratorów)."""
+    if not _is_prezydium_or_admin(request.user):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    radni = Uzytkownik.objects.filter(rola="radny").order_by("nazwisko", "imie")
+    return render(request, "core/prezydium_uczestnicy.html", {"radni": radni})
+
+
+@login_required
+def prezydium_uczestnik_szczegoly(request, user_id: int):
+    """Szczegóły wybranego radnego (dla prezydium i administratorów)."""
+    if not _is_prezydium_or_admin(request.user):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    radny = get_object_or_404(Uzytkownik, id=user_id, rola="radny")
+
+    # Można rozbudować o statystyki (np. obecności, głosy) jeśli będą potrzebne.
+    return render(request, "core/prezydium_uczestnik_szczegoly.html", {"radny": radny})
 
 
 # --------------------------------------------------

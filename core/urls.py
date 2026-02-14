@@ -35,6 +35,18 @@ urlpatterns = [
         name="nadchodzace_sesje_prezidium",
     ),
 
+    # PREZYDIUM / ADMIN – radni
+    path(
+        "prezydium/radni/",
+        views.prezydium_uczestnicy,
+        name="prezydium_uczestnicy",
+    ),
+    path(
+        "prezydium/radni/<int:user_id>/",
+        views.prezydium_uczestnik_szczegoly,
+        name="prezydium_uczestnik_szczegoly",
+    ),
+
     # Operacje na sesjach
     path("sesje/nowa/", views.sesja_nowa, name="sesja_nowa"),
     path("sesje/<int:sesja_id>/edytuj/", views.sesja_edytuj, name="sesja_edytuj"),

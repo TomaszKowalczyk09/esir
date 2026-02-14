@@ -1,0 +1,17 @@
+{% extends "core/prezydium_dashboard.html" %}
+
+{% block content %}
+  <h2>Szczegóły radnego</h2>
+
+  <p><strong>Imię i nazwisko:</strong> {{ radny.imie }} {{ radny.nazwisko }}</p>
+
+  {% if radny.email %}
+    <p><strong>E-mail:</strong> {{ radny.email }}</p>
+  {% endif %}
+
+  <p><strong>Rola:</strong> {{ radny.get_rola_display|default:radny.rola }}</p>
+
+  <p>
+    <a href="{% url 'prezydium_uczestnicy' %}">← Wróć do listy radnych</a>
+  </p>
+{% endblock %}

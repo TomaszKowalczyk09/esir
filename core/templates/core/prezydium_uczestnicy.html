@@ -1,0 +1,17 @@
+{% extends "core/prezydium_dashboard.html" %}
+
+{% block content %}
+  <h2>Lista radnych</h2>
+
+  {% if radni %}
+    <ul>
+      {% for r in radni %}
+        <li>
+          <a href="{% url 'prezydium_uczestnik_szczegoly' r.id %}">{{ r.imie }} {{ r.nazwisko }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Brak radnych w systemie.</p>
+  {% endif %}
+{% endblock %}
