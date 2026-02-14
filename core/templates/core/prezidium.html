@@ -78,12 +78,15 @@
             {# Opcja oddania głosu dla prezydium #}
             <div class="mt-2" id="glosowanie-prez-{{ punkt.glosowanie.id }}">
               {% if punkt.glosowanie.otwarte %}
-                <div class="btn-group btn-group-sm" role="group" aria-label="Oddaj głos">
-                  <button type="button" class="btn btn-outline-primary btn-oddaj-glos" data-id="{{ punkt.glosowanie.id }}" data-glos="za">ZA</button>
-                  <button type="button" class="btn btn-outline-danger btn-oddaj-glos" data-id="{{ punkt.glosowanie.id }}" data-glos="przeciw">PRZECIW</button>
-                  <button type="button" class="btn btn-outline-secondary btn-oddaj-glos" data-id="{{ punkt.glosowanie.id }}" data-glos="wstrzymuje">WSTRZYMUJĘ</button>
-                </div>
-                <small class="ms-2 text-muted" id="glos-info-{{ punkt.glosowanie.id }}"></small>
+                <form method="post" action="{% url 'oddaj_glos' punkt.glosowanie.id %}" class="form-glosowanie-prez d-flex align-items-center gap-2 flex-wrap">
+                  {% csrf_token %}
+                  <div class="btn-group btn-group-sm" role="group" aria-label="Oddaj głos">
+                    <button type="submit" name="glos" value="za" class="btn btn-outline-primary">ZA</button>
+                    <button type="submit" name="glos" value="przeciw" class="btn btn-outline-danger">PRZECIW</button>
+                    <button type="submit" name="glos" value="wstrzymuje" class="btn btn-outline-secondary">WSTRZYMUJĘ</button>
+                  </div>
+                  <small class="text-muted">(głos zapisze się po kliknięciu)</small>
+                </form>
               {% else %}
                 <small class="text-muted">Głosowanie zamknięte.</small>
               {% endif %}
@@ -123,20 +126,35 @@ $(function () {
     return cookieValue;
   }
 
-  // Otwieranie / zamykanie głosowania
+  // Ustaw CSRF dla wszystkich żądań AJAX (ważne przy POST)
+  $.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+      const method = (settings.type || settings.method || 'GET').toUpperCase();
+      if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+        const token = getCookie('csrftoken');
+        if (token) xhr.setRequestHeader('X-CSRFToken', token);
+      }
+    }
+  });
+
+  // Otwieranie / zamykanie głosowania (zostaje w AJAX)
   $('.toggle-glosowanie').click(function () {
     const id = $(this).data('id');
     const btn = $(this);
     $.get('/glosowanie/' + id + '/toggle/', function (data) {
       if (data.otwarte) {
         btn.text('Zamknij');
+        // odśwież UI po otwarciu: pokaż formularz jak u radnego (POST + CSRF)
         $('#glosowanie-prez-' + id).html(
+          '<form method="post" action="/glosowanie/' + id + '/glosuj/" class="form-glosowanie-prez d-flex align-items-center gap-2 flex-wrap">' +
+          '{% csrf_token %}' +
           '<div class="btn-group btn-group-sm" role="group" aria-label="Oddaj głos">' +
-          '<button type="button" class="btn btn-outline-primary btn-oddaj-glos" data-id="' + id + '" data-glos="za">ZA</button>' +
-          '<button type="button" class="btn btn-outline-danger btn-oddaj-glos" data-id="' + id + '" data-glos="przeciw">PRZECIW</button>' +
-          '<button type="button" class="btn btn-outline-secondary btn-oddaj-glos" data-id="' + id + '" data-glos="wstrzymuje">WSTRZYMUJĘ</button>' +
+          '<button type="submit" name="glos" value="za" class="btn btn-outline-primary">ZA</button>' +
+          '<button type="submit" name="glos" value="przeciw" class="btn btn-outline-danger">PRZECIW</button>' +
+          '<button type="submit" name="glos" value="wstrzymuje" class="btn btn-outline-secondary">WSTRZYMUJĘ</button>' +
           '</div>' +
-          '<small class="ms-2 text-muted" id="glos-info-' + id + '"></small>'
+          '<small class="text-muted">(głos zapisze się po kliknięciu)</small>' +
+          '</form>'
         );
       } else {
         btn.text('Otwórz');
@@ -157,15 +175,17 @@ $(function () {
       url: '/glosowanie/' + glosowanieId + '/glosuj/',
       method: 'POST',
       headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': getCookie('csrftoken'),
+        'X-Requested-With': 'XMLHttpRequest'
       },
       data: { glos: glos },
       success: function () {
         info.removeClass('text-muted text-danger').addClass('text-success').text('Głos zapisany.');
       },
       error: function (xhr) {
-        const msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Błąd zapisu głosu.';
+        let msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Błąd zapisu głosu.';
+        if (xhr.status === 403 && !msg) {
+          msg = 'Brak uprawnień lub błąd CSRF (odśwież stronę).';
+        }
         info.removeClass('text-muted text-success').addClass('text-danger').text(msg);
       }
     });

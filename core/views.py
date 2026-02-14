@@ -19,7 +19,7 @@ def _is_prezydium(user):
 
 def _is_radny_like(user):
     # roles that can act as a councillor (can vote / see councillor views)
-    return getattr(user, "rola", None) in {"radny", "administrator"}
+    return getattr(user, "rola", None) in {"radny", "administrator", "prezydium"}
 
 
 def _can_manage_session(user):
@@ -415,16 +415,16 @@ def oddaj_glos(request, glosowanie_id):
 
     if not glosowanie.otwarte:
         if is_ajax(request):
-            return JsonResponse({"error": "Głosowanie zamknięte"})
+            return JsonResponse({"error": "Głosowanie zamknięte"}, status=400)
         messages.error(request, "Głosowanie jest zamknięte.")
-        return redirect("radny")
+        return redirect("panel")
 
     wartosc = request.POST.get("glos")
     if wartosc not in ["za", "przeciw", "wstrzymuje"]:
         if is_ajax(request):
-            return JsonResponse({"error": "Nieprawidłowa wartość głosu"})
+            return JsonResponse({"error": "Nieprawidłowa wartość głosu"}, status=400)
         messages.error(request, "Nieprawidłowa wartość głosu.")
-        return redirect("radny")
+        return redirect("panel")
 
     glos, created = Glos.objects.get_or_create(
         glosowanie=glosowanie,
@@ -434,15 +434,15 @@ def oddaj_glos(request, glosowanie_id):
 
     if not created:
         if is_ajax(request):
-            return JsonResponse({"error": "Już oddałeś głos w tym głosowaniu"})
+            return JsonResponse({"error": "Już oddałeś głos w tym głosowaniu"}, status=409)
         messages.warning(request, "Już oddałeś głos w tym głosowaniu.")
-        return redirect("radny")
+        return redirect("panel")
 
     if is_ajax(request):
         return JsonResponse({"success": True})
 
     messages.success(request, "Głos został zapisany.")
-    return redirect("radny")
+    return redirect("panel")
 
 
 def api_wyniki(request, glosowanie_id):
