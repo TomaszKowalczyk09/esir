@@ -50,6 +50,7 @@ AUTH_USER_MODEL = 'accounts.Uzytkownik'
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -140,6 +141,13 @@ STATICFILES_DIRS = [
 
 # Katalog wyjściowy dla `collectstatic` (nie commitować)
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# WhiteNoise: serwowanie statyków (w tym admin CSS/JS) bezpośrednio z Django
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    }
+}
 
 # (opcjonalnie) media upload
 MEDIA_URL = "/media/"

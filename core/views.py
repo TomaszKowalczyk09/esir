@@ -287,23 +287,34 @@ def nadchodzace_sesje_prezidium(request):
 
 @login_required
 def prezydium_uczestnicy(request):
-    """Lista wszystkich radnych (dla prezydium i administratorów)."""
+    """Lista wszystkich radnych (dla prezydium i administratorów).
+
+    W praktyce „radni” w UI to wszyscy uprawnieni do głosowania:
+    - radny
+    - prezydium
+    - administrator (też jest radnym)
+    """
     if not _is_prezydium_or_admin(request.user):
         return HttpResponseForbidden("Brak uprawnień")
 
-    radni = Uzytkownik.objects.filter(rola="radny").order_by("nazwisko", "imie")
+    radni = _uprawnieni_do_glosowania_qs().order_by("nazwisko", "imie")
     return render(request, "core/prezydium_uczestnicy.html", {"radni": radni})
 
 
 @login_required
 def prezydium_uczestnik_szczegoly(request, user_id: int):
-    """Szczegóły wybranego radnego (dla prezydium i administratorów)."""
+    """Szczegóły wybranego uczestnika (dla prezydium i administratorów)."""
     if not _is_prezydium_or_admin(request.user):
         return HttpResponseForbidden("Brak uprawnień")
 
-    radny = get_object_or_404(Uzytkownik, id=user_id, rola="radny")
+    # Dopuszczamy podgląd także prezydium i administratorów,
+    # bo są częścią listy i mają status „radny” w sensie uprawnień do głosowania.
+    radny = get_object_or_404(
+        Uzytkownik,
+        id=user_id,
+        rola__in=["radny", "administrator", "prezydium"],
+    )
 
-    # Można rozbudować o statystyki (np. obecności, głosy) jeśli będą potrzebne.
     return render(request, "core/prezydium_uczestnik_szczegoly.html", {"radny": radny})
 
 
