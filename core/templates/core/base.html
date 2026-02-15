@@ -314,6 +314,22 @@
             /* na mobile zwijanie desktopowe nie ma sensu */
             .esir-sidebar-collapse { display: none; }
         }
+
+        /* Sidebar zawsze widoczny przy scrollu (desktop) */
+        @media (min-width: 992px) {
+            .esir-sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+            }
+            .esir-content {
+                margin-left: var(--esir-sidebar-w);
+            }
+            body.esir-sidebar-collapsed .esir-content {
+                margin-left: 76px;
+            }
+        }
     </style>
 
     {% block extra_head %}{% endblock %}
