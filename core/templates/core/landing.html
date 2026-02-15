@@ -2,73 +2,222 @@
 
 {% block title %}Elektroniczny System Informacji i Rady{% endblock %}
 
+{% block extra_head %}
+<style>
+  .landing-hero {
+    background: radial-gradient(1200px 500px at 15% 10%, rgba(13,110,253,.20), transparent 55%),
+                radial-gradient(900px 420px at 90% 20%, rgba(25,135,84,.18), transparent 55%),
+                #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+  .landing-kpi {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    background: rgba(255,255,255,.75);
+  }
+  .feature-tile {
+    border: 1px solid rgba(15, 23, 42, 0.10);
+    border-radius: 14px;
+    background: #fff;
+    height: 100%;
+  }
+  .feature-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: rgba(13,110,253,.10);
+    color: #0b2a55;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="py-3 py-md-4">
   <div class="row justify-content-center">
-    <div class="col-lg-9">
-      <div class="p-4 p-md-5 bg-white rounded-3 shadow-sm">
-        <div class="d-flex align-items-center gap-3 mb-3">
-          <div class="display-6 fw-semibold">e-SIR</div>
-          <span class="badge text-bg-primary">Elektroniczny System Informacji i Rady</span>
-        </div>
+    <div class="col-12 col-lg-10">
 
-        <p class="lead mb-4">
-          e-SIR to aplikacja webowa wspierająca przygotowanie i prowadzenie sesji oraz obsługę głosowań.
-          Ułatwia pracę prezydium, porządkuje dokumentację i pozwala radnym oddawać głosy w sposób szybki i przejrzysty.
-        </p>
+      <div class="landing-hero rounded-4 shadow-sm p-4 p-md-5">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-4">
+          <div>
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <div class="display-6 fw-semibold">e‑SIR</div>
+              <span class="badge text-bg-primary">System sesyjny</span>
+            </div>
+            <p class="lead mb-0" style="max-width: 62ch;">
+              Elektroniczny System Informacji i Rady wspiera przygotowanie i prowadzenie sesji,
+              obsługę głosowań, obecności (quorum) oraz dokumentację wniosków i prac komisji.
+            </p>
+          </div>
 
-        <div class="row g-3 mb-4">
-          <div class="col-md-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="fw-semibold mb-1"><i class="bi bi-check2-square me-2"></i>Głosowania</div>
-              <div class="text-muted small">
-                Prezydium przygotowuje sesję i punkty obrad, a następnie otwiera i zamyka głosowania.
-                Wyniki są liczone automatycznie.
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="fw-semibold mb-1"><i class="bi bi-person-check me-2"></i>Obecność i quorum</div>
-              <div class="text-muted small">
-                Radni potwierdzają obecność, a prezydium ma podgląd quorum w czasie rzeczywistym.
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="fw-semibold mb-1"><i class="bi bi-journal-text me-2"></i>Wnioski</div>
-              <div class="text-muted small">
-                Składanie i obsługa wniosków (powiązanych z punktem obrad lub poza sesją), z możliwością eksportu do PDF.
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="fw-semibold mb-1"><i class="bi bi-shield-lock me-2"></i>Bezpieczeństwo</div>
-              <div class="text-muted small">
-                Dostęp do funkcji systemu jest kontrolowany rolami. Dane sesji są dostępne wyłącznie po zalogowaniu.
-              </div>
+          <div class="d-grid gap-2" style="min-width: 240px;">
+            <a class="btn btn-primary btn-lg" href="{% url 'login' %}">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Zaloguj się
+            </a>
+            <a class="btn btn-outline-secondary" href="{% url 'pomoc' %}">
+              <i class="bi bi-question-circle me-2"></i>Jak to działa?
+            </a>
+            <div class="text-muted small">
+              Dostęp wymaga konta przydzielonego przez administratora.
             </div>
           </div>
         </div>
 
-        <hr class="my-4" />
-
-        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
-          <div class="text-muted small">
-            Aby przejść do panelu, zaloguj się przy użyciu konta, które zostało Ci przydzielone.
+        <div class="row g-3 mt-4">
+          <div class="col-12 col-md-4">
+            <div class="landing-kpi p-3">
+              <div class="small text-muted">Sesje w systemie</div>
+              <div class="fw-semibold">
+                {{ liczba_sesji|default:"—" }}
+              </div>
+            </div>
           </div>
-          <a class="btn btn-primary" href="{% url 'login' %}">
-            Przejdź do logowania
-          </a>
+          <div class="col-12 col-md-4">
+            <div class="landing-kpi p-3">
+              <div class="small text-muted">Punkty porządku obrad</div>
+              <div class="fw-semibold">
+                {{ liczba_punktow|default:"—" }}
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="landing-kpi p-3">
+              <div class="small text-muted">Otwarte głosowania</div>
+              <div class="fw-semibold">
+                {{ liczba_glosowan_otwartych|default:"—" }}
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="row g-3 g-md-4 mt-4">
+        <div class="col-12 col-md-6">
+          <div class="feature-tile p-3 p-md-4">
+            <div class="d-flex gap-3">
+              <div class="feature-icon"><i class="bi bi-check2-square"></i></div>
+              <div>
+                <div class="fw-semibold mb-1">Głosowania</div>
+                <div class="text-muted small">
+                  Otwieranie i zamykanie głosowań, automatyczne zliczanie wyników oraz podgląd w czasie rzeczywistym.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <div class="feature-tile p-3 p-md-4">
+            <div class="d-flex gap-3">
+              <div class="feature-icon" style="background: rgba(25,135,84,.10);"><i class="bi bi-person-check"></i></div>
+              <div>
+                <div class="fw-semibold mb-1">Obecność i quorum</div>
+                <div class="text-muted small">
+                  Potwierdzanie obecności przez radnych oraz szybki podgląd quorum dla operatora sesji.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <div class="feature-tile p-3 p-md-4">
+            <div class="d-flex gap-3">
+              <div class="feature-icon" style="background: rgba(111,66,193,.10);"><i class="bi bi-journal-text"></i></div>
+              <div>
+                <div class="fw-semibold mb-1">Wnioski</div>
+                <div class="text-muted small">
+                  Rejestracja wniosków, powiązanie z punktami obrad, statusy oraz eksport do PDF.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <div class="feature-tile p-3 p-md-4">
+            <div class="d-flex gap-3">
+              <div class="feature-icon" style="background: rgba(13,202,240,.12);"><i class="bi bi-diagram-3"></i></div>
+              <div>
+                <div class="fw-semibold mb-1">Komisje</div>
+                <div class="text-muted small">
+                  Obsługa prac komisji: punkty, wnioski komisji i przekazywanie do rady.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h2 class="h4 mb-0">FAQ</h2>
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'pomoc' %}">Pełna pomoc</a>
+        </div>
+        <div class="accordion mt-3" id="landingFaq">
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="faqOneH">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faqOne" aria-expanded="true" aria-controls="faqOne">
+                Kto może korzystać z e‑SIR?
+              </button>
+            </h2>
+            <div id="faqOne" class="accordion-collapse collapse show" aria-labelledby="faqOneH" data-bs-parent="#landingFaq">
+              <div class="accordion-body">
+                Użytkownicy z rolami systemowymi: radny, prezydium lub administrator. Konto zakłada administrator.
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="faqTwoH">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqTwo" aria-expanded="false" aria-controls="faqTwo">
+                Gdzie zobaczę aktualne głosowania?
+              </button>
+            </h2>
+            <div id="faqTwo" class="accordion-collapse collapse" aria-labelledby="faqTwoH" data-bs-parent="#landingFaq">
+              <div class="accordion-body">
+                Po zalogowaniu wejdź do panelu. Radni widzą listę otwartych głosowań dla aktywnej sesji.
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="faqThreeH">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqThree" aria-expanded="false" aria-controls="faqThree">
+                Czy wyniki głosowań mogą być tajne?
+              </button>
+            </h2>
+            <div id="faqThree" class="accordion-collapse collapse" aria-labelledby="faqThreeH" data-bs-parent="#landingFaq">
+              <div class="accordion-body">
+                Tak. Przy głosowaniach tajnych w trakcie trwania nie są ujawniane wyniki szczegółowe.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mt-4">
+        <div class="text-muted small">
+          Masz problem z logowaniem? Skontaktuj się z administratorem systemu.
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'login' %}">
+          Przejdź do logowania
+        </a>
       </div>
 
       <div class="text-center text-muted small mt-4">
-        e-SIR • {{ now|default:"" }}
+        e‑SIR • <span id="landingYear"></span>
       </div>
+
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const y = document.getElementById('landingYear');
+    if (y) y.textContent = String(new Date().getFullYear());
+  })();
+</script>
 {% endblock %}
