@@ -335,10 +335,11 @@
         .esir-public {
             min-height: 100vh;
             display: flex;
-            align-items: center;
+            align-items: stretch; /* było: center */
         }
         .esir-public main {
             width: 100%;
+            max-width: none;
         }
     </style>
 
@@ -507,7 +508,7 @@
         <!-- Główna treść -->
         <main class="esir-content">
       {% else %}
-        <main class="container py-4">
+        <main class="container-fluid p-0">
       {% endif %}
 
             {% if messages %}

@@ -73,12 +73,7 @@ def landing(request):
     if request.user.is_authenticated:
         return redirect("panel")
 
-    context = {
-        "liczba_sesji": Sesja.objects.count(),
-        "liczba_punktow": PunktObrad.objects.count(),
-        "liczba_glosowan_otwartych": Glosowanie.objects.filter(otwarte=True).count(),
-    }
-    return render(request, "core/landing.html", context)
+    return render(request, "core/landing.html")
 
 
 @login_required
