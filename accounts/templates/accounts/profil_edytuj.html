@@ -1,0 +1,112 @@
+{% extends "core/base.html" %}
+
+{% block title %}Profil{% endblock %}
+
+{% block extra_head %}
+<style>
+  .profile-hint {
+    font-size: .85rem;
+    color: #64748b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="esir-page-title">Profil</h1>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Imię</label>
+              <input class="form-control" value="{{ request.user.imie }}" disabled>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Nazwisko</label>
+              <input class="form-control" value="{{ request.user.nazwisko }}" disabled>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Rola</label>
+              <input class="form-control" value="{{ request.user.get_rola_display }}" disabled>
+            </div>
+
+            <div class="col-12">
+              <div class="d-flex align-items-baseline justify-content-between gap-2">
+                <label class="form-label mb-0">Opis</label>
+                <div class="small text-muted"><span id="opisCount">0</span>/500</div>
+              </div>
+              {{ form.opis }}
+              <div class="profile-hint mt-1">To pole jest widoczne dla innych użytkowników w systemie.</div>
+
+              {% if form.opis.errors %}
+                <div class="text-danger small mt-1">{{ form.opis.errors }}</div>
+              {% endif %}
+            </div>
+
+            {% if form.non_field_errors %}
+              <div class="col-12">
+                <div class="alert alert-danger mb-0">{{ form.non_field_errors }}</div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary" type="submit">
+              <i class="bi bi-save me-1"></i>Zapisz
+            </button>
+            <a class="btn btn-outline-secondary" href="{% url 'panel' %}">Powrót</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-body p-4">
+        <h5 class="mb-3">Podgląd</h5>
+        <div>
+          <div class="fw-semibold">{{ request.user.imie }} {{ request.user.nazwisko }}</div>
+          <div class="text-muted small">{{ request.user.get_rola_display }}</div>
+        </div>
+
+        {% if request.user.opis %}
+          <hr>
+          <div class="small text-muted">Opis</div>
+          <div>{{ request.user.opis|linebreaksbr }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="alert alert-info mt-4">
+      Zmiana imienia, nazwiska i roli jest zablokowana. Skontaktuj się z administratorem, jeśli dane są niepoprawne.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const textarea = document.getElementById('id_opis');
+    const counter = document.getElementById('opisCount');
+    if (!textarea || !counter) return;
+
+    const limit = 500;
+    textarea.setAttribute('maxlength', String(limit));
+    textarea.classList.add('form-control');
+
+    function refresh() {
+      counter.textContent = String((textarea.value || '').length);
+    }
+
+    textarea.addEventListener('input', refresh);
+    refresh();
+  })();
+</script>
+{% endblock %}

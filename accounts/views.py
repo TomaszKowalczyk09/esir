@@ -3,6 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django import forms
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def user_login(request):
@@ -41,3 +46,33 @@ def change_password_first(request):
         form = PasswordChangeForm(user=request.user)
 
     return render(request, "core/change_password_first.html", {"form": form})
+
+
+class ProfilForm(forms.ModelForm):
+    class Meta:
+        from .models import Uzytkownik
+
+        model = Uzytkownik
+        fields = ["opis"]
+        widgets = {
+            "opis": forms.Textarea(attrs={"rows": 4, "placeholder": "Krótki opis..."}),
+        }
+
+
+@login_required
+def profil_edytuj(request):
+    if request.method == "POST":
+        form = ProfilForm(request.POST, instance=request.user)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    form.save()
+                messages.success(request, "Profil został zaktualizowany.")
+                return redirect("profil_edytuj")
+            except Exception:
+                logger.exception("Błąd zapisu profilu użytkownika id=%s", getattr(request.user, "id", None))
+                form.add_error(None, "Nie udało się zapisać profilu. Spróbuj ponownie lub skontaktuj się z administratorem.")
+    else:
+        form = ProfilForm(instance=request.user)
+
+    return render(request, "accounts/profil_edytuj.html", {"form": form})

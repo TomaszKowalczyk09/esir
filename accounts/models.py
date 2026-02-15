@@ -14,6 +14,9 @@ class Uzytkownik(AbstractUser):
     nazwisko = models.CharField(max_length=50)
     must_change_password = models.BooleanField(default=True)
 
+    # profil
+    opis = models.TextField(blank=True, default="")
+
     def save(self, *args, **kwargs):
         """Synchronizuje rolę biznesową z uprawnieniami Django.
 
