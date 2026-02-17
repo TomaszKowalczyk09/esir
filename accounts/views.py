@@ -45,7 +45,14 @@ def change_password_first(request):
     else:
         form = PasswordChangeForm(user=request.user)
 
-    return render(request, "core/change_password_first.html", {"form": form})
+    return render(
+        request,
+        "core/change_password_first.html",
+        {
+            "form": form,
+            "force_public_layout": True,  # bez menu przy wymuszonej zmianie hasła
+        },
+    )
 
 
 class ProfilForm(forms.ModelForm):
