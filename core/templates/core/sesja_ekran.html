@@ -187,6 +187,12 @@
 </div>
 
 <div class="ekran-main">
+  <!-- Komunikat globalny (jeśli ustawiony) -->
+  <div id="ekran-komunikat-global" style="display: none; margin-bottom: 30px;">
+    <div class="alert alert-warning text-center fs-4 mb-0">
+      <i class="bi bi-megaphone"></i> <span id="ekran-komunikat-text"></span>
+    </div>
+  </div>
   <!-- Tytuł punktu i opis -->
   <h1 id="ekran-punkt-tytul" class="ekran-punkt-tytul">Brak aktywnego punktu</h1>
   <div id="ekran-punkt-sub" class="ekran-punkt-sub text-muted"></div>
@@ -258,6 +264,22 @@
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
+    // Auto-refresh global message
+    function odswiezKomunikatGlobalny() {
+      $.getJSON('/api/ekran_komunikat/', function(data) {
+        var komunikat = data.komunikat || '';
+        var box = $('#ekran-komunikat-global');
+        var text = $('#ekran-komunikat-text');
+        if (komunikat) {
+          text.text(komunikat);
+          box.show();
+        } else {
+          box.hide();
+        }
+      });
+    }
+    odswiezKomunikatGlobalny();
+    setInterval(odswiezKomunikatGlobalny, 2000);
   // Zegar w prawym górnym rogu
   function aktualizujCzas() {
     const el = document.getElementById('ekran-czas');

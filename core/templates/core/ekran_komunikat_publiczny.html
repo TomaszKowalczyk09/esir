@@ -1,0 +1,11 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Komunikat na ekranie{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="height: 80vh;">
+  <div class="text-center">
+    <h1 class="display-4">{{ komunikat|linebreaksbr }}</h1>
+  </div>
+</div>
+{% endblock %}

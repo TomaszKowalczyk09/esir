@@ -1,9 +1,38 @@
-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 # Panel wyboru sesji do generowania protokołu PDF
 from .models import Sesja
+
+# Wyświetlanie komunikatu na ekranie sesji bez punktu obrad
+from django.core.cache import cache
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def ekran_komunikat(request):
+    if not _can_manage_session(request.user):
+        return redirect("radny")
+    komunikat = ""
+    if request.method == "POST":
+        komunikat = request.POST.get("komunikat", "")
+        cache.set("ekran_komunikat_global", komunikat, timeout=None)
+    else:
+        komunikat = cache.get("ekran_komunikat_global", "")
+    return render(request, "core/ekran_komunikat.html", {"komunikat": komunikat})
+
+# Widok publiczny ekranu komunikatu
+def ekran_komunikat_publiczny(request):
+    from django.core.cache import cache
+    komunikat = cache.get("ekran_komunikat_global", "")
+    return render(request, "core/ekran_komunikat_publiczny.html", {"komunikat": komunikat})
+
+# API endpoint for AJAX polling of the global message
+from django.http import JsonResponse
+@require_http_methods(["GET"])
+def api_ekran_komunikat(request):
+    from django.core.cache import cache
+    komunikat = cache.get("ekran_komunikat_global", "")
+    return JsonResponse({"komunikat": komunikat})
 
 # Usuwanie punktu obrad
 @login_required
@@ -741,8 +770,10 @@ def sesja_ekran(request, sesja_id):
     """
     Publiczny ekran sesji wyświetlany na rzutniku w sali obrad.
     """
+    from django.core.cache import cache
     sesja = get_object_or_404(Sesja, id=sesja_id)
-    return render(request, "core/sesja_ekran.html", {"sesja": sesja})
+    komunikat = cache.get("ekran_komunikat_global", "")
+    return render(request, "core/sesja_ekran.html", {"sesja": sesja, "komunikat": komunikat})
 
 
 @login_required

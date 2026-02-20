@@ -1,8 +1,12 @@
-
 from django.urls import path
 from . import views
 
 urlpatterns = [
+        # API for AJAX polling of the global message
+        path("api/ekran_komunikat/", views.api_ekran_komunikat, name="api_ekran_komunikat"),
+    # Komunikat na ekranie sesji (bez punktu obrad)
+    path("ekran/komunikat/", views.ekran_komunikat, name="ekran_komunikat"),
+    path("ekran/komunikat/publiczny/", views.ekran_komunikat_publiczny, name="ekran_komunikat_publiczny"),
     # Przesuwanie punktów obrad (góra/dół)
     path(
         "punkt/<int:punkt_id>/przesun/<str:kierunek>/",
@@ -15,8 +19,8 @@ urlpatterns = [
         views.usun_punkt_obrad,
         name="usun_punkt_obrad",
     ),
-        path("protokol/wybor/", views.protokol_sesji_wybor, name="protokol_sesji_wybor"),
-        path("protokol/pdf/", views.protokol_sesji_pdf_wybor, name="protokol_sesji_pdf_wybor"),
+    path("protokol/wybor/", views.protokol_sesji_wybor, name="protokol_sesji_wybor"),
+    path("protokol/pdf/", views.protokol_sesji_pdf_wybor, name="protokol_sesji_pdf_wybor"),
     # Landing page (public)
     path("", views.landing, name="landing"),
     # Panel główny (przekierowuje wg roli)

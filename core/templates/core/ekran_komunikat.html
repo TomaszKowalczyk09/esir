@@ -1,0 +1,21 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Komunikat na ekranie{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">Wyświetl komunikat na ekranie sesji</h3>
+<form method="post">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label for="komunikat" class="form-label">Treść komunikatu</label>
+    <textarea id="komunikat" name="komunikat" class="form-control" rows="3">{{ komunikat }}</textarea>
+  </div>
+  <button type="submit" class="btn btn-primary">Wyświetl na ekranie</button>
+</form>
+{% if komunikat %}
+  <div class="alert alert-info mt-4">
+    <strong>Aktualny komunikat na ekranie:</strong><br>
+    {{ komunikat }}
+  </div>
+{% endif %}
+{% endblock %}
