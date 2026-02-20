@@ -346,7 +346,7 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    {% if user.is_authenticated %}
+    {% if user.is_authenticated and not force_public_layout %}
     <div class="esir-mobilebar">
         <div class="container-fluid py-2 d-flex align-items-center justify-content-between">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="esirNavToggle" aria-label="Menu">
@@ -363,8 +363,8 @@
     {% endif %}
 
     {# Wrapper wybierany w zależności od tego, czy pokazujemy sidebar #}
-    <div class="{% if user.is_authenticated %}esir-layout{% else %}esir-public{% endif %}">
-      {% if user.is_authenticated %}
+    <div class="{% if user.is_authenticated and not force_public_layout %}esir-layout{% else %}esir-public{% endif %}">
+      {% if user.is_authenticated and not force_public_layout %}
         <!-- Sidebar -->
         <aside class="esir-sidebar d-flex flex-column" aria-label="Nawigacja">
           <div class="esir-brand">

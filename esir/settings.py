@@ -15,6 +15,7 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get(
     "DJANGO_ALLOWED_HOSTS",
     "localhost,127.0.0.1,sesja.gminagryfino.pl",
+    ".vercel.app",
 ).split(",") if h.strip()]
 
 AUTH_PASSWORD_VALIDATORS = [
