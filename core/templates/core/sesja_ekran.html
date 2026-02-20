@@ -192,6 +192,7 @@
     <div class="alert alert-warning text-center fs-4 mb-0">
       <i class="bi bi-megaphone"></i> <span id="ekran-komunikat-text"></span>
     </div>
+    <div id="ekran-komunikat-debug" style="font-size:12px; color:#888; text-align:center; margin-top:4px; display:none;"></div>
   </div>
   <!-- Tytuł punktu i opis -->
   <h1 id="ekran-punkt-tytul" class="ekran-punkt-tytul">Brak aktywnego punktu</h1>
@@ -270,6 +271,9 @@
         var komunikat = data.komunikat || '';
         var box = $('#ekran-komunikat-global');
         var text = $('#ekran-komunikat-text');
+        var debug = $('#ekran-komunikat-debug');
+        debug.text('API: ' + JSON.stringify(data));
+        debug.show();
         if (komunikat) {
           text.text(komunikat);
           box.show();
