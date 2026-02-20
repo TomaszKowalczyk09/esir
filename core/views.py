@@ -1029,7 +1029,7 @@ def reset_danych_testowych(request):
 @require_http_methods(["GET"])
 def obecnosci_prezidium(request):
     """Panel prezydium do sprawdzania obecności i quorum w aktywnej sesji."""
-    if request.user.rola != "prezydium":
+    if request.user.rola not in ["prezydium", "administrator"]:
         return redirect("radny")
 
     sesja = Sesja.objects.filter(aktywna=True).first()
