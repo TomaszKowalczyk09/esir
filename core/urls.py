@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+        path("protokol/wybor/", views.protokol_sesji_wybor, name="protokol_sesji_wybor"),
+        path("protokol/pdf/", views.protokol_sesji_pdf_wybor, name="protokol_sesji_pdf_wybor"),
     # Landing page (public)
     path("", views.landing, name="landing"),
     # Panel główny (przekierowuje wg roli)

@@ -1,0 +1,16 @@
+{% extends 'core/base.html' %}
+{% block title %}Protokół z sesji{% endblock %}
+{% block content %}
+<h3 class="mb-3">Wygeneruj protokół z wybranej sesji</h3>
+<form method="get" action="{% url 'protokol_sesji_pdf_wybor' %}">
+  <div class="mb-3">
+    <label for="sesja_id" class="form-label">Wybierz sesję:</label>
+    <select class="form-select" id="sesja_id" name="sesja_id" required>
+      {% for s in sesje %}
+        <option value="{{ s.id }}">{{ s.nazwa }} ({{ s.data|date:'Y-m-d H:i' }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Generuj protokół PDF</button>
+</form>
+{% endblock %}

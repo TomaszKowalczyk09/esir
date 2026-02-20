@@ -1,3 +1,152 @@
+from django.shortcuts import render, get_object_or_404, redirect
+# Panel wyboru sesji do generowania protokołu PDF
+from .models import Sesja
+
+def protokol_sesji_wybor(request):
+    if not _can_manage_session(request.user):
+        return HttpResponseForbidden("Brak uprawnień")
+    sesje = Sesja.objects.filter(jest_usunieta=False).order_by('-data')
+    return render(request, "core/protokol_sesji_wybor.html", {"sesje": sesje})
+
+# Generowanie PDF dla wybranej sesji
+def protokol_sesji_pdf_wybor(request):
+    if not _can_manage_session(request.user):
+        return HttpResponseForbidden("Brak uprawnień")
+    sesja_id = request.GET.get("sesja_id")
+    sesja = get_object_or_404(Sesja, id=sesja_id)
+    # poniżej kod jak w protokol_sesji_pdf, ale dla wybranej sesji
+    punkty = (
+        sesja.punkty
+        .select_related("glosowanie")
+        .order_by("numer")
+    )
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    font_regular = "Helvetica"
+    font_bold = "Helvetica-Bold"
+    try:
+        import os
+        from django.conf import settings
+        font_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "fonts", "DejaVuSans.ttf")
+        font_bold_path = os.path.join(settings.BASE_DIR, "core", "static", "core", "fonts", "DejaVuSans-Bold.ttf")
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
+            font_regular = "DejaVuSans"
+        if os.path.exists(font_bold_path):
+            pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", font_bold_path))
+            font_bold = "DejaVuSans-Bold"
+    except Exception:
+        pass
+    margin_left = 20 * mm
+    margin_right = 20 * mm
+    margin_top = 20 * mm
+    margin_bottom = 20 * mm
+    usable_width = width - margin_left - margin_right
+    def new_page(y_start=None):
+        c.showPage()
+        y0 = (height - margin_top) if y_start is None else y_start
+        return y0
+    y = height - margin_top
+    c.setFont(font_bold, 14)
+    c.drawString(margin_left, y, "Protokół z posiedzenia")
+    y -= 8 * mm
+    c.setFont(font_bold, 12)
+    c.drawString(margin_left, y, sesja.nazwa)
+    y -= 6 * mm
+    c.setFont(font_regular, 10)
+    c.drawString(margin_left, y, f"Data: {timezone.localtime(sesja.data).strftime('%Y-%m-%d %H:%M')}")
+    y -= 6 * mm
+    c.setFont(font_regular, 9)
+    c.drawString(margin_left, y, f"Wygenerowano: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
+    y -= 10 * mm
+    c.setFont(font_bold, 11)
+    c.drawString(margin_left, y, "Porządek obrad i wyniki głosowań")
+    y -= 8 * mm
+    for p in punkty:
+        if y < margin_bottom:
+            y = new_page()
+        c.setFont(font_bold, 10)
+        c.drawString(margin_left, y, f"{p.numer}. {p.tytul}")
+        y -= 5 * mm
+        if p.opis:
+            c.setFont(font_regular, 9)
+            text = (p.opis or "").replace("\r\n", "\n").replace("\r", "\n")
+            for para in text.split("\n"):
+                para = para.strip()
+                if not para:
+                    y -= 3 * mm
+                    continue
+                while para:
+                    max_chars = len(para)
+                    for i in range(1, len(para)+1):
+                        if c.stringWidth(para[:i], font_regular, 9) > usable_width - 2 * mm:
+                            max_chars = i - 1
+                            break
+                    line, para = para[:max_chars], para[max_chars:]
+                    c.drawString(margin_left + 2 * mm, y, line)
+                    y -= 4.5 * mm
+                    if y < margin_bottom:
+                        y = new_page()
+                        c.setFont(font_regular, 9)
+        gl = getattr(p, "glosowanie", None)
+        if gl:
+            r = gl.wynik_podsumowanie()
+            c.setFont(font_regular, 9)
+            meta = f"Głosowanie: {gl.nazwa} | Jawność: {gl.get_jawnosc_display()} | Większość: {gl.get_wiekszosc_display()}"
+            meta_lines = []
+            meta_text = meta
+            while meta_text:
+                max_chars = len(meta_text)
+                for i in range(1, len(meta_text)+1):
+                    if c.stringWidth(meta_text[:i], font_regular, 9) > usable_width - 2 * mm:
+                        max_chars = i - 1
+                        break
+                line, meta_text = meta_text[:max_chars], meta_text[max_chars:]
+                meta_lines.append(line)
+            for line in meta_lines:
+                c.drawString(margin_left + 2 * mm, y, line)
+                y -= 4.8 * mm
+            wynik = f"Za: {r['za']}  Przeciw: {r['przeciw']}  Wstrzymuje: {r['wstrzymuje']}"
+            if r.get("prog"):
+                wynik += f"  |  Próg: {r['prog']}"
+            wynik += f"  |  Wynik: {'PRZESZŁO' if r['przeszedl'] else 'NIE PRZESZŁO'}"
+            wynik_lines = []
+            wynik_text = wynik
+            while wynik_text:
+                max_chars = len(wynik_text)
+                for i in range(1, len(wynik_text)+1):
+                    if c.stringWidth(wynik_text[:i], font_regular, 9) > usable_width - 2 * mm:
+                        max_chars = i - 1
+                        break
+                line, wynik_text = wynik_text[:max_chars], wynik_text[max_chars:]
+                wynik_lines.append(line)
+            for line in wynik_lines:
+                c.drawString(margin_left + 2 * mm, y, line)
+                y -= 6 * mm
+        else:
+            c.setFont(font_regular, 9)
+            c.drawString(margin_left + 2 * mm, y, "Brak głosowania")
+            y -= 6 * mm
+        y -= 2 * mm
+    c.showPage()
+    c.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    safe_name = (sesja.nazwa or "sesja").replace("/", "-")
+    filename = f"protokol_{safe_name}_{timezone.localtime(sesja.data).strftime('%Y-%m-%d')}.pdf"
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp["Pragma"] = "no-cache"
+    resp["Expires"] = "0"
+    return resp
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
