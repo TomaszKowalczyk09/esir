@@ -11,6 +11,9 @@
     <textarea id="komunikat" name="komunikat" class="form-control" rows="3">{{ komunikat }}</textarea>
   </div>
   <button type="submit" class="btn btn-primary">Wyświetl na ekranie</button>
+  {% if komunikat %}
+    <button type="submit" name="usun_komunikat" value="1" class="btn btn-outline-danger ms-2">Usuń komunikat</button>
+  {% endif %}
 </form>
 {% if komunikat %}
   <div class="alert alert-info mt-4">

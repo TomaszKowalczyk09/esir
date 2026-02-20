@@ -14,8 +14,12 @@ def ekran_komunikat(request):
         return redirect("radny")
     komunikat = ""
     if request.method == "POST":
-        komunikat = request.POST.get("komunikat", "")
-        cache.set("ekran_komunikat_global", komunikat, timeout=None)
+        if "usun_komunikat" in request.POST:
+            cache.set("ekran_komunikat_global", "", timeout=None)
+            komunikat = ""
+        else:
+            komunikat = request.POST.get("komunikat", "")
+            cache.set("ekran_komunikat_global", komunikat, timeout=None)
     else:
         komunikat = cache.get("ekran_komunikat_global", "")
     return render(request, "core/ekran_komunikat.html", {"komunikat": komunikat})
@@ -25,6 +29,17 @@ def ekran_komunikat_publiczny(request):
     from django.core.cache import cache
     komunikat = cache.get("ekran_komunikat_global", "")
     return render(request, "core/ekran_komunikat_publiczny.html", {"komunikat": komunikat})
+
+# API endpoint to clear the global message (admin/prezydium only)
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_ekran_komunikat_clear(request):
+    if not request.user.is_authenticated or not _can_manage_session(request.user):
+        return JsonResponse({"ok": False, "error": "Brak uprawnień"}, status=403)
+    from django.core.cache import cache
+    cache.set("ekran_komunikat_global", "", timeout=None)
+    return JsonResponse({"ok": True})
 
 # API endpoint for AJAX polling of the global message
 from django.http import JsonResponse
@@ -773,7 +788,8 @@ def sesja_ekran(request, sesja_id):
     from django.core.cache import cache
     sesja = get_object_or_404(Sesja, id=sesja_id)
     komunikat = cache.get("ekran_komunikat_global", "")
-    return render(request, "core/sesja_ekran.html", {"sesja": sesja, "komunikat": komunikat})
+    is_admin = request.user.is_authenticated and _can_manage_session(request.user)
+    return render(request, "core/sesja_ekran.html", {"sesja": sesja, "komunikat": komunikat, "is_admin": is_admin})
 
 
 @login_required

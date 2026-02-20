@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+            # API for clearing the global message
+            path("api/ekran_komunikat/clear/", views.api_ekran_komunikat_clear, name="api_ekran_komunikat_clear"),
         # API for AJAX polling of the global message
         path("api/ekran_komunikat/", views.api_ekran_komunikat, name="api_ekran_komunikat"),
     # Komunikat na ekranie sesji (bez punktu obrad)
