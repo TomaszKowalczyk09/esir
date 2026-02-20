@@ -1,3 +1,25 @@
+from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods
+require_POST
+def punkt_gora(request, punkt_id):
+    punkt = get_object_or_404(PunktObrad, id=punkt_id)
+    if punkt.numer > 1:
+        poprzedni = PunktObrad.objects.filter(sesja=punkt.sesja, numer=punkt.numer-1).first()
+        if poprzedni:
+            punkt.numer, poprzedni.numer = poprzedni.numer, punkt.numer
+            punkt.save()
+            poprzedni.save()
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+@require_POST
+def punkt_dol(request, punkt_id):
+    punkt = get_object_or_404(PunktObrad, id=punkt_id)
+    nastepny = PunktObrad.objects.filter(sesja=punkt.sesja, numer=punkt.numer+1).first()
+    if nastepny:
+        punkt.numer, nastepny.numer = nastepny.numer, punkt.numer
+        punkt.save()
+        nastepny.save()
+    return redirect(request.META.get('HTTP_REFERER', '/'))
 from django.shortcuts import render, get_object_or_404, redirect
 # Panel wyboru sesji do generowania protokołu PDF
 from .models import Sesja
