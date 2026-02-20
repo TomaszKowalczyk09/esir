@@ -1211,81 +1211,114 @@ def protokol_sesji_pdf(request):
     except Exception:
         pass
 
+    # Marginesy: 20 mm z każdej strony
+    margin_left = 20 * mm
+    margin_right = 20 * mm
+    margin_top = 20 * mm
+    margin_bottom = 20 * mm
+    usable_width = width - margin_left - margin_right
+
     def new_page(y_start=None):
         c.showPage()
-        y0 = (height - 20 * mm) if y_start is None else y_start
+        y0 = (height - margin_top) if y_start is None else y_start
         return y0
 
-    y = height - 20 * mm
+    y = height - margin_top
 
     c.setFont(font_bold, 14)
-    c.drawString(20 * mm, y, "Protokół z posiedzenia")
+    c.drawString(margin_left, y, "Protokół z posiedzenia")
     y -= 8 * mm
 
     c.setFont(font_bold, 12)
-    c.drawString(20 * mm, y, sesja.nazwa)
+    c.drawString(margin_left, y, sesja.nazwa)
     y -= 6 * mm
 
     c.setFont(font_regular, 10)
-    c.drawString(20 * mm, y, f"Data: {timezone.localtime(sesja.data).strftime('%Y-%m-%d %H:%M')}")
+    c.drawString(margin_left, y, f"Data: {timezone.localtime(sesja.data).strftime('%Y-%m-%d %H:%M')}")
     y -= 6 * mm
 
     c.setFont(font_regular, 9)
-    c.drawString(20 * mm, y, f"Wygenerowano: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
+    c.drawString(margin_left, y, f"Wygenerowano: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
     y -= 10 * mm
 
     c.setFont(font_bold, 11)
-    c.drawString(20 * mm, y, "Porządek obrad i wyniki głosowań")
+    c.drawString(margin_left, y, "Porządek obrad i wyniki głosowań")
     y -= 8 * mm
 
     for p in punkty:
-        if y < 30 * mm:
+        if y < margin_bottom:
             y = new_page()
 
         c.setFont(font_bold, 10)
-        c.drawString(20 * mm, y, f"{p.numer}. {p.tytul}")
+        c.drawString(margin_left, y, f"{p.numer}. {p.tytul}")
         y -= 5 * mm
 
         if p.opis:
             c.setFont(font_regular, 9)
-            # proste łamanie opisu
-            max_chars = 115
             text = (p.opis or "").replace("\r\n", "\n").replace("\r", "\n")
             for para in text.split("\n"):
                 para = para.strip()
                 if not para:
                     y -= 3 * mm
                     continue
-                while len(para) > max_chars:
+                # Łamanie linii na podstawie szerokości
+                while para:
+                    # Oblicz ile znaków zmieści się w usable_width
+                    max_chars = len(para)
+                    for i in range(1, len(para)+1):
+                        if c.stringWidth(para[:i], font_regular, 9) > usable_width - 2 * mm:
+                            max_chars = i - 1
+                            break
                     line, para = para[:max_chars], para[max_chars:]
-                    c.drawString(22 * mm, y, line)
+                    c.drawString(margin_left + 2 * mm, y, line)
                     y -= 4.5 * mm
-                    if y < 30 * mm:
+                    if y < margin_bottom:
                         y = new_page()
                         c.setFont(font_regular, 9)
-                c.drawString(22 * mm, y, para)
-                y -= 4.5 * mm
-                if y < 30 * mm:
-                    y = new_page()
-                    c.setFont(font_regular, 9)
 
         gl = getattr(p, "glosowanie", None)
         if gl:
             r = gl.wynik_podsumowanie()
             c.setFont(font_regular, 9)
             meta = f"Głosowanie: {gl.nazwa} | Jawność: {gl.get_jawnosc_display()} | Większość: {gl.get_wiekszosc_display()}"
-            c.drawString(22 * mm, y, meta)
+            # Łamanie linii meta jeśli za długa
+            meta_lines = []
+            meta_text = meta
+            while meta_text:
+                max_chars = len(meta_text)
+                for i in range(1, len(meta_text)+1):
+                    if c.stringWidth(meta_text[:i], font_regular, 9) > usable_width - 2 * mm:
+                        max_chars = i - 1
+                        break
+                line, meta_text = meta_text[:max_chars], meta_text[max_chars:]
+                meta_lines.append(line)
+            for line in meta_lines:
+                c.drawString(margin_left + 2 * mm, y, line)
+                y -= 4.8 * mm
             y -= 4.8 * mm
 
             wynik = f"Za: {r['za']}  Przeciw: {r['przeciw']}  Wstrzymuje: {r['wstrzymuje']}"
             if r.get("prog"):
                 wynik += f"  |  Próg: {r['prog']}"
             wynik += f"  |  Wynik: {'PRZESZŁO' if r['przeszedl'] else 'NIE PRZESZŁO'}"
-            c.drawString(22 * mm, y, wynik)
+            # Łamanie linii wynik jeśli za długa
+            wynik_lines = []
+            wynik_text = wynik
+            while wynik_text:
+                max_chars = len(wynik_text)
+                for i in range(1, len(wynik_text)+1):
+                    if c.stringWidth(wynik_text[:i], font_regular, 9) > usable_width - 2 * mm:
+                        max_chars = i - 1
+                        break
+                line, wynik_text = wynik_text[:max_chars], wynik_text[max_chars:]
+                wynik_lines.append(line)
+            for line in wynik_lines:
+                c.drawString(margin_left + 2 * mm, y, line)
+                y -= 6 * mm
             y -= 6 * mm
         else:
             c.setFont(font_regular, 9)
-            c.drawString(22 * mm, y, "Brak głosowania")
+            c.drawString(margin_left + 2 * mm, y, "Brak głosowania")
             y -= 6 * mm
 
         y -= 2 * mm
@@ -1301,4 +1334,7 @@ def protokol_sesji_pdf(request):
 
     resp = HttpResponse(pdf, content_type="application/pdf")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp["Pragma"] = "no-cache"
+    resp["Expires"] = "0"
     return resp
