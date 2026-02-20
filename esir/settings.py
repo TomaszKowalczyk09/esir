@@ -9,7 +9,7 @@ if not SECRET_KEY:
     # dev fallback (nie używać na produkcji)
     SECRET_KEY = "dev-only-change-me"
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 # ALLOWED_HOSTS jako lista rozdzielona przecinkami
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get(
