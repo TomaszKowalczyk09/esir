@@ -5,6 +5,18 @@ from django.views.decorators.http import require_POST
 # Panel wyboru sesji do generowania protokołu PDF
 from .models import Sesja
 
+# Usuwanie punktu obrad
+@login_required
+@require_POST
+def usun_punkt_obrad(request, punkt_id):
+    if not _can_manage_session(request.user):
+        return redirect("radny")
+    punkt = get_object_or_404(PunktObrad, id=punkt_id)
+    sesja_id = punkt.sesja.id
+    punkt.delete()
+    messages.success(request, "Punkt obrad został usunięty.")
+    return redirect("sesja_edytuj", sesja_id=sesja_id)
+
 # Przesuwanie punktów obrad (góra/dół)
 @login_required
 @require_POST

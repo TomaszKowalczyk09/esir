@@ -86,6 +86,12 @@
                     <i class="bi bi-arrow-down"></i>
                   </button>
                 </form>
+                <form method="post" action="{% url 'usun_punkt_obrad' punkt.id %}" onsubmit="return confirm('Czy na pewno usunąć ten punkt?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Usuń punkt">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
               </div>
             </div>
           </div>
