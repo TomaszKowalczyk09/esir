@@ -1,6 +1,40 @@
+
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 # Panel wyboru sesji do generowania protokołu PDF
 from .models import Sesja
+
+# Przesuwanie punktów obrad (góra/dół)
+@login_required
+@require_POST
+def przesun_punkt_obrad(request, punkt_id, kierunek):
+    if not _can_manage_session(request.user):
+        return redirect("radny")
+
+    punkt = get_object_or_404(PunktObrad, id=punkt_id)
+    sesja = punkt.sesja
+    if kierunek == "up":
+        poprzedni = (
+            PunktObrad.objects.filter(sesja=sesja, numer__lt=punkt.numer)
+            .order_by("-numer")
+            .first()
+        )
+        if poprzedni:
+            punkt.numer, poprzedni.numer = poprzedni.numer, punkt.numer
+            punkt.save()
+            poprzedni.save()
+    elif kierunek == "down":
+        nastepny = (
+            PunktObrad.objects.filter(sesja=sesja, numer__gt=punkt.numer)
+            .order_by("numer")
+            .first()
+        )
+        if nastepny:
+            punkt.numer, nastepny.numer = nastepny.numer, punkt.numer
+            punkt.save()
+            nastepny.save()
+    return redirect("sesja_edytuj", sesja_id=sesja.id)
 
 def protokol_sesji_wybor(request):
     if not _can_manage_session(request.user):

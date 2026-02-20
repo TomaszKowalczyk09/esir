@@ -66,12 +66,28 @@
               {% endif %}
             </div>
 
-            <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-outline-primary">
-                Ustaw jako aktywny
-              </button>
-            </form>
+            <div class="d-flex flex-column align-items-end">
+              <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}" class="mb-1">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                  Ustaw jako aktywny
+                </button>
+              </form>
+              <div class="btn-group" role="group">
+                <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'up' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń w górę" {% if forloop.first %}disabled{% endif %}>
+                    <i class="bi bi-arrow-up"></i>
+                  </button>
+                </form>
+                <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'down' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń w dół" {% if forloop.last %}disabled{% endif %}>
+                    <i class="bi bi-arrow-down"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
           <hr class="my-3" />

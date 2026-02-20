@@ -1,7 +1,15 @@
+
+
 from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Przesuwanie punktów obrad (góra/dół)
+    path(
+        "punkt/<int:punkt_id>/przesun/<str:kierunek>/",
+        views.przesun_punkt_obrad,
+        name="przesun_punkt_obrad",
+    ),
         path("protokol/wybor/", views.protokol_sesji_wybor, name="protokol_sesji_wybor"),
         path("protokol/pdf/", views.protokol_sesji_pdf_wybor, name="protokol_sesji_pdf_wybor"),
     # Landing page (public)

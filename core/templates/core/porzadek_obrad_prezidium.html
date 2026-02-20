@@ -75,13 +75,29 @@
                     <p class="mb-1 text-muted">{{ punkt.opis }}</p>
                   {% endif %}
                 </div>
-                <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
-                  {% csrf_token %}
-                  <button type="submit"
-                          class="btn btn-sm {% if punkt.aktywny %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                    Pokaż na ekranie
-                  </button>
-                </form>
+                <div class="d-flex flex-column align-items-end">
+                  <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}" class="mb-1">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="btn btn-sm {% if punkt.aktywny %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                      Pokaż na ekranie
+                    </button>
+                  </form>
+                  <div class="btn-group" role="group">
+                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'up' %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń w górę" {% if forloop.first %}disabled{% endif %}>
+                        <i class="bi bi-arrow-up"></i>
+                      </button>
+                    </form>
+                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'down' %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń w dół" {% if forloop.last %}disabled{% endif %}>
+                        <i class="bi bi-arrow-down"></i>
+                      </button>
+                    </form>
+                  </div>
+                </div>
               </div>
 
               {% if punkt.glosowanie %}
