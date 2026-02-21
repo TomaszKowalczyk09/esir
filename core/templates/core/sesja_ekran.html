@@ -465,16 +465,16 @@
                 for (let i = col * maxPerCol; i < Math.min((col + 1) * maxPerCol, items.length); i++) {
                   const r = items[i];
                   const lp = i + 1;
-                  let voteClass = '';
-                  let voteText = '';
-                  if (r.glos === 'za') { voteClass = 'text-success fw-bold'; voteText = 'za'; }
-                  else if (r.glos === 'przeciw') { voteClass = 'text-danger fw-bold'; voteText = 'przeciw'; }
-                  else if (r.glos === 'wstrzymuje') { voteClass = 'text-warning fw-bold'; voteText = 'wstrzymuje'; }
-                  else if (r.glos === 'nieobecny' || r.glos === 'nieobecna') { voteClass = 'text-secondary'; voteText = 'nieobecny'; }
-                  else { voteClass = 'text-muted'; voteText = 'BRAK'; }
-                  html += `<li class="list-group-item d-flex justify-content-between align-items-center" style="font-size:18px;padding:6px 12px;">`;
+                  let badgeClass = '';
+                  let badgeText = '';
+                  if (r.glos === 'za') { badgeClass = 'bg-success text-white fw-bold'; badgeText = 'ZA'; }
+                  else if (r.glos === 'przeciw') { badgeClass = 'bg-danger text-white fw-bold'; badgeText = 'PRZECIW'; }
+                  else if (r.glos === 'wstrzymuje') { badgeClass = 'bg-warning text-dark fw-bold'; badgeText = 'WSTRZYMUJE'; }
+                  else if (r.glos === 'nieobecny' || r.glos === 'nieobecna') { badgeClass = 'bg-secondary text-white'; badgeText = 'NIEOBECNY'; }
+                  else { badgeClass = 'bg-light text-muted'; badgeText = 'BRAK'; }
+                  html += `<li class="list-group-item d-flex justify-content-between align-items-center" style="font-size:20px;padding:8px 16px;">`;
                   html += `<span><span class="text-muted">${lp}.</span> <span class="fw-bold">${escapeHtml(r.nazwisko)} ${escapeHtml(r.imie)}</span></span>`;
-                  html += `<span class="${voteClass}" style="font-size:18px;min-width:90px;text-align:right;">${voteText}</span>`;
+                  html += `<span class="badge ${badgeClass}" style="font-size:1.2rem;padding:8px 32px;border-radius:18px;min-width:120px;text-align:right;">${badgeText}</span>`;
                   html += '</li>';
                 }
                 html += '</ul></div>';
