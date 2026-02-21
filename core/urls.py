@@ -1,8 +1,17 @@
 from django.urls import path
+from django.views.generic import TemplateView  # Usunięte, niepotrzebne
+from django.conf import settings
+from django.conf.urls.static import static
+from django.urls import re_path
+from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
             # API for clearing the global message
+    # path("docs/", TemplateView.as_view(template_name="core/static/docs/index.html")),  # Usunięte
+    path("docs", lambda request: redirect('/docs/index.html')),
+    re_path(r"^docs/(?P<section>[^/]+)/$", lambda request, section: redirect(f"/docs/{section}/index.html")),
+        re_path(r"^docs/(?P<section>[^/]+)/$", lambda request, section: redirect(f"/docs/{section}/index.html")),
             path("api/ekran_komunikat/clear/", views.api_ekran_komunikat_clear, name="api_ekran_komunikat_clear"),
         # API for AJAX polling of the global message
         path("api/ekran_komunikat/", views.api_ekran_komunikat, name="api_ekran_komunikat"),
@@ -176,3 +185,7 @@ path(
     path("ekran/sesja/", views.sesja_ekran_aktywna, name="sesja_ekran_aktywna"),
     path("ekran/sesja/<int:sesja_id>/", views.sesja_ekran, name="sesja_ekran_alias"),
 ]
+
+# Serwowanie dokumentacji MKDocs jako statycznych plików
+if settings.DEBUG:
+    urlpatterns += static("/docs/", document_root=settings.BASE_DIR / "core/static/docs")

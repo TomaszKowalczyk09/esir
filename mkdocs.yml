@@ -1,0 +1,9 @@
+site_name: e-SIR - Dokumentacja
+theme:
+  name: material
+nav:
+  - Wprowadzenie: wprowadzenie.md
+  - Logowanie i hasło: logowanie.md
+  - Panel użytkownika: panel.md
+  - Zgłaszanie problemów: pomoc.md
+  - FAQ: index.md

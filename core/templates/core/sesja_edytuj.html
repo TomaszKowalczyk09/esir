@@ -14,15 +14,41 @@
 <div class="card shadow-sm mb-4">
   <div class="card-body">
     <h5 class="card-title mb-1">{{ sesja.nazwa }}</h5>
-    <p class="text-muted mb-2">{{ sesja.data }}</p>
-    <p class="mb-0">
-      Status:
-      {% if sesja.aktywna %}
-        <span class="badge bg-success">Aktywna</span>
-      {% else %}
-        <span class="badge bg-secondary">Nieaktywna</span>
-      {% endif %}
-    </p>
+    <form method="post" enctype="multipart/form-data" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label mb-1">Data sesji</label>
+        <input type="date" name="data" class="form-control" value="{{ sesja.data|date:'Y-m-d' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label mb-1">Godzina</label>
+        <input type="time" name="czas" class="form-control" value="{{ sesja.data|date:'H:i' }}">
+      </div>
+      <div class="col-md-12">
+        <label class="form-label mb-1">Opis sesji</label>
+        <textarea name="opis" class="form-control" rows="2">{{ sesja.opis }}</textarea>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label mb-1">Status</label>
+        <select name="status" class="form-select">
+          <option value="aktywna" {% if sesja.aktywna %}selected{% endif %}>Aktywna</option>
+          <option value="nieaktywna" {% if not sesja.aktywna %}selected{% endif %}>Nieaktywna</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label mb-1">Tagi (oddziel przecinkami)</label>
+        <input type="text" name="tagi" class="form-control" value="{{ sesja.tagi|default:'' }}">
+      </div>
+      <div class="col-md-12">
+        <label class="form-label mb-1">Załączniki</label>
+        <input type="file" name="zalaczniki" class="form-control" multiple>
+      </div>
+      <div class="col-md-12 mt-2">
+        <button type="submit" name="zapisz_sesje" class="btn btn-outline-primary w-100">
+          <i class="bi bi-save me-1"></i> Zapisz zmiany
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -154,23 +180,34 @@
                 </div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label mb-1">Typ głosowania</label>
                 {{ glosowanie_form.typ }}
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label mb-1">Jawność</label>
                 {{ glosowanie_form.jawnosc }}
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label mb-1">Większość</label>
                 {{ glosowanie_form.wiekszosc }}
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label mb-1">Uprawnieni (opcjonalnie)</label>
                 {{ glosowanie_form.liczba_uprawnionych }}
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
+                <label class="form-label mb-1">Limit czasu głosowania (minuty)</label>
+                <input type="number" name="czas_glosowania" class="form-control" min="1" max="120" value="">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label mb-1">Automatyczne zamknięcie</label>
+                <select name="auto_zamkniecie" class="form-select">
+                  <option value="nie">Nie</option>
+                  <option value="tak">Tak</option>
+                </select>
+              </div>
+              <div class="col-md-12">
                 <button type="submit" name="dodaj_glosowanie" class="btn btn-outline-success btn-sm w-100">
                   <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
                 </button>

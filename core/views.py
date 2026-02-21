@@ -400,10 +400,11 @@ def sesja_edytuj(request, sesja_id):
 
     sesja = get_object_or_404(Sesja, id=sesja_id)
 
+    punkt_form = PunktForm()
+    glosowanie_form = GlosowanieForm()
     if request.method == "POST":
         if "dodaj_punkt" in request.POST:
             punkt_form = PunktForm(request.POST)
-            glosowanie_form = GlosowanieForm()
             if punkt_form.is_valid():
                 punkt = punkt_form.save(commit=False)
                 punkt.sesja = sesja
@@ -412,7 +413,6 @@ def sesja_edytuj(request, sesja_id):
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
 
         elif "dodaj_glosowanie" in request.POST:
-            punkt_form = PunktForm()
             glosowanie_form = GlosowanieForm(request.POST)
             if glosowanie_form.is_valid():
                 punkt = get_object_or_404(
@@ -441,9 +441,6 @@ def sesja_edytuj(request, sesja_id):
             else:
                 messages.error(request, "Imię i nazwisko kandydata są wymagane.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
-    else:
-        punkt_form = PunktForm()
-        glosowanie_form = GlosowanieForm()
 
     punkty = sesja.punkty.select_related("glosowanie").all()
 

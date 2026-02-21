@@ -1,6 +1,7 @@
 from django.db import models
 from accounts.models import Uzytkownik
 from django.utils import timezone
+from django.forms import ModelForm
 
 class Kandydat(models.Model):
     imie = models.CharField(max_length=100)
@@ -13,6 +14,7 @@ class Kandydat(models.Model):
 from django.db import models
 from accounts.models import Uzytkownik
 from django.utils import timezone
+from django.forms import ModelForm
 
 
 class Sesja(models.Model):
