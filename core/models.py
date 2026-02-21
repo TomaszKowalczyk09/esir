@@ -2,6 +2,18 @@ from django.db import models
 from accounts.models import Uzytkownik
 from django.utils import timezone
 
+class Kandydat(models.Model):
+    imie = models.CharField(max_length=100)
+    nazwisko = models.CharField(max_length=100)
+    punkt_obrad = models.ForeignKey('PunktObrad', on_delete=models.CASCADE, related_name='kandydaci')
+    opis = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.nazwisko} {self.imie}"
+from django.db import models
+from accounts.models import Uzytkownik
+from django.utils import timezone
+
 
 class Sesja(models.Model):
     nazwa = models.CharField(max_length=200)
@@ -66,7 +78,13 @@ class Glosowanie(models.Model):
     otwarte = models.BooleanField(default=False)
     utworzone = models.DateTimeField(auto_now_add=True)
 
-    # nowe: typ głosowania
+    # typ głosowania: zwykłe (za/przeciw/wstrzymuje) lub imienne na kandydata
+    TYP_CHOICES = [
+        ("zwykle", "Zwykłe (za/przeciw/wstrzymuje)"),
+        ("kandydaci", "Imienne na kandydata"),
+    ]
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default="zwykle")
+
     jawnosc = models.CharField(max_length=10, choices=JAWNOSC_CHOICES, default="jawne")
     wiekszosc = models.CharField(max_length=15, choices=WIEKSZOSC_CHOICES, default="zwykla")
     liczba_uprawnionych = models.PositiveIntegerField(
@@ -112,8 +130,13 @@ class Glosowanie(models.Model):
 class Glos(models.Model):
     glosowanie = models.ForeignKey(Glosowanie, on_delete=models.CASCADE)
     uzytkownik = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE)
-    glos = models.CharField(max_length=10,
-                            choices=[('za', 'Za'), ('przeciw', 'Przeciw'), ('wstrzymuje', 'Wstrzymuję się')])
+    glos = models.CharField(
+        max_length=10,
+        choices=[('za', 'Za'), ('przeciw', 'Przeciw'), ('wstrzymuje', 'Wstrzymuję się')],
+        blank=True,
+        null=True,
+    )
+    kandydat = models.ForeignKey('Kandydat', on_delete=models.CASCADE, blank=True, null=True)
 
     class Meta:
         unique_together = ['glosowanie', 'uzytkownik']
