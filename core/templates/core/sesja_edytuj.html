@@ -107,6 +107,37 @@
                   {{ punkt.glosowanie.get_jawnosc_display }} • {{ punkt.glosowanie.get_wiekszosc_display }}
                   {% if punkt.glosowanie.liczba_uprawnionych %} • Uprawnieni: {{ punkt.glosowanie.liczba_uprawnionych }}{% endif %}
                 </div>
+                {% if punkt.glosowanie.typ == 'kandydaci' %}
+                  <hr class="my-2" />
+                  <div class="mb-2">
+                    <strong>Kandydaci:</strong>
+                    <ul class="list-group mb-2">
+                      {% for kandydat in punkt.kandydaci.all %}
+                        <li class="list-group-item py-1">{{ kandydat.nazwisko }} {{ kandydat.imie }}{% if kandydat.opis %} <span class="text-muted small">({{ kandydat.opis }})</span>{% endif %}</li>
+                      {% empty %}
+                        <li class="list-group-item py-1 text-muted">Brak kandydatów.</li>
+                      {% endfor %}
+                    </ul>
+                    <form method="post" class="row g-2 align-items-end">
+                      {% csrf_token %}
+                      <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
+                      <div class="col-md-4">
+                        <input type="text" name="imie" class="form-control" placeholder="Imię" required>
+                      </div>
+                      <div class="col-md-4">
+                        <input type="text" name="nazwisko" class="form-control" placeholder="Nazwisko" required>
+                      </div>
+                      <div class="col-md-4">
+                        <input type="text" name="opis" class="form-control" placeholder="Opis (opcjonalnie)">
+                      </div>
+                      <div class="col-md-12 mt-2">
+                        <button type="submit" name="dodaj_kandydata" class="btn btn-outline-info btn-sm w-100">
+                          <i class="bi bi-person-plus me-1"></i> Dodaj kandydata
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                {% endif %}
               </div>
               <span class="badge bg-{% if punkt.glosowanie.otwarte %}success{% else %}secondary{% endif %}">
                 {% if punkt.glosowanie.otwarte %}Otwarte{% else %}Zamknięte{% endif %}
@@ -123,6 +154,10 @@
                 </div>
               </div>
 
+              <div class="col-md-6">
+                <label class="form-label mb-1">Typ głosowania</label>
+                {{ glosowanie_form.typ }}
+              </div>
               <div class="col-md-6">
                 <label class="form-label mb-1">Jawność</label>
                 {{ glosowanie_form.jawnosc }}

@@ -143,17 +143,35 @@
             </div>
 
             {% if glosowanie.otwarte %}
-            <form method="post"
-                  action="{% url 'oddaj_glos' glosowanie.id %}"
-                  id="form-{{ glosowanie.id }}"
-                  class="form-glosowanie">
-              {% csrf_token %}
-              <div class="btn-group w-100" role="group">
-                <button type="submit" name="glos" value="za" class="btn btn-success">ZA</button>
-                <button type="submit" name="glos" value="przeciw" class="btn btn-danger">PRZECIW</button>
-                <button type="submit" name="glos" value="wstrzymuje" class="btn btn-warning">WSTRZYMUJĘ SIĘ</button>
-              </div>
-            </form>
+              {% if glosowanie.typ == 'kandydaci' %}
+                <form method="post"
+                      action="{% url 'oddaj_glos' glosowanie.id %}"
+                      id="form-{{ glosowanie.id }}"
+                      class="form-glosowanie">
+                  {% csrf_token %}
+                  <div class="mb-3">
+                    <label for="kandydat-{{ glosowanie.id }}" class="form-label">Wybierz kandydata:</label>
+                    <select name="kandydat" id="kandydat-{{ glosowanie.id }}" class="form-select">
+                      {% for kandydat in glosowanie.punkt_obrad.kandydaci.all %}
+                        <option value="{{ kandydat.id }}">{{ kandydat.nazwisko }} {{ kandydat.imie }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <button type="submit" class="btn btn-primary w-100">Oddaj głos</button>
+                </form>
+              {% else %}
+                <form method="post"
+                      action="{% url 'oddaj_glos' glosowanie.id %}"
+                      id="form-{{ glosowanie.id }}"
+                      class="form-glosowanie">
+                  {% csrf_token %}
+                  <div class="btn-group w-100" role="group">
+                    <button type="submit" name="glos" value="za" class="btn btn-success">ZA</button>
+                    <button type="submit" name="glos" value="przeciw" class="btn btn-danger">PRZECIW</button>
+                    <button type="submit" name="glos" value="wstrzymuje" class="btn btn-warning">WSTRZYMUJĘ SIĘ</button>
+                  </div>
+                </form>
+              {% endif %}
             {% else %}
             <div class="alert alert-secondary mb-0">
               Głosowanie jest zamknięte.

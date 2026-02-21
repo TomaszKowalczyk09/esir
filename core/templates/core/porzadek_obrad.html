@@ -50,7 +50,10 @@
               </div>
               {% if punkt.glosowanie %}
               <div class="text-end small text-muted">
-                Głosowanie: {{ punkt.glosowanie.nazwa }}
+                Głosowanie: {{ punkt.glosowanie.nazwa }}<br>
+                <span class="badge bg-secondary mt-1">
+                  Typ: {% if punkt.glosowanie.typ == 'zwykle' %}Zwykłe{% elif punkt.glosowanie.typ == 'kandydaci' %}Imienne na kandydata{% else %}Inne{% endif %}
+                </span>
               </div>
               {% endif %}
             </div>

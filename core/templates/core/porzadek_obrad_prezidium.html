@@ -105,6 +105,9 @@
                 <div class="d-flex justify-content-between align-items-center mb-1">
                   <div>
                     <strong>{{ punkt.glosowanie.nazwa }}</strong><br>
+                    <span class="badge bg-secondary mt-1">
+                      Typ: {% if punkt.glosowanie.typ == 'zwykle' %}Zwykłe{% elif punkt.glosowanie.typ == 'kandydaci' %}Imienne na kandydata{% else %}Inne{% endif %}
+                    </span><br>
                     <small id="wyniki-prez-{{ punkt.glosowanie.id }}" class="text-muted">
                       Wyniki: Za: 0 | Przeciw: 0 | Wstrzymuję: 0
                     </small>

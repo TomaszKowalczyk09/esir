@@ -27,9 +27,27 @@
         {% if punkt.glosowanie %}
           <div class="row g-3">
             <div class="col-12 col-xl-4">
-              <div id="wyniki-public-{{ punkt.glosowanie.id }}" class="fs-5">
-                <em>Ładowanie wyników...</em>
-              </div>
+              {% if punkt.glosowanie.typ == 'kandydaci' %}
+                <div class="mb-2">
+                  <strong>Wyniki głosowania imiennego:</strong>
+                  <ul class="list-group mt-2">
+                    {% for kandydat in punkt.kandydaci.all %}
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ kandydat.nazwisko }} {{ kandydat.imie }}
+                        <span class="badge bg-primary">
+                          {{ kandydat.glos_set.count }} głosów
+                        </span>
+                      </li>
+                    {% empty %}
+                      <li class="list-group-item text-muted">Brak kandydatów.</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% else %}
+                <div id="wyniki-public-{{ punkt.glosowanie.id }}" class="fs-5">
+                  <em>Ładowanie wyników...</em>
+                </div>
+              {% endif %}
             </div>
 
             <div class="col-12 col-xl-8">

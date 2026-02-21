@@ -45,13 +45,15 @@ class GlosowanieForm(forms.ModelForm):
     """
     class Meta:
         model = Glosowanie
-        fields = ["jawnosc", "wiekszosc", "liczba_uprawnionych"]
+        fields = ["typ", "jawnosc", "wiekszosc", "liczba_uprawnionych"]
         widgets = {
+            "typ": forms.Select(attrs={"class": "form-select"}),
             "jawnosc": forms.Select(attrs={"class": "form-select"}),
             "wiekszosc": forms.Select(attrs={"class": "form-select"}),
             "liczba_uprawnionych": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
         }
         labels = {
+            "typ": "Typ głosowania",
             "jawnosc": "Jawność",
             "wiekszosc": "Rodzaj większości",
             "liczba_uprawnionych": "Liczba uprawnionych (opcjonalnie)",

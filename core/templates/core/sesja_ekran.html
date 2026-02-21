@@ -210,45 +210,7 @@
   <div id="ekran-opis" class="ekran-opis"></div>
 
   <!-- Wyniki głosowania -->
-  <div id="ekran-wyniki" style="display:none;">
-    <div class="ekran-wyniki-header">
-      Głosowanie: <span id="ekran-glosowanie-nazwa"></span>
-    </div>
-
-    <!-- Wykres wyników (pokazywany po zamknięciu, gdy są głosy) -->
-    <div class="ekran-wyniki-row">
-      <div class="d-flex justify-content-between">
-        <span>Za</span>
-        <span><span id="ekran-za-liczba">0</span> (<span id="ekran-za-proc">0</span>%)</span>
-      </div>
-      <div class="progress ekran-progbar">
-        <div id="ekran-za-prog" class="progress-bar bg-success" role="progressbar"
-             style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
-      </div>
-    </div>
-
-    <div class="ekran-wyniki-row">
-      <div class="d-flex justify-content-between">
-        <span>Przeciw</span>
-        <span><span id="ekran-przeciw-liczba">0</span> (<span id="ekran-przeciw-proc">0</span>%)</span>
-      </div>
-      <div class="progress ekran-progbar">
-        <div id="ekran-przeciw-prog" class="progress-bar bg-danger" role="progressbar"
-             style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
-      </div>
-    </div>
-
-    <div class="ekran-wyniki-row">
-      <div class="d-flex justify-content-between">
-        <span>Wstrzymuję się</span>
-        <span><span id="ekran-wstrzymuje-liczba">0</span> (<span id="ekran-wstrzymuje-proc">0</span>%)</span>
-      </div>
-      <div class="progress ekran-progbar">
-        <div id="ekran-wstrzymuje-prog" class="progress-bar bg-warning" role="progressbar"
-             style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
-      </div>
-    </div>
-  </div>
+  <div id="ekran-wyniki" style="display:none;"></div>
 
   <!-- Lista imienna (jawne) -->
   <div id="ekran-rollcall-wrap" class="ekran-rollcall-wrap" style="display:none;">
@@ -453,29 +415,31 @@
             wstrzymuje: wyn.wstrzymuje || 0
           });
 
-          if (otwarte) {
-            // w trakcie: bez wyników; jawne -> list imienna
-            if (!sameKey(lastVotesKey, votesKey)) {
-              wynikiBox.hide();
-              $('#ekran-glosowanie-nazwa').text('');
-
-              // w trakcie głosowania opis ma być pusty
-              opisEl.text('');
-
-              if (!tajne) {
-                $('#ekran-rollcall-banner').text('GŁOSOWANIE W TRAKCIE');
-                $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
-                  renderRollcall(rollData.items || []);
-                  rollWrap.show();
-                }).fail(function () {
-                  rollWrap.hide();
-                });
-              } else {
-                rollWrap.hide();
-              }
-
-              lastVotesKey = votesKey;
+          // Wymuszenie wyświetlania wyników kandydatów niezależnie od stanu głosowania
+          if (data.kandydaci && Array.isArray(data.kandydaci)) {
+            let html = `
+              <div class="ekran-wyniki-header mb-3">
+                <h2 class="fw-bold text-center">Wyniki głosowania imiennego</h2>
+                <hr>
+              </div>
+            `;
+            if ((data.kandydaci_glosow_suma || 0) === 0) {
+              html += '<div class="alert alert-info text-center">Brak oddanych głosów na kandydatów.</div>';
+            } else {
+              html += `<div class="mb-2 text-center text-muted">Oddano <span class="fw-bold">${data.kandydaci_glosow_suma}</span> głosów</div>`;
             }
+            html += '<div class="table-responsive"><table class="table table-bordered table-striped table-hover align-middle mb-4"><thead><tr><th class="text-center">Nazwisko i imię</th><th class="text-center">Liczba głosów</th></tr></thead><tbody>';
+            for (const k of data.kandydaci) {
+              html += '<tr>';
+              html += `<td class="fw-bold">${escapeHtml(k.nazwisko)} ${escapeHtml(k.imie)}</td>`;
+              html += `<td class="text-center"><span class="badge bg-primary fs-5">${k.glosy}</span></td>`;
+              html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+            $('#ekran-wyniki').html(html).show();
+            wynikiBox.show();
+            rollWrap.hide();
+            lastVotesKey = votesKey;
             return;
           }
 
@@ -497,31 +461,45 @@
             return;
           }
 
-          // po zamknięciu: pokazujemy wyniki zbiorcze
+          // po zamknięciu: pokazujemy wyniki zbiorcze lub imienne
           if (!sameKey(lastVotesKey, votesKey)) {
-            rollWrap.hide();
             $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
-
-            function proc(x) {
-              return suma > 0 ? Math.round(x * 100 / suma) : 0;
+            // Wyniki imienne na kandydatów
+            if (data.kandydaci && Array.isArray(data.kandydaci)) {
+              let html = '<div class="ekran-wyniki-header">Wyniki głosowania imiennego:</div>';
+              html += '<pre class="bg-light p-2 mb-2">DEBUG: ' + escapeHtml(JSON.stringify(data, null, 2)) + '</pre>';
+              if ((data.kandydaci_glosow_suma || 0) === 0) {
+                html += '<div class="alert alert-info">Brak oddanych głosów na kandydatów.</div>';
+              }
+              html += '<ul class="list-group mb-4">';
+              for (const k of data.kandydaci) {
+                html += '<li class="list-group-item d-flex justify-content-between align-items-center">';
+                html += escapeHtml(k.nazwisko) + ' ' + escapeHtml(k.imie);
+                if (k.opis) html += ' <span class="text-muted small">(' + escapeHtml(k.opis) + ")</span>";
+                html += '<span class="badge bg-primary">' + k.glosy + ' głosów</span>';
+                html += '</li>';
+              }
+              html += '</ul>';
+              $('#ekran-wyniki').html(html).show();
+              wynikiBox.show();
+              rollWrap.hide();
+            } else {
+              rollWrap.hide();
+              function proc(x) {
+                return suma > 0 ? Math.round(x * 100 / suma) : 0;
+              }
+              $('#ekran-za-liczba').text(za);
+              $('#ekran-przeciw-liczba').text(przeciw);
+              $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
+              $('#ekran-za-proc').text(proc(za));
+              $('#ekran-przeciw-proc').text(proc(przeciw));
+              $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
+              $('#ekran-za-prog').css('width', proc(za) + '%');
+              $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
+              $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
+              opisEl.text(data.opis || '');
+              wynikiBox.show();
             }
-
-            $('#ekran-za-liczba').text(za);
-            $('#ekran-przeciw-liczba').text(przeciw);
-            $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
-
-            $('#ekran-za-proc').text(proc(za));
-            $('#ekran-przeciw-proc').text(proc(przeciw));
-            $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
-
-            $('#ekran-za-prog').css('width', proc(za) + '%');
-            $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
-            $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
-
-            // opis wraca po zamknięciu
-            opisEl.text(data.opis || '');
-
-            wynikiBox.show();
             lastVotesKey = votesKey;
           }
         }).fail(function () {

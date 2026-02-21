@@ -238,6 +238,7 @@ def protokol_sesji_pdf_wybor(request):
     resp["Expires"] = "0"
     return resp
 from django.shortcuts import render, redirect, get_object_or_404
+from .models import Kandydat
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
@@ -420,9 +421,26 @@ def sesja_edytuj(request, sesja_id):
                 gl = glosowanie_form.save(commit=False)
                 gl.punkt_obrad = punkt
                 gl.nazwa = punkt.tytul
+                # Automatycznie ustaw jawność na 'tajne' dla głosowań imiennych
+                if gl.typ == "kandydaci":
+                    gl.jawnosc = "tajne"
                 gl.save()
                 messages.success(request, "Głosowanie zostało dodane.")
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        elif "dodaj_kandydata" in request.POST:
+            punkt_id = request.POST.get("punkt_id")
+            punkt = get_object_or_404(PunktObrad, id=punkt_id, sesja=sesja)
+            imie = request.POST.get("imie")
+            nazwisko = request.POST.get("nazwisko")
+            opis = request.POST.get("opis", "")
+            if imie and nazwisko:
+                from .models import Kandydat
+                Kandydat.objects.create(punkt_obrad=punkt, imie=imie, nazwisko=nazwisko, opis=opis)
+                messages.success(request, "Kandydat został dodany.")
+            else:
+                messages.error(request, "Imię i nazwisko kandydata są wymagane.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
     else:
         punkt_form = PunktForm()
         glosowanie_form = GlosowanieForm()
@@ -659,18 +677,32 @@ def oddaj_glos(request, glosowanie_id):
         messages.error(request, "Głosowanie jest zamknięte.")
         return redirect("panel")
 
-    wartosc = request.POST.get("glos")
-    if wartosc not in ["za", "przeciw", "wstrzymuje"]:
-        if is_ajax(request):
-            return JsonResponse({"error": "Nieprawidłowa wartość głosu"}, status=400)
-        messages.error(request, "Nieprawidłowa wartość głosu.")
-        return redirect("panel")
-
-    glos, created = Glos.objects.get_or_create(
-        glosowanie=glosowanie,
-        uzytkownik=request.user,
-        defaults={"glos": wartosc},
-    )
+    if glosowanie.typ == "kandydaci":
+        kandydat_id = request.POST.get("kandydat")
+        try:
+            kandydat = glosowanie.punkt_obrad.kandydaci.get(id=kandydat_id)
+        except Kandydat.DoesNotExist:
+            if is_ajax(request):
+                return JsonResponse({"error": "Nieprawidłowy kandydat"}, status=400)
+            messages.error(request, "Nieprawidłowy kandydat.")
+            return redirect("panel")
+        glos, created = Glos.objects.get_or_create(
+            glosowanie=glosowanie,
+            uzytkownik=request.user,
+            defaults={"kandydat": kandydat},
+        )
+    else:
+        wartosc = request.POST.get("glos")
+        if wartosc not in ["za", "przeciw", "wstrzymuje"]:
+            if is_ajax(request):
+                return JsonResponse({"error": "Nieprawidłowa wartość głosu"}, status=400)
+            messages.error(request, "Nieprawidłowa wartość głosu.")
+            return redirect("panel")
+        glos, created = Glos.objects.get_or_create(
+            glosowanie=glosowanie,
+            uzytkownik=request.user,
+            defaults={"glos": wartosc},
+        )
 
     if not created:
         if is_ajax(request):
@@ -844,18 +876,37 @@ def api_aktywny_punkt(request, sesja_id):
     }
 
     if glosowanie:
-        wyniki = (
-            Glos.objects.filter(glosowanie=glosowanie)
-            .values("glos")
-            .annotate(count=Count("glos"))
-        )
-        for w in wyniki:
-            if w["glos"] == "za":
-                data["za"] = w["count"]
-            elif w["glos"] == "przeciw":
-                data["przeciw"] = w["count"]
-            elif w["glos"] == "wstrzymuje":
-                data["wstrzymuje"] = w["count"]
+        if glosowanie.typ == "kandydaci":
+            # Wyniki głosowania na kandydatów (bez informacji kto głosował)
+            from .models import Kandydat
+            kandydaci = punkt.kandydaci.all()
+            wyniki_kandydaci = []
+            suma_glosow = 0
+            for k in kandydaci:
+                liczba = k.glos_set.filter(glosowanie=glosowanie).count()
+                suma_glosow += liczba
+                wyniki_kandydaci.append({
+                    "id": k.id,
+                    "imie": k.imie,
+                    "nazwisko": k.nazwisko,
+                    "opis": k.opis,
+                    "glosy": liczba,
+                })
+            data["kandydaci"] = wyniki_kandydaci
+            data["kandydaci_glosow_suma"] = suma_glosow
+        else:
+            wyniki = (
+                Glos.objects.filter(glosowanie=glosowanie)
+                .values("glos")
+                .annotate(count=Count("glos"))
+            )
+            for w in wyniki:
+                if w["glos"] == "za":
+                    data["za"] = w["count"]
+                elif w["glos"] == "przeciw":
+                    data["przeciw"] = w["count"]
+                elif w["glos"] == "wstrzymuje":
+                    data["wstrzymuje"] = w["count"]
 
     return JsonResponse(data)
 
