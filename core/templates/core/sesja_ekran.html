@@ -378,11 +378,11 @@
       });
 
       if (!data.aktywny) {
+        wynikiBox.hide(); // Wyniki zawsze ukryte, gdy punkt nieaktywny
         if (!sameKey(lastRenderKey, renderKey)) {
           tytulEl.text('Brak aktywnego punktu');
           subEl.text('');
           opisEl.text('');
-          wynikiBox.hide();
           rollWrap.hide();
           $('#ekran-glosowanie-nazwa').text('');
           lastVotesKey = null;
@@ -393,6 +393,11 @@
 
       // aktualizuj nagłówki/opis tylko jeśli zmienił się punkt
       if (!sameKey(lastRenderKey, renderKey)) {
+        // Automatyczne odświeżenie strony przy zmianie punktu
+        if (lastRenderKey !== null) {
+          location.reload();
+          return;
+        }
         tytulEl.text(data.numer + '. ' + (data.tytul || 'Punkt porządku obrad'));
         subEl.text(data.podtytul || '');
         opisEl.text(data.opis || '');
@@ -415,7 +420,7 @@
             wstrzymuje: wyn.wstrzymuje || 0
           });
 
-          // Wymuszenie wyświetlania wyników kandydatów niezależnie od stanu głosowania
+          // Wyniki głosowania imiennego na kandydatów
           if (data.kandydaci && Array.isArray(data.kandydaci)) {
             let html = `
               <div class="ekran-wyniki-header mb-3">
@@ -443,64 +448,78 @@
             return;
           }
 
+          // Wyniki jawne: lista imienna radnych i ich głosów tylko podczas otwartego głosowania
+          if (!tajne && otwarte && data.glosowanie_id) {
+            $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
+              const items = rollData.items || [];
+              const maxPerCol = 14;
+              const colCount = Math.ceil(items.length / maxPerCol);
+              let html = `
+                <div class="ekran-wyniki-header mb-3">
+                  <h2 class="fw-bold text-center mb-2">Lista imienna głosowania</h2>
+                  <hr style="margin-bottom:10px;">
+                </div>
+                <div class="row justify-content-center">`;
+              for (let col = 0; col < colCount; col++) {
+                html += '<div class="col-lg-6 col-md-12 mb-2"><ul class="list-group">';
+                for (let i = col * maxPerCol; i < Math.min((col + 1) * maxPerCol, items.length); i++) {
+                  const r = items[i];
+                  const lp = i + 1;
+                  let voteClass = '';
+                  let voteText = '';
+                  if (r.glos === 'za') { voteClass = 'text-success fw-bold'; voteText = 'za'; }
+                  else if (r.glos === 'przeciw') { voteClass = 'text-danger fw-bold'; voteText = 'przeciw'; }
+                  else if (r.glos === 'wstrzymuje') { voteClass = 'text-warning fw-bold'; voteText = 'wstrzymuje'; }
+                  else if (r.glos === 'nieobecny' || r.glos === 'nieobecna') { voteClass = 'text-secondary'; voteText = 'nieobecny'; }
+                  else { voteClass = 'text-muted'; voteText = 'BRAK'; }
+                  html += `<li class="list-group-item d-flex justify-content-between align-items-center" style="font-size:18px;padding:6px 12px;">`;
+                  html += `<span><span class="text-muted">${lp}.</span> <span class="fw-bold">${escapeHtml(r.nazwisko)} ${escapeHtml(r.imie)}</span></span>`;
+                  html += `<span class="${voteClass}" style="font-size:18px;min-width:90px;text-align:right;">${voteText}</span>`;
+                  html += '</li>';
+                }
+                html += '</ul></div>';
+              }
+              html += '</div>';
+              $('#ekran-wyniki').html(html).show();
+              wynikiBox.show();
+              rollWrap.hide();
+              lastVotesKey = votesKey;
+            });
+            return;
+          }
+
           const za = wyn.za || 0;
           const przeciw = wyn.przeciw || 0;
           const wstrzymuje = wyn.wstrzymuje || 0;
           const suma = za + przeciw + wstrzymuje;
 
-          if (suma <= 0) {
-            // jeszcze nie otwarto / brak danych -> nic nie pokazuj
-            if (!sameKey(lastVotesKey, votesKey)) {
-              wynikiBox.hide();
-              rollWrap.hide();
-              $('#ekran-glosowanie-nazwa').text('');
-              // opis wraca
-              opisEl.text(data.opis || '');
-              lastVotesKey = votesKey;
-            }
-            return;
-          }
-
-          // po zamknięciu: pokazujemy wyniki zbiorcze lub imienne
-          if (!sameKey(lastVotesKey, votesKey)) {
-            $('#ekran-glosowanie-nazwa').text(data.glosowanie_nazwa || '');
-            // Wyniki imienne na kandydatów
-            if (data.kandydaci && Array.isArray(data.kandydaci)) {
-              let html = '<div class="ekran-wyniki-header">Wyniki głosowania imiennego:</div>';
-              html += '<pre class="bg-light p-2 mb-2">DEBUG: ' + escapeHtml(JSON.stringify(data, null, 2)) + '</pre>';
-              if ((data.kandydaci_glosow_suma || 0) === 0) {
-                html += '<div class="alert alert-info">Brak oddanych głosów na kandydatów.</div>';
-              }
-              html += '<ul class="list-group mb-4">';
-              for (const k of data.kandydaci) {
-                html += '<li class="list-group-item d-flex justify-content-between align-items-center">';
-                html += escapeHtml(k.nazwisko) + ' ' + escapeHtml(k.imie);
-                if (k.opis) html += ' <span class="text-muted small">(' + escapeHtml(k.opis) + ")</span>";
-                html += '<span class="badge bg-primary">' + k.glosy + ' głosów</span>';
-                html += '</li>';
-              }
-              html += '</ul>';
-              $('#ekran-wyniki').html(html).show();
-              wynikiBox.show();
-              rollWrap.hide();
-            } else {
-              rollWrap.hide();
-              function proc(x) {
-                return suma > 0 ? Math.round(x * 100 / suma) : 0;
-              }
-              $('#ekran-za-liczba').text(za);
-              $('#ekran-przeciw-liczba').text(przeciw);
-              $('#ekran-wstrzymuje-liczba').text(wstrzymuje);
-              $('#ekran-za-proc').text(proc(za));
-              $('#ekran-przeciw-proc').text(proc(przeciw));
-              $('#ekran-wstrzymuje-proc').text(proc(wstrzymuje));
-              $('#ekran-za-prog').css('width', proc(za) + '%');
-              $('#ekran-przeciw-prog').css('width', proc(przeciw) + '%');
-              $('#ekran-wstrzymuje-prog').css('width', proc(wstrzymuje) + '%');
-              opisEl.text(data.opis || '');
-              wynikiBox.show();
-            }
+          // Po zamknięciu głosowania, jeśli oddano jakikolwiek głos, pokaż informację o wynikach
+          if (!otwarte && suma > 0) {
+            let html = `<div class="ekran-wyniki-header mb-4">
+              <h1 class="fw-bold text-center mb-2" style="font-size:2.2rem;">Wyniki głosowania</h1>
+              <hr style="margin-bottom:18px;">
+            </div>`;
+            html += `<div class="row justify-content-center">
+              <div class="col-lg-8 col-md-10 col-sm-12 mb-2">
+                <div class="d-flex flex-row justify-content-around align-items-center mb-4" style="gap:32px;">`;
+            html += `<div class="text-center">
+              <span class="badge bg-success" style="font-size:2rem;padding:18px 36px;border-radius:24px;min-width:120px;">ZA</span><br>
+              <span class="fw-bold" style="font-size:2.2rem;color:#198754;">${za}</span>
+            </div>`;
+            html += `<div class="text-center">
+              <span class="badge bg-danger" style="font-size:2rem;padding:18px 36px;border-radius:24px;min-width:120px;">PRZECIW</span><br>
+              <span class="fw-bold" style="font-size:2.2rem;color:#dc3545;">${przeciw}</span>
+            </div>`;
+            html += `<div class="text-center">
+              <span class="badge bg-warning text-dark" style="font-size:2rem;padding:18px 36px;border-radius:24px;min-width:120px;">WSTRZYMUJE</span><br>
+              <span class="fw-bold" style="font-size:2.2rem;color:#8a6d00;">${wstrzymuje}</span>
+            </div>`;
+            html += `</div></div></div>`;
+            $('#ekran-wyniki').html(html).show();
+            wynikiBox.show();
+            rollWrap.hide();
             lastVotesKey = votesKey;
+            return;
           }
         }).fail(function () {
           // Jeśli coś nie działa z API, nie migaj - tylko schowaj jeśli to zmiana
