@@ -10,6 +10,7 @@ urlpatterns = [
             # API for clearing the global message
     # path("docs/", TemplateView.as_view(template_name="core/static/docs/index.html")),  # Usunięte
     path("docs", lambda request: redirect('/docs/index.html')),
+    path("docs/", lambda request: redirect('/docs/index.html')),
     re_path(r"^docs/(?P<section>[^/]+)/$", lambda request, section: redirect(f"/docs/{section}/index.html")),
         re_path(r"^docs/(?P<section>[^/]+)/$", lambda request, section: redirect(f"/docs/{section}/index.html")),
             path("api/ekran_komunikat/clear/", views.api_ekran_komunikat_clear, name="api_ekran_komunikat_clear"),
