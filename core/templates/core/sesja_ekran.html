@@ -204,6 +204,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Plansza tytułowa sesji, gdy brak aktywnego punktu -->
+  <div id="ekran-plansza-tytulowa" style="display:none;">
+    <div class="text-center py-5">
+      <h1 class="fw-bold" style="font-size:3rem;">{{ sesja.nazwa }}</h1>
+      <div class="mb-3 fs-3 text-muted">{{ sesja.data|date:'d.m.Y H:i' }}</div>
+      {% if sesja.opis %}
+        <div class="mb-4 fs-4">{{ sesja.opis }}</div>
+      {% endif %}
+      <span class="badge bg-secondary fs-4 py-2 px-4">Sesja jeszcze nie rozpoczęła punktów obrad</span>
+    </div>
+  </div>
+
   <!-- Tytuł punktu i opis -->
   <h1 id="ekran-punkt-tytul" class="ekran-punkt-tytul">Brak aktywnego punktu</h1>
   <div id="ekran-punkt-sub" class="ekran-punkt-sub text-muted"></div>
@@ -379,16 +392,21 @@
 
       if (!data.aktywny) {
         wynikiBox.hide(); // Wyniki zawsze ukryte, gdy punkt nieaktywny
-        if (!sameKey(lastRenderKey, renderKey)) {
-          tytulEl.text('Brak aktywnego punktu');
-          subEl.text('');
-          opisEl.text('');
-          rollWrap.hide();
-          $('#ekran-glosowanie-nazwa').text('');
-          lastVotesKey = null;
-          lastRenderKey = renderKey;
-        }
+        // Pokaż planszę tytułową sesji
+        $('#ekran-plansza-tytulowa').show();
+        $('#ekran-punkt-tytul').hide();
+        subEl.hide();
+        opisEl.hide();
+        rollWrap.hide();
+        $('#ekran-glosowanie-nazwa').text('');
+        lastVotesKey = null;
+        lastRenderKey = renderKey;
         return;
+      } else {
+        $('#ekran-plansza-tytulowa').hide();
+        tytulEl.show();
+        subEl.show();
+        opisEl.show();
       }
 
       // aktualizuj nagłówki/opis tylko jeśli zmienił się punkt

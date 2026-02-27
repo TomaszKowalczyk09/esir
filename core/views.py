@@ -443,12 +443,18 @@ def sesja_edytuj(request, sesja_id):
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
     punkty = sesja.punkty.select_related("glosowanie").all()
+    aktywny_punkt = None
+    for punkt in punkty:
+        if getattr(punkt, "aktywny", False):
+            aktywny_punkt = punkt
+            break
 
     context = {
         "sesja": sesja,
         "punkty": punkty,
         "punkt_form": punkt_form,
         "glosowanie_form": glosowanie_form,
+        "aktywny_punkt": aktywny_punkt,
     }
     return render(request, "core/sesja_edytuj.html", context)
 
