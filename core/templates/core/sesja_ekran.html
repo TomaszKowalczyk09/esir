@@ -169,6 +169,31 @@
       .vb-przeciw { background: rgba(220,53,69,.12); color: #dc3545; border: 1px solid rgba(220,53,69,.30); }
       .vb-wstrzymuje { background: rgba(255,193,7,.18); color: #8a6d00; border: 1px solid rgba(255,193,7,.45); }
       .vb-brak { background: rgba(108,117,125,.10); color: #6c757d; border: 1px solid rgba(108,117,125,.25); }
+      .ekran-wyniki-bar {
+        margin-bottom: 18px;
+      }
+      .ekran-wyniki-label {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .ekran-wyniki-progbar {
+        height: 32px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        border-radius: 8px;
+      }
+      .ekran-wyniki-liczba {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-left: 12px;
+      }
+      .ekran-wyniki-procent {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-left: 8px;
+        color: #555;
+      }
     </style>
 </head>
 <body>
@@ -513,26 +538,41 @@
 
           // Po zamknięciu głosowania, jeśli oddano jakikolwiek głos, pokaż informację o wynikach
           if (!otwarte && suma > 0) {
+            // Oblicz procenty
+            const zaPct = suma ? Math.round(za / suma * 100) : 0;
+            const przeciwPct = suma ? Math.round(przeciw / suma * 100) : 0;
+            const wstrzymujePct = suma ? Math.round(wstrzymuje / suma * 100) : 0;
             let html = `<div class="ekran-wyniki-header mb-4">
               <h1 class="fw-bold text-center mb-2" style="font-size:2.2rem;">Wyniki głosowania</h1>
               <hr style="margin-bottom:18px;">
             </div>`;
-            html += `<div class="row justify-content-center">
-              <div class="col-lg-8 col-md-10 col-sm-12 mb-2">
-                <div class="d-flex flex-row justify-content-around align-items-center mb-4" style="gap:32px;">`;
-            html += `<div class="text-center">
-              <span class="badge bg-success" style="font-size:2rem;padding:18px 36px;border-radius:24px;min-width:120px;">ZA</span><br>
-              <span class="fw-bold" style="font-size:2.2rem;color:#198754;">${za}</span>
+            html += `<div class="mb-4">
+              <div class="ekran-wyniki-label">Głosowanie: <span class="fw-normal">${escapeHtml(data.glosowanie_nazwa || '')}</span></div>
             </div>`;
-            html += `<div class="text-center">
-              <span class="badge bg-danger" style="font-size:2rem;padding:18px 36px;border-radius:24px;min-width:120px;">PRZECIW</span><br>
-              <span class="fw-bold" style="font-size:2.2rem;color:#dc3545;">${przeciw}</span>
+            html += `<div class="ekran-wyniki-bar">
+              <div class="ekran-wyniki-label text-success">ZA</div>
+              <div class="progress ekran-wyniki-progbar mb-2">
+                <div class="progress-bar bg-success" role="progressbar" style="width: ${zaPct}%\" aria-valuenow=\"${za}\" aria-valuemin=\"0\" aria-valuemax=\"${suma}\">${za}</div>
+              </div>
+              <span class="ekran-wyniki-liczba text-success">${za}</span>
+              <span class="ekran-wyniki-procent">${zaPct}%</span>
             </div>`;
-            html += `<div class="text-center">
-              <span class="badge bg-warning text-dark" style="font-size:2rem;padding:18px 36px;border-radius:24px;min-width:120px;">WSTRZYMUJE</span><br>
-              <span class="fw-bold" style="font-size:2.2rem;color:#8a6d00;">${wstrzymuje}</span>
+            html += `<div class="ekran-wyniki-bar">
+              <div class="ekran-wyniki-label text-danger">PRZECIW</div>
+              <div class="progress ekran-wyniki-progbar mb-2">
+                <div class="progress-bar bg-danger" role="progressbar" style="width: ${przeciwPct}%\" aria-valuenow=\"${przeciw}\" aria-valuemin=\"0\" aria-valuemax=\"${suma}\">${przeciw}</div>
+              </div>
+              <span class="ekran-wyniki-liczba text-danger">${przeciw}</span>
+              <span class="ekran-wyniki-procent">${przeciwPct}%</span>
             </div>`;
-            html += `</div></div></div>`;
+            html += `<div class="ekran-wyniki-bar">
+              <div class="ekran-wyniki-label text-warning">WSTRZYMUJE SIĘ</div>
+              <div class="progress ekran-wyniki-progbar mb-2">
+                <div class="progress-bar bg-warning text-dark" role="progressbar" style="width: ${wstrzymujePct}%\" aria-valuenow=\"${wstrzymuje}\" aria-valuemin=\"0\" aria-valuemax=\"${suma}\">${wstrzymuje}</div>
+              </div>
+              <span class="ekran-wyniki-liczba text-warning">${wstrzymuje}</span>
+              <span class="ekran-wyniki-procent">${wstrzymujePct}%</span>
+            </div>`;
             $('#ekran-wyniki').html(html).show();
             wynikiBox.show();
             rollWrap.hide();
