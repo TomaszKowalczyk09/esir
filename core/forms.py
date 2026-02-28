@@ -25,14 +25,12 @@ class PunktForm(forms.ModelForm):
     """Dodawanie / edycja punktu obrad w ramach wybranej sesji."""
     class Meta:
         model = PunktObrad
-        fields = ["numer", "tytul", "opis"]
+        fields = ["tytul", "opis"]
         widgets = {
-            "numer": forms.NumberInput(attrs={"class": "form-control"}),
             "tytul": forms.TextInput(attrs={"class": "form-control"}),
             "opis": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
         }
         labels = {
-            "numer": "Numer punktu",
             "tytul": "Tytuł",
             "opis": "Opis (opcjonalnie)",
         }

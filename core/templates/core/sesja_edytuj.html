@@ -79,156 +79,155 @@
       </div>
     </div>
     <div class="row mt-2">
+      <div class="col-12 mb-2">
+        <div class="alert alert-warning">Debug: liczba punktów w sesji: {{ punkty|length }}</div>
+      </div>
       <div class="col-12">
         <div class="d-flex flex-column gap-4">
-          {% if not aktywny_punkt %}
-            <div class="card shadow-sm mb-2 border-0" style="background:#f8f9fc; border-radius:18px;">
-              <div class="card-body text-center py-4">
-                <h3 class="mb-2">{{ sesja.nazwa }}</h3>
-                <div class="mb-2 fs-5 text-muted">{{ sesja.data|date:'d.m.Y H:i' }}</div>
-                {% if sesja.opis %}
-                  <div class="mb-2">{{ sesja.opis }}</div>
-                {% endif %}
-                <span class="badge bg-secondary">Sesja jeszcze nie rozpoczęła punktów obrad</span>
-              </div>
-            </div>
-          {% endif %}
-          {% if punkty %}
-            {% for punkt in punkty %}
-              <div class="card border-0 shadow-sm" style="background:#fff; border-radius:18px;">
-                <div class="card-body d-flex justify-content-between align-items-center py-3">
-                  <div>
-                    <span class="fs-5 fw-bold">{{ punkt.numer }}. {{ punkt.tytul }}</span>
-                    {% if punkt.aktywny %}
-                      <span class="badge bg-primary ms-2">Aktualnie omawiany</span>
-                    {% endif %}
-                    {% if punkt.opis %}
-                      <div class="text-muted small mt-1">{{ punkt.opis }}</div>
-                    {% endif %}
-                  </div>
-                  <div class="d-flex gap-2">
-                    <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
+          {# Usunięto warunek, aby lista punktów była zawsze widoczna #}
+          {% for punkt in punkty %}
+            <div class="mb-2"><span style="color:red">DEBUG: ID={{ punkt.id }}, numer={{ punkt.numer }}, tytul={{ punkt.tytul }}</span></div>
+            <div class="card border-0 shadow-sm" style="background:#fff; border-radius:18px;">
+              <div class="card-body d-flex justify-content-between align-items-center py-3">
+                <div>
+                  <span class="fs-5 fw-bold">{{ punkt.numer }}. {{ punkt.tytul }}</span>
+                  {% if punkt.aktywny %}
+                    <span class="badge bg-primary ms-2">Aktualnie omawiany</span>
+                  {% endif %}
+                  {% if punkt.opis %}
+                    <div class="text-muted small mt-1">{{ punkt.opis }}</div>
+                  {% endif %}
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                  {% if not forloop.first %}
+                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'up' %}">
                       {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-outline-primary">Ustaw jako aktywny</button>
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń wyżej">&#8593;</button>
                     </form>
-                    <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalEdytujPunkt{{ punkt.id }}">Edytuj</button>
+                  {% endif %}
+                  {% if not forloop.last %}
+                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'down' %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń niżej">&#8595;</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Ustaw jako aktywny</button>
+                  </form>
+                  <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalEdytujPunkt{{ punkt.id }}">Edytuj</button>
+                </div>
+              </div>
+            </div>
+            <!-- Modal edycji punktu -->
+            <div class="modal fade" id="modalEdytujPunkt{{ punkt.id }}" tabindex="-1" aria-labelledby="modalEdytujPunktLabel{{ punkt.id }}" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="modalEdytujPunktLabel{{ punkt.id }}">Edytuj punkt: {{ punkt.tytul }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+                  </div>
+                  <div class="modal-body">
+                    <!-- Tu umieść pełny formularz edycji punktu, dyskusji, głosowania itp. -->
+                    <div class="mb-3">
+                      <strong>Opis:</strong>
+                      <div class="text-muted">{{ punkt.opis }}</div>
+                    </div>
+                    <div class="mb-3">
+                      <strong>Dyskusja:</strong>
+                      <div class="dyskusja-punktu">
+                        {% for uczestnik in punkt.dyskusja.all %}
+                          <div class="d-flex align-items-center mb-2 p-2 border rounded {% if uczestnik.mowi %}border-primary bg-light{% endif %}">
+                            <img src="{{ uczestnik.avatar_url|default:'/static/core/img/avatar.png' }}" alt="avatar" class="rounded-circle me-2" width="36" height="36">
+                            <div class="flex-grow-1">
+                              <div class="fw-semibold small mb-1">{{ uczestnik.imie }} {{ uczestnik.nazwisko }}{% if uczestnik.skrot %} ({{ uczestnik.skrot }}){% endif %}</div>
+                              <div class="text-muted small">Czas wypowiedzi: {{ uczestnik.czas_wypowiedzi|default:'00:00:00' }}</div>
+                            </div>
+                            <form method="post" action="{% url 'udziel_glosu' uczestnik.id %}" class="me-1">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-outline-dark btn-sm" title="Udziel głosu"><i class="bi bi-mic"></i></button>
+                            </form>
+                            <form method="post" action="{% url 'usun_uczestnika' uczestnik.id %}">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger btn-sm" title="Usuń"><i class="bi bi-trash"></i></button>
+                            </form>
+                          </div>
+                        {% empty %}
+                          <div class="text-muted">Brak uczestników w dyskusji.</div>
+                        {% endfor %}
+                        <form method="post" class="mt-2">
+                          {% csrf_token %}
+                          <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
+                          <input type="text" name="uczestnik" class="form-control form-control-sm mb-2" placeholder="Dodaj uczestnika do dyskusji...">
+                          <button type="submit" class="btn btn-outline-primary btn-sm">Dodaj do dyskusji</button>
+                        </form>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <strong>Głosowanie:</strong>
+                      {% if punkt.glosowanie %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <div>
+                            <div class="text-muted small">Głosowanie</div>
+                            <div class="fw-semibold">{{ punkt.glosowanie.nazwa }}</div>
+                            <div class="text-muted small">
+                              {{ punkt.glosowanie.get_jawnosc_display }} • {{ punkt.glosowanie.get_wiekszosc_display }}
+                              {% if punkt.glosowanie.liczba_uprawnionych %} • Uprawnieni: {{ punkt.glosowanie.liczba_uprawnionych }}{% endif %}
+                            </div>
+                          </div>
+                          <span class="badge bg-{% if punkt.glosowanie.otwarte %}success{% else %}secondary{% endif %}">
+                            {% if punkt.glosowanie.otwarte %}Otwarte{% else %}Zamknięte{% endif %}
+                          </span>
+                        </div>
+                      {% else %}
+                        <form method="post" class="row g-2 align-items-end">
+                          {% csrf_token %}
+                          <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
+                          <div class="col-12">
+                            <div class="alert alert-info py-2 mb-0">
+                              Nazwa głosowania zostanie ustawiona automatycznie na podstawie tytułu punktu.
+                            </div>
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1">Typ głosowania</label>
+                            {{ glosowanie_form.typ }}
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1">Jawność</label>
+                            {{ glosowanie_form.jawnosc }}
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1">Większość</label>
+                            {{ glosowanie_form.wiekszosc }}
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1">Uprawnieni (opcjonalnie)</label>
+                            {{ glosowanie_form.liczba_uprawnionych }}
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1">Limit czasu głosowania (minuty)</label>
+                            <input type="number" name="czas_glosowania" class="form-control" min="1" max="120" value="">
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1">Automatyczne zamknięcie</label>
+                            <select name="auto_zamkniecie" class="form-select">
+                              <option value="nie">Nie</option>
+                              <option value="tak">Tak</option>
+                            </select>
+                          </div>
+                          <div class="col-md-12">
+                            <button type="submit" name="dodaj_glosowanie" class="btn btn-outline-success btn-sm w-100">
+                              <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
+                            </button>
+                          </div>
+                        </form>
+                        <div class="text-muted small mt-2">Brak głosowania dla tego punktu.</div>
+                      {% endif %}
+                    </div>
                   </div>
                 </div>
               </div>
-              <!-- Modal edycji punktu -->
-              <div class="modal fade" id="modalEdytujPunkt{{ punkt.id }}" tabindex="-1" aria-labelledby="modalEdytujPunktLabel{{ punkt.id }}" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h5 class="modal-title" id="modalEdytujPunktLabel{{ punkt.id }}">Edytuj punkt: {{ punkt.tytul }}</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-                    </div>
-                    <div class="modal-body">
-                      <!-- Tu umieść pełny formularz edycji punktu, dyskusji, głosowania itp. -->
-                      <div class="mb-3">
-                        <strong>Opis:</strong>
-                        <div class="text-muted">{{ punkt.opis }}</div>
-                      </div>
-                      <div class="mb-3">
-                        <strong>Dyskusja:</strong>
-                        <div class="dyskusja-punktu">
-                          {% for uczestnik in punkt.dyskusja.all %}
-                            <div class="d-flex align-items-center mb-2 p-2 border rounded {% if uczestnik.mowi %}border-primary bg-light{% endif %}">
-                              <img src="{{ uczestnik.avatar_url|default:'/static/core/img/avatar.png' }}" alt="avatar" class="rounded-circle me-2" width="36" height="36">
-                              <div class="flex-grow-1">
-                                <div class="fw-semibold small mb-1">{{ uczestnik.imie }} {{ uczestnik.nazwisko }}{% if uczestnik.skrot %} ({{ uczestnik.skrot }}){% endif %}</div>
-                                <div class="text-muted small">Czas wypowiedzi: {{ uczestnik.czas_wypowiedzi|default:'00:00:00' }}</div>
-                              </div>
-                              <form method="post" action="{% url 'udziel_glosu' uczestnik.id %}" class="me-1">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-dark btn-sm" title="Udziel głosu"><i class="bi bi-mic"></i></button>
-                              </form>
-                              <form method="post" action="{% url 'usun_uczestnika' uczestnik.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger btn-sm" title="Usuń"><i class="bi bi-trash"></i></button>
-                              </form>
-                            </div>
-                          {% empty %}
-                            <div class="text-muted">Brak uczestników w dyskusji.</div>
-                          {% endfor %}
-                          <form method="post" class="mt-2">
-                            {% csrf_token %}
-                            <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
-                            <input type="text" name="uczestnik" class="form-control form-control-sm mb-2" placeholder="Dodaj uczestnika do dyskusji...">
-                            <button type="submit" class="btn btn-outline-primary btn-sm">Dodaj do dyskusji</button>
-                          </form>
-                        </div>
-                      </div>
-                      <div class="mb-3">
-                        <strong>Głosowanie:</strong>
-                        {% if punkt.glosowanie %}
-                          <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div>
-                              <div class="text-muted small">Głosowanie</div>
-                              <div class="fw-semibold">{{ punkt.glosowanie.nazwa }}</div>
-                              <div class="text-muted small">
-                                {{ punkt.glosowanie.get_jawnosc_display }} • {{ punkt.glosowanie.get_wiekszosc_display }}
-                                {% if punkt.glosowanie.liczba_uprawnionych %} • Uprawnieni: {{ punkt.glosowanie.liczba_uprawnionych }}{% endif %}
-                              </div>
-                            </div>
-                            <span class="badge bg-{% if punkt.glosowanie.otwarte %}success{% else %}secondary{% endif %}">
-                              {% if punkt.glosowanie.otwarte %}Otwarte{% else %}Zamknięte{% endif %}
-                            </span>
-                          </div>
-                        {% else %}
-                          <form method="post" class="row g-2 align-items-end">
-                            {% csrf_token %}
-                            <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
-                            <div class="col-12">
-                              <div class="alert alert-info py-2 mb-0">
-                                Nazwa głosowania zostanie ustawiona automatycznie na podstawie tytułu punktu.
-                              </div>
-                            </div>
-                            <div class="col-md-4">
-                              <label class="form-label mb-1">Typ głosowania</label>
-                              {{ glosowanie_form.typ }}
-                            </div>
-                            <div class="col-md-4">
-                              <label class="form-label mb-1">Jawność</label>
-                              {{ glosowanie_form.jawnosc }}
-                            </div>
-                            <div class="col-md-4">
-                              <label class="form-label mb-1">Większość</label>
-                              {{ glosowanie_form.wiekszosc }}
-                            </div>
-                            <div class="col-md-4">
-                              <label class="form-label mb-1">Uprawnieni (opcjonalnie)</label>
-                              {{ glosowanie_form.liczba_uprawnionych }}
-                            </div>
-                            <div class="col-md-4">
-                              <label class="form-label mb-1">Limit czasu głosowania (minuty)</label>
-                              <input type="number" name="czas_glosowania" class="form-control" min="1" max="120" value="">
-                            </div>
-                            <div class="col-md-4">
-                              <label class="form-label mb-1">Automatyczne zamknięcie</label>
-                              <select name="auto_zamkniecie" class="form-select">
-                                <option value="nie">Nie</option>
-                                <option value="tak">Tak</option>
-                              </select>
-                            </div>
-                            <div class="col-md-12">
-                              <button type="submit" name="dodaj_glosowanie" class="btn btn-outline-success btn-sm w-100">
-                                <i class="bi bi-check2-square me-1"></i> Dodaj głosowanie
-                              </button>
-                            </div>
-                          </form>
-                          <div class="text-muted small mt-2">Brak głosowania dla tego punktu.</div>
-                        {% endif %}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              {% endfor %}
-          {% else %}
-            <div class="alert alert-info">
-              Brak punktów w tej sesji. Dodaj pierwszy punkt w formularzu po lewej.
-            </div>
-          {% endif %}
+          {% endfor %}
         </div>
       </div>
     </div>

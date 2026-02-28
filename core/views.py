@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.db import models
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
 # Panel wyboru sesji do generowania protokołu PDF
@@ -90,6 +91,12 @@ def przesun_punkt_obrad(request, punkt_id, kierunek):
             punkt.numer, nastepny.numer = nastepny.numer, punkt.numer
             punkt.save()
             nastepny.save()
+    # Automatyczna renumeracja po przesunięciu
+    punkty = list(sesja.punkty.order_by("numer"))
+    for idx, p in enumerate(punkty, start=1):
+        if p.numer != idx:
+            p.numer = idx
+            p.save(update_fields=["numer"])
     return redirect("sesja_edytuj", sesja_id=sesja.id)
 
 def protokol_sesji_wybor(request):
@@ -203,6 +210,8 @@ def protokol_sesji_pdf_wybor(request):
             for line in meta_lines:
                 c.drawString(margin_left + 2 * mm, y, line)
                 y -= 4.8 * mm
+            y -= 4.8 * mm
+
             wynik = f"Za: {r['za']}  Przeciw: {r['przeciw']}  Wstrzymuje: {r['wstrzymuje']}"
             if r.get("prog"):
                 wynik += f"  |  Próg: {r['prog']}"
@@ -220,6 +229,7 @@ def protokol_sesji_pdf_wybor(request):
             for line in wynik_lines:
                 c.drawString(margin_left + 2 * mm, y, line)
                 y -= 6 * mm
+            y -= 6 * mm
         else:
             c.setFont(font_regular, 9)
             c.drawString(margin_left + 2 * mm, y, "Brak głosowania")
@@ -408,6 +418,9 @@ def sesja_edytuj(request, sesja_id):
             if punkt_form.is_valid():
                 punkt = punkt_form.save(commit=False)
                 punkt.sesja = sesja
+                # Ustal numer nowego punktu jako max + 1
+                max_numer = sesja.punkty.aggregate(max_num=models.Max('numer'))['max_num'] or 0
+                punkt.numer = max_numer + 1
                 punkt.save()
                 messages.success(request, "Punkt obrad został dodany.")
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
@@ -442,7 +455,14 @@ def sesja_edytuj(request, sesja_id):
                 messages.error(request, "Imię i nazwisko kandydata są wymagane.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
-    punkty = sesja.punkty.select_related("glosowanie").all()
+    punkty = list(sesja.punkty.select_related("glosowanie").order_by("id"))
+    # Automatyczna renumeracja punktów (unikalne, rosnące numery)
+    for idx, punkt in enumerate(punkty, start=1):
+        if punkt.numer != idx:
+            punkt.numer = idx
+            punkt.save(update_fields=["numer"])
+    # Ponownie pobierz punkty po renumeracji
+    punkty = list(sesja.punkty.select_related("glosowanie").order_by("numer"))
     aktywny_punkt = None
     for punkt in punkty:
         if getattr(punkt, "aktywny", False):
@@ -1570,7 +1590,13 @@ def protokol_sesji_pdf(request):
                     y -= 4.5 * mm
                     if y < margin_bottom:
                         y = new_page()
-                        c.setFont(font_regular, 9)
+                        c.setFont(font_regular, 10)
+            c.drawString(margin_left + 2 * mm, y, para)
+            y -= 5 * mm
+            if y < margin_bottom:
+                c.showPage()
+                y = height - 20 * mm
+                c.setFont(font_regular, 10)
 
         gl = getattr(p, "glosowanie", None)
         if gl:
