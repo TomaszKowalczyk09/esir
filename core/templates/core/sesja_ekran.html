@@ -522,20 +522,20 @@
 
           // Wyniki jawne: lista imienna radnych i ich głosów tylko podczas otwartego głosowania
           if (!tajne && otwarte && data.glosowanie_id) {
-            $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
-              const items = rollData.items || [];
-              const maxPerCol = 14;
-              const colCount = Math.ceil(items.length / maxPerCol);
-              let html = `
-                <div class="ekran-wyniki-header mb-3">
-                  <h2 class="fw-bold text-center mb-2">Lista imienna głosowania</h2>
-                  <hr style="margin-bottom:10px;">
-                </div>
-                <div class="row justify-content-center">`;
-              for (let col = 0; col < colCount; col++) {
-                html += '<div class="col-lg-6 col-md-12 mb-2"><ul class="list-group">';
-                for (let i = col * maxPerCol; i < Math.min((col + 1) * maxPerCol, items.length); i++) {
-                  const r = items[i];
+              $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
+                const items = rollData.items || [];
+                const maxPerCol = 11;
+                // Always use 2 columns, max 11 per column
+                let col1 = items.slice(0, maxPerCol);
+                let col2 = items.slice(maxPerCol, maxPerCol * 2);
+                let html = `
+                  <div class="ekran-wyniki-header mb-3">
+                    <h2 class="fw-bold text-center mb-2">Lista imienna głosowania</h2>
+                    <hr style="margin-bottom:10px;">
+                  </div>
+                  <div class="row justify-content-center">
+                    <div class="col-lg-6 col-md-12 mb-2"><ul class="list-group">`;
+                col1.forEach((r, i) => {
                   const lp = i + 1;
                   let badgeClass = '';
                   let badgeText = '';
@@ -548,16 +548,31 @@
                   html += `<span><span class="text-muted">${lp}.</span> <span class="fw-bold">${escapeHtml(r.nazwisko)} ${escapeHtml(r.imie)}</span></span>`;
                   html += `<span class="badge ${badgeClass}" style="font-size:1.2rem;padding:8px 32px;border-radius:18px;min-width:120px;text-align:right;">${badgeText}</span>`;
                   html += '</li>';
-                }
+                });
                 html += '</ul></div>';
-              }
-              html += '</div>';
-              $('#ekran-wyniki').html(html).show();
-              wynikiBox.show();
-              rollWrap.hide();
-              lastVotesKey = votesKey;
-            });
-            return;
+                html += '<div class="col-lg-6 col-md-12 mb-2"><ul class="list-group">';
+                col2.forEach((r, i) => {
+                  const lp = maxPerCol + i + 1;
+                  let badgeClass = '';
+                  let badgeText = '';
+                  if (r.glos === 'za') { badgeClass = 'bg-success text-white fw-bold'; badgeText = 'ZA'; }
+                  else if (r.glos === 'przeciw') { badgeClass = 'bg-danger text-white fw-bold'; badgeText = 'PRZECIW'; }
+                  else if (r.glos === 'wstrzymuje') { badgeClass = 'bg-warning text-dark fw-bold'; badgeText = 'WSTRZYMUJE'; }
+                  else if (r.glos === 'nieobecny' || r.glos === 'nieobecna') { badgeClass = 'bg-secondary text-white'; badgeText = 'NIEOBECNY'; }
+                  else { badgeClass = 'bg-light text-muted'; badgeText = 'BRAK'; }
+                  html += `<li class="list-group-item d-flex justify-content-between align-items-center" style="font-size:20px;padding:8px 16px;">`;
+                  html += `<span><span class="text-muted">${lp}.</span> <span class="fw-bold">${escapeHtml(r.nazwisko)} ${escapeHtml(r.imie)}</span></span>`;
+                  html += `<span class="badge ${badgeClass}" style="font-size:1.2rem;padding:8px 32px;border-radius:18px;min-width:120px;text-align:right;">${badgeText}</span>`;
+                  html += '</li>';
+                });
+                html += '</ul></div>';
+                html += '</div>';
+                $('#ekran-wyniki').html(html).show();
+                wynikiBox.show();
+                rollWrap.hide();
+                lastVotesKey = votesKey;
+              });
+              return;
           }
 
           const za = wyn.za || 0;
