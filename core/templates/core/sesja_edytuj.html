@@ -20,7 +20,7 @@
           <a href="{% url 'sesja_ekran' sesja.id %}" class="btn btn-outline-dark btn-sm px-3" target="_blank"><i class="bi bi-display"></i> Okno wizualizacji</a>
             <button class="btn btn-outline-dark btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalObecnosc"><i class="bi bi-people"></i> Lista obecności</button>
           <button class="btn btn-outline-dark btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalKworum"><i class="bi bi-check2-circle"></i> Sprawdź kworum</button>
-          <button class="btn btn-outline-dark btn-sm px-3"><i class="bi bi-pause-circle"></i> Przerwa</button>
+          <button class="btn btn-outline-dark btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalPrzerwa"><i class="bi bi-pause-circle"></i> Przerwa</button>
           <button class="btn btn-outline-dark btn-sm px-3"><i class="bi bi-clock-history"></i> Czas wypowiedzi</button>
         </div>
         <form method="post" class="d-inline ms-2">
@@ -209,6 +209,65 @@
     </div>
   </div>
   <!-- KONIEC -->
+      <!-- Modal ogłoszenia przerwy -->
+      <div class="modal fade" id="modalPrzerwa" tabindex="-1" aria-labelledby="modalPrzerwaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="modalPrzerwaLabel">Ogłoś przerwę</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body">
+              <form method="post" action="">
+                {% csrf_token %}
+                {% if przerwa_trwa %}
+                  <div class="alert alert-info text-center mb-3">
+                    <strong>Przerwa trwa!</strong><br>
+                    Pozostały czas: <span id="przerwa_odliczanie">{{ przerwa_pozostalo }}</span>
+                  </div>
+                  <button type="submit" name="usun_przerwe" class="btn btn-danger w-100 mb-2">
+                    <i class="bi bi-x-circle me-1"></i> Usuń przerwę
+                  </button>
+                  <script>
+                    var pozostalo = {{ przerwa_pozostalo|default:0 }};
+                    var licznik = document.getElementById('przerwa_odliczanie');
+                    function formatujCzas(s) {
+                      var min = Math.floor(s/60);
+                      var sek = s%60;
+                      return min + ' min ' + sek + '';
+                    }
+                    if (licznik && pozostalo > 0) {
+                      licznik.innerText = formatujCzas(pozostalo);
+                      var timer = setInterval(function() {
+                        pozostalo--;
+                        if (pozostalo <= 0) {
+                          licznik.innerText = 'Przerwa zakończona';
+                          clearInterval(timer);
+                        } else {
+                          licznik.innerText = formatujCzas(pozostalo);
+                        }
+                      }, 1000);
+                    }
+                  </script>
+                {% else %}
+                  <div class="mb-3">
+                    <label class="form-label">Czas trwania przerwy</label>
+                    <select name="czas_przerwy" class="form-select">
+                      <option value="5">5 minut</option>
+                      <option value="10">10 minut</option>
+                      <option value="15">15 minut</option>
+                      <option value="30">30 minut</option>
+                    </select>
+                  </div>
+                  <button type="submit" name="oglos_przerwe" class="btn btn-primary w-100">
+                    <i class="bi bi-pause-circle me-1"></i> Ogłoś przerwę
+                  </button>
+                {% endif %}
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
       <!-- Modal sprawdź kworum -->
       <div class="modal fade" id="modalKworum" tabindex="-1" aria-labelledby="modalKworumLabel" aria-hidden="true">
         <div class="modal-dialog">

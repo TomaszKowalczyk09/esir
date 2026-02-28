@@ -119,22 +119,21 @@
         font-size: 18px;
       }
       .ekran-rollcall-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
       }
       .ekran-rollcall-col {
-        border-right: 1px solid #e9ecef;
-      }
-      .ekran-rollcall-col:last-child {
-        border-right: 0;
+        border-right: none;
       }
       .ekran-rollcall-row {
-        display: grid;
-        grid-template-columns: 52px 1fr 140px;
+        display: flex;
+        flex-direction: row;
         align-items: center;
-        padding: 7px 12px;
+        padding: 1px 3px;
         border-bottom: 1px solid #edf0f2;
-        font-size: 18px;
+        font-size: 12px;
+        min-height: 18px;
       }
       .ekran-rollcall-row:nth-child(even) {
         background: #f8f9fa;
@@ -143,7 +142,8 @@
         font-weight: 800;
         color: #495057;
         text-align: right;
-        padding-right: 10px;
+        padding-right: 4px;
+        min-width: 22px;
       }
       .ekran-rollcall-name {
         font-weight: 800;
@@ -151,19 +151,21 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        flex: 1;
       }
       .ekran-rollcall-vote {
         display: flex;
         justify-content: flex-end;
+        min-width: 50px;
       }
       .vote-badge {
         display: inline-block;
-        min-width: 120px;
+        min-width: 40px;
         text-align: center;
-        padding: 4px 10px;
+        padding: 1px 3px;
         border-radius: 999px;
         font-weight: 900;
-        font-size: 16px;
+        font-size: 11px;
       }
       .vb-za { background: rgba(25,135,84,.15); color: #198754; border: 1px solid rgba(25,135,84,.35); }
       .vb-przeciw { background: rgba(220,53,69,.12); color: #dc3545; border: 1px solid rgba(220,53,69,.30); }
@@ -212,6 +214,34 @@
 </div>
 
 <div class="ekran-main">
+  {% if przerwa_trwa %}
+    <div id="ekran-przerwa-banner" class="alert alert-warning text-center py-4 mb-4" style="font-size:2rem;">
+      <i class="bi bi-pause-circle me-2"></i>
+      Przerwa w obradach<br>
+      Pozostały czas: <span id="ekran-przerwa-odliczanie">{{ przerwa_pozostalo }}</span>
+    </div>
+    <script>
+      var pozostalo = {{ przerwa_pozostalo|default:0 }};
+      var licznik = document.getElementById('ekran-przerwa-odliczanie');
+      function formatujCzas(s) {
+        var min = Math.floor(s/60);
+        var sek = s%60;
+        return min + ' min ' + sek + ' sek';
+      }
+      if (licznik && pozostalo > 0) {
+        licznik.innerText = formatujCzas(pozostalo);
+        var timer = setInterval(function() {
+          pozostalo--;
+          if (pozostalo <= 0) {
+            licznik.innerText = 'Przerwa zakończona';
+            clearInterval(timer);
+          } else {
+            licznik.innerText = formatujCzas(pozostalo);
+          }
+        }, 1000);
+      }
+    </script>
+  {% endif %}
   <!-- Komunikat globalny (jeśli ustawiony) -->
   <!-- MODAL komunikatu globalnego -->
   <div class="modal fade" id="ekranKomunikatModal" tabindex="-1" aria-labelledby="ekranKomunikatModalLabel" aria-hidden="true">
@@ -258,8 +288,8 @@
     </div>
     <div class="ekran-rollcall-banner" id="ekran-rollcall-banner">GŁOSOWANIE W TRAKCIE</div>
     <div class="ekran-rollcall-grid">
-      <div class="ekran-rollcall-col"><div id="ekran-rollcall-left"></div></div>
-      <div class="ekran-rollcall-col"><div id="ekran-rollcall-right"></div></div>
+      <div class="ekran-rollcall-col" id="ekran-rollcall-col-1"></div>
+      <div class="ekran-rollcall-col" id="ekran-rollcall-col-2"></div>
     </div>
   </div>
 </div>
@@ -358,29 +388,28 @@
       if (ai > bi) return 1;
       return 0;
     });
-
-    const half = Math.ceil(items.length / 2);
-    const left = items.slice(0, half);
-    const right = items.slice(half);
-
-    function build(colItems, startIndex) {
-      let html = '';
-      colItems.forEach((it, idx) => {
-        const lp = startIndex + idx + 1;
-        const nazw = escapeHtml(it.nazwisko);
-        const imie = escapeHtml(it.imie);
-        const v = voteMeta(it.glos);
-        html += '<div class="ekran-rollcall-row">' +
-          '<div class="ekran-rollcall-lp">' + lp + '.</div>' +
-          '<div class="ekran-rollcall-name">' + nazw + ' ' + imie + '</div>' +
-          '<div class="ekran-rollcall-vote"><span class="vote-badge ' + v.c + '">' + v.t + '</span></div>' +
-        '</div>';
-      });
-      return html;
-    }
-
-    $('#ekran-rollcall-left').html(build(left, 0));
-    $('#ekran-rollcall-right').html(build(right, half));
+    let html1 = '';
+    let html2 = '';
+    items.forEach((it, idx) => {
+      const lp = idx + 1;
+      const nazw = escapeHtml(it.nazwisko);
+      const imie = escapeHtml(it.imie);
+      const v = voteMeta(it.glos);
+      const htmlRow = '<div class="ekran-rollcall-row">' +
+        '<div class="ekran-rollcall-lp">' + lp + '.</div>' +
+        '<div class="ekran-rollcall-name">' + nazw + ' ' + imie + '</div>' +
+        '<div class="ekran-rollcall-vote"><span class="vote-badge ' + v.c + '">' + v.t + '</span></div>' +
+      '</div>';
+      if (idx < 11) {
+        html1 += htmlRow;
+      } else {
+        html2 += htmlRow;
+      }
+    });
+    const grid = $('.ekran-rollcall-grid');
+    grid.empty();
+    grid.append('<div class="ekran-rollcall-col">' + html1 + '</div>');
+    grid.append('<div class="ekran-rollcall-col">' + html2 + '</div>');
   }
 
   // --- Anty-miganie: cache stanu + anulowanie poprzedniego requestu ---

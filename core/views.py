@@ -410,6 +410,22 @@ def sesja_edytuj(request, sesja_id):
     punkt_form = PunktForm()
     glosowanie_form = GlosowanieForm()
     if request.method == "POST":
+        if "oglos_przerwe" in request.POST:
+            czas_przerwy = int(request.POST.get("czas_przerwy", 0))
+            if czas_przerwy > 0:
+                sesja.przerwa_start = timezone.now()
+                sesja.przerwa_czas = czas_przerwy * 60
+                sesja.save(update_fields=["przerwa_start", "przerwa_czas"])
+                messages.success(request, f"Przerwa ogłoszona na {czas_przerwy} minut.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        if "usun_przerwe" in request.POST:
+            sesja.przerwa_start = None
+            sesja.przerwa_czas = None
+            sesja.save(update_fields=["przerwa_start", "przerwa_czas"])
+            messages.success(request, "Przerwa została usunięta.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
         if "dodaj_punkt" in request.POST:
             punkt_form = PunktForm(request.POST)
             if punkt_form.is_valid():
@@ -477,12 +493,28 @@ def sesja_edytuj(request, sesja_id):
             aktywny_punkt = punkt
             break
 
+    # Przerwa info for template
+    przerwa_trwa = False
+    przerwa_pozostalo = 0
+    if sesja.przerwa_start and sesja.przerwa_czas:
+        elapsed = (timezone.now() - sesja.przerwa_start).total_seconds()
+        if elapsed < sesja.przerwa_czas:
+            przerwa_trwa = True
+            przerwa_pozostalo = int(sesja.przerwa_czas - elapsed)
+        else:
+            # Przerwa zakończona, wyczyść
+            sesja.przerwa_start = None
+            sesja.przerwa_czas = None
+            sesja.save(update_fields=["przerwa_start", "przerwa_czas"])
+
     context = {
         "sesja": sesja,
         "punkty": punkty,
         "punkt_form": punkt_form,
         "glosowanie_form": glosowanie_form,
         "aktywny_punkt": aktywny_punkt,
+        "przerwa_trwa": przerwa_trwa,
+        "przerwa_pozostalo": przerwa_pozostalo,
     }
     return render(request, "core/sesja_edytuj.html", context)
 
@@ -852,7 +884,25 @@ def sesja_ekran(request, sesja_id):
     sesja = get_object_or_404(Sesja, id=sesja_id)
     komunikat = cache.get("ekran_komunikat_global", "")
     is_admin = request.user.is_authenticated and _can_manage_session(request.user)
-    return render(request, "core/sesja_ekran.html", {"sesja": sesja, "komunikat": komunikat, "is_admin": is_admin})
+    przerwa_trwa = False
+    przerwa_pozostalo = 0
+    if sesja.przerwa_start and sesja.przerwa_czas:
+        from django.utils import timezone
+        elapsed = (timezone.now() - sesja.przerwa_start).total_seconds()
+        if elapsed < sesja.przerwa_czas:
+            przerwa_trwa = True
+            przerwa_pozostalo = int(sesja.przerwa_czas - elapsed)
+        else:
+            sesja.przerwa_start = None
+            sesja.przerwa_czas = None
+            sesja.save(update_fields=["przerwa_start", "przerwa_czas"])
+    return render(request, "core/sesja_ekran.html", {
+        "sesja": sesja,
+        "komunikat": komunikat,
+        "is_admin": is_admin,
+        "przerwa_trwa": przerwa_trwa,
+        "przerwa_pozostalo": przerwa_pozostalo,
+    })
 
 
 @login_required

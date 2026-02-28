@@ -23,6 +23,8 @@ class Sesja(models.Model):
     aktywna = models.BooleanField(default=True)
     jest_usunieta = models.BooleanField(default=False)  # NOWE POLE
     opublikowana = models.BooleanField(default=False)  # widoczna dla radnych przed startem
+    przerwa_start = models.DateTimeField(null=True, blank=True)
+    przerwa_czas = models.IntegerField(null=True, blank=True, help_text="Czas przerwy w sekundach")
 
     def ustaw_aktywna(self):
         # dezaktywuj wszystkie inne sesje
