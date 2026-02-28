@@ -83,55 +83,59 @@
         <div class="alert alert-warning">Debug: liczba punktów w sesji: {{ punkty|length }}</div>
       </div>
       <div class="col-12">
-        <ul class="list-group mb-4">
-          {% for punkt in punkty %}
-            <li class="list-group-item">
-              <span class="fw-bold">{{ punkt.numer }}. {{ punkt.tytul }}</span>
-              {% if punkt.aktywny %}
-                <span class="badge bg-primary ms-2">Aktualnie omawiany</span>
-              {% endif %}
-              {% if punkt.opis %}
-                <div class="text-muted small mt-1">{{ punkt.opis }}</div>
-              {% endif %}
-              <div class="mt-2">
-                {% if not forloop.first %}
-                  <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'up' %}" style="display:inline-block">
+        {% for punkt in punkty %}
+          <div class="card mb-3 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <span class="fw-bold fs-5">{{ punkt.numer }}. {{ punkt.tytul }}</span>
+                  {% if punkt.aktywny %}
+                    <span class="badge bg-primary ms-2">Aktualnie omawiany</span>
+                  {% endif %}
+                  {% if punkt.opis %}
+                    <div class="text-muted small mt-1">{{ punkt.opis }}</div>
+                  {% endif %}
+                </div>
+                <div>
+                  {% if not forloop.first %}
+                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'up' %}" style="display:inline-block">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń wyżej">&#8593;</button>
+                    </form>
+                  {% endif %}
+                  {% if not forloop.last %}
+                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'down' %}" style="display:inline-block">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń niżej">&#8595;</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}" style="display:inline-block">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń wyżej">&#8593;</button>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Ustaw jako aktywny</button>
                   </form>
-                {% endif %}
-                {% if not forloop.last %}
-                  <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'down' %}" style="display:inline-block">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń niżej">&#8595;</button>
-                  </form>
-                {% endif %}
-                <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}" style="display:inline-block">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-outline-primary">Ustaw jako aktywny</button>
-                </form>
-                <button type="button" class="btn btn-sm btn-outline-dark ms-2" data-bs-toggle="modal" data-bs-target="#modalEdytujPunkt{{ punkt.id }}">Edytuj</button>
+                  <button type="button" class="btn btn-sm btn-outline-dark ms-2" data-bs-toggle="modal" data-bs-target="#modalEdytujPunkt{{ punkt.id }}">Edytuj</button>
+                </div>
               </div>
-            </li>
-            <!-- Modal edycji punktu (pozostawiam, jeśli chcesz rozwinąć) -->
-            <div class="modal fade" id="modalEdytujPunkt{{ punkt.id }}" tabindex="-1" aria-labelledby="modalEdytujPunktLabel{{ punkt.id }}" aria-hidden="true">
-              <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title" id="modalEdytujPunktLabel{{ punkt.id }}">Edytuj punkt: {{ punkt.tytul }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-                  </div>
-                  <div class="modal-body">
-                    <div class="mb-3">
-                      <strong>Opis:</strong>
-                      <div class="text-muted">{{ punkt.opis }}</div>
-                    </div>
+            </div>
+          </div>
+          <!-- Modal edycji punktu (pozostawiam, jeśli chcesz rozwinąć) -->
+          <div class="modal fade" id="modalEdytujPunkt{{ punkt.id }}" tabindex="-1" aria-labelledby="modalEdytujPunktLabel{{ punkt.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="modalEdytujPunktLabel{{ punkt.id }}">Edytuj punkt: {{ punkt.tytul }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-3">
+                    <strong>Opis:</strong>
+                    <div class="text-muted">{{ punkt.opis }}</div>
                   </div>
                 </div>
               </div>
             </div>
-          {% endfor %}
-        </ul>
+          </div>
+        {% endfor %}
       </div>
     </div>
     <!-- Modal dodawania punktu -->
