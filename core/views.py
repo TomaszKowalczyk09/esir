@@ -452,6 +452,17 @@ def sesja_edytuj(request, sesja_id):
                 messages.error(request, "Imię i nazwisko kandydata są wymagane.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
+        elif "zapisz_punkt" in request.POST:
+            punkt_id = request.POST.get("punkt_id")
+            punkt = get_object_or_404(PunktObrad, id=punkt_id, sesja=sesja)
+            tytul = request.POST.get("tytul", "")
+            opis = request.POST.get("opis", "")
+            punkt.tytul = tytul
+            punkt.opis = opis
+            punkt.save(update_fields=["tytul", "opis"])
+            messages.success(request, "Zmiany w punkcie zostały zapisane.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
     punkty = list(sesja.punkty.select_related("glosowanie").order_by("numer"))
     # Automatyczna renumeracja punktów (unikalne, rosnące numery)
     for idx, punkt in enumerate(punkty, start=1):
