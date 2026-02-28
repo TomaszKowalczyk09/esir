@@ -91,13 +91,10 @@ def przesun_punkt_obrad(request, punkt_id, kierunek):
             punkt.numer, nastepny.numer = nastepny.numer, punkt.numer
             punkt.save()
             nastepny.save()
-    # Automatyczna renumeracja po przesunięciu
-    punkty = list(sesja.punkty.order_by("numer"))
-    for idx, p in enumerate(punkty, start=1):
-        if p.numer != idx:
-            p.numer = idx
-            p.save(update_fields=["numer"])
-    return redirect("sesja_edytuj", sesja_id=sesja.id)
+    # NIE renumeruj punktów po przesunięciu – tylko zamiana numerów!
+    from django.urls import reverse
+    url = reverse('sesja_edytuj', args=[sesja.id]) + f"#punkt-{punkt.id}"
+    return redirect(url)
 
 def protokol_sesji_wybor(request):
     if not _can_manage_session(request.user):
@@ -455,7 +452,7 @@ def sesja_edytuj(request, sesja_id):
                 messages.error(request, "Imię i nazwisko kandydata są wymagane.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
-    punkty = list(sesja.punkty.select_related("glosowanie").order_by("id"))
+    punkty = list(sesja.punkty.select_related("glosowanie").order_by("numer"))
     # Automatyczna renumeracja punktów (unikalne, rosnące numery)
     for idx, punkt in enumerate(punkty, start=1):
         if punkt.numer != idx:
