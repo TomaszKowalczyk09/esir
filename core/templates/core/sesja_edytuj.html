@@ -17,9 +17,9 @@
         </div>
         <span class="fw-bold fs-4 text-center flex-grow-1">{{ sesja.nazwa }}</span>
         <div class="d-flex flex-row gap-2">
-          <button class="btn btn-outline-dark btn-sm px-3"><i class="bi bi-display"></i> Okno wizualizacji</button>
-          <button class="btn btn-outline-dark btn-sm px-3"><i class="bi bi-people"></i> Lista obecności</button>
-          <button class="btn btn-outline-dark btn-sm px-3"><i class="bi bi-check2-circle"></i> Sprawdź kworum</button>
+          <a href="{% url 'sesja_ekran' sesja.id %}" class="btn btn-outline-dark btn-sm px-3" target="_blank"><i class="bi bi-display"></i> Okno wizualizacji</a>
+            <button class="btn btn-outline-dark btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalObecnosc"><i class="bi bi-people"></i> Lista obecności</button>
+          <button class="btn btn-outline-dark btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalKworum"><i class="bi bi-check2-circle"></i> Sprawdź kworum</button>
           <button class="btn btn-outline-dark btn-sm px-3"><i class="bi bi-pause-circle"></i> Przerwa</button>
           <button class="btn btn-outline-dark btn-sm px-3"><i class="bi bi-clock-history"></i> Czas wypowiedzi</button>
         </div>
@@ -209,4 +209,76 @@
     </div>
   </div>
   <!-- KONIEC -->
+      <!-- Modal sprawdź kworum -->
+      <div class="modal fade" id="modalKworum" tabindex="-1" aria-labelledby="modalKworumLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="modalKworumLabel">Sprawdź kworum</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-2">
+                <strong>Obecnych:</strong> {{ obecnych_count }}<br>
+                <strong>Nieobecnych:</strong> {{ nieobecnych_count }}<br>
+                <strong>Wymagane kworum:</strong> {{ wymagane_kworum }}<br>
+              </div>
+              {% if kworum_osiagniete %}
+                <div class="alert alert-success">Kworum zostało osiągnięte.</div>
+              {% else %}
+                <div class="alert alert-danger">Kworum nie zostało osiągnięte.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    <!-- Modal lista obecności -->
+    <div class="modal fade" id="modalObecnosc" tabindex="-1" aria-labelledby="modalObecnoscLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalObecnoscLabel">Lista obecności</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+          </div>
+          <div class="modal-body">
+            <form method="post" action="" class="mb-3">
+              {% csrf_token %}
+              <table class="table table-bordered align-middle">
+                <thead>
+                  <tr>
+                    <th>Imię i nazwisko</th>
+                    <th>Status</th>
+                    <th>Akcja</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for osoba in obecnosci %}
+                  <tr>
+                    <td>{{ osoba.imie }} {{ osoba.nazwisko }}</td>
+                    <td>
+                      {% if osoba.obecny %}
+                        <span class="badge bg-success">Obecny</span>
+                      {% else %}
+                        <span class="badge bg-danger">Nieobecny</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <input type="hidden" name="osoba_id_{{ osoba.id }}" value="{{ osoba.id }}">
+                      <select name="obecnosc_{{ osoba.id }}" class="form-select form-select-sm">
+                        <option value="obecny" {% if osoba.obecny %}selected{% endif %}>Obecny</option>
+                        <option value="nieobecny" {% if not osoba.obecny %}selected{% endif %}>Nieobecny</option>
+                      </select>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <button type="submit" name="zapisz_obecnosc" class="btn btn-primary w-100 mt-2">
+                <i class="bi bi-save me-1"></i> Zapisz zmiany
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
 {% endblock %}
