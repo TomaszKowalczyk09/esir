@@ -61,6 +61,9 @@
                 <span class="badge bg-secondary ms-1">Zamknięte</span>
               {% endif %}
             </div>
+            <div class="mt-2" id="wyniki-agenda-{{ punkt.glosowanie.id }}">
+              <div class="small text-muted">Ładowanie wyników...</div>
+            </div>
           {% endif %}
         </div>
         <div class="text-end">
@@ -99,6 +102,67 @@
 {% block extra_js %}
 <script>
 $(function () {
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"]/g, function(c) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] || c);
+    });
+  }
+
+  function renderWyniki(glosowanieId, data) {
+    const box = $('#wyniki-agenda-' + glosowanieId);
+    if (!box.length) return;
+
+    if (data.typ === 'kandydaci') {
+      let html = '<div class="small"><strong>Wyniki głosowania na kandydatów</strong> • oddano: <span class="fw-bold">' + (data.oddano || 0) + '</span></div>';
+      const kandydaci = data.kandydaci || [];
+      if (!kandydaci.length) {
+        html += '<div class="small text-muted">Brak kandydatów.</div>';
+      } else {
+        html += '<ul class="list-group list-group-flush mt-1">';
+        kandydaci.forEach(function(k) {
+          html += '<li class="list-group-item px-0 py-1 d-flex justify-content-between align-items-center">'
+            + '<span>' + escapeHtml(k.nazwisko) + ' ' + escapeHtml(k.imie) + '</span>'
+            + '<span class="badge bg-primary">' + (k.glosy || 0) + '</span>'
+            + '</li>';
+        });
+        html += '</ul>';
+      }
+      box.html(html);
+      return;
+    }
+
+    if (data.tajne && data.otwarte) {
+      box.html('<div class="small"><strong>Głosowanie tajne</strong> — oddano: <span class="fw-bold">' + (data.oddano || 0) + '</span></div>');
+      return;
+    }
+
+    box.html(
+      '<div class="small">'
+      + '<strong>Wyniki:</strong> '
+      + 'ZA <span class="text-success fw-bold">' + (data.za || 0) + '</span>, '
+      + 'PRZECIW <span class="text-danger fw-bold">' + (data.przeciw || 0) + '</span>, '
+      + 'WSTRZYMUJE <span class="text-warning fw-bold">' + (data.wstrzymuje || 0) + '</span>'
+      + '</div>'
+    );
+  }
+
+  {% for punkt in punkty %}
+    {% if punkt.glosowanie %}
+      (function(glosowanieId) {
+        function odswiezWyniki() {
+          $.get('{% url "api_wyniki" punkt.glosowanie.id %}', function(data) {
+            renderWyniki(glosowanieId, data);
+          }).fail(function() {
+            $('#wyniki-agenda-' + glosowanieId).html('<div class="small text-danger">Nie udało się pobrać wyników.</div>');
+          });
+        }
+
+        odswiezWyniki();
+        setInterval(odswiezWyniki, 2000);
+      })({{ punkt.glosowanie.id }});
+    {% endif %}
+  {% endfor %}
+
   $('.toggle-glosowanie').click(function () {
     const id = $(this).data('id');
     const btn = $(this);

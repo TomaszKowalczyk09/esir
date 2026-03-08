@@ -217,11 +217,37 @@ $(function () {
   {% for glosowanie in glosowania %}
   function odswiezWyniki{{ glosowanie.id }}() {
     $.get("{% url 'api_wyniki' glosowanie.id %}", function (data) {
-      $('#wyniki-{{ glosowanie.id }}').html(
-        '<strong>Wyniki:</strong> ' +
-        'Za: <span class="text-success fw-bold">' + data.za + '</span> | ' +
-        'Przeciw: <span class="text-danger fw-bold">' + data.przeciw + '</span> | ' +
-        'Wstrzymuję się: <span class="text-warning fw-bold">' + data.wstrzymuje + '</span>'
+      const box = $('#wyniki-{{ glosowanie.id }}');
+
+      if (data.tajne && data.otwarte) {
+        box.html('');
+        return;
+      }
+
+      if (data.typ === 'kandydaci') {
+        const kandydaci = data.kandydaci || [];
+        let html = '<strong>Wyniki głosowania na kandydatów:</strong>';
+        if (!kandydaci.length) {
+          html += '<div class="text-muted small mt-1">Brak kandydatów.</div>';
+        } else {
+          html += '<ul class="list-group list-group-flush mt-2">';
+          kandydaci.forEach(function (k) {
+            html += '<li class="list-group-item d-flex justify-content-between align-items-center px-0">'
+              + '<span>' + (k.nazwisko || '') + ' ' + (k.imie || '') + '</span>'
+              + '<span class="badge bg-primary">' + (k.glosy || 0) + '</span>'
+              + '</li>';
+          });
+          html += '</ul>';
+        }
+        box.html(html);
+        return;
+      }
+
+      box.html(
+        '<strong>Wyniki:</strong> '
+        + 'Za: <span class="text-success fw-bold">' + (data.za || 0) + '</span> | '
+        + 'Przeciw: <span class="text-danger fw-bold">' + (data.przeciw || 0) + '</span> | '
+        + 'Wstrzymuję się: <span class="text-warning fw-bold">' + (data.wstrzymuje || 0) + '</span>'
       );
     });
   }

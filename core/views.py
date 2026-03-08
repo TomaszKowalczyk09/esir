@@ -789,12 +789,35 @@ def api_wyniki(request, glosowanie_id):
     glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
 
     # Tajne: w trakcie nie ujawniamy wyników szczegółowych
-    if (glosowanie.jawnosc == "tajne" and glosowanie.otwarte):
+    if (glosowanie.jawnosc == "tajne" and glosowanie.otwarte and glosowanie.typ != "kandydaci"):
         total = Glos.objects.filter(glosowanie=glosowanie).count()
         return JsonResponse({
             "tajne": True,
             "otwarte": True,
+            "typ": glosowanie.typ,
             "oddano": total,
+        })
+
+    if glosowanie.typ == "kandydaci":
+        kandydaci = glosowanie.punkt_obrad.kandydaci.all().order_by("nazwisko", "imie")
+        wyniki_kandydaci = []
+        suma_glosow = 0
+        for kandydat in kandydaci:
+            liczba = kandydat.glos_set.filter(glosowanie=glosowanie).count()
+            suma_glosow += liczba
+            wyniki_kandydaci.append({
+                "id": kandydat.id,
+                "imie": kandydat.imie,
+                "nazwisko": kandydat.nazwisko,
+                "glosy": liczba,
+            })
+
+        return JsonResponse({
+            "typ": "kandydaci",
+            "tajne": glosowanie.jawnosc == "tajne",
+            "otwarte": glosowanie.otwarte,
+            "oddano": suma_glosow,
+            "kandydaci": wyniki_kandydaci,
         })
 
     wyniki = (
@@ -811,6 +834,7 @@ def api_wyniki(request, glosowanie_id):
 
     return JsonResponse({
         **dane,
+        "typ": glosowanie.typ,
         "tajne": glosowanie.jawnosc == "tajne",
         "otwarte": glosowanie.otwarte,
         "wiekszosc": glosowanie.wiekszosc,
