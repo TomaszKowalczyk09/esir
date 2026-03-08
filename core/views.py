@@ -111,7 +111,7 @@ def protokol_sesji_pdf_wybor(request):
     # poniżej kod jak w protokol_sesji_pdf, ale dla wybranej sesji
     punkty = (
         sesja.punkty
-        .select_related("glosowanie")
+        .prefetch_related("glosowania")
         .order_by("numer")
     )
     from io import BytesIO
@@ -346,7 +346,7 @@ def prezydium_dashboard(request):
 
     najblizsza = (
         Sesja.objects.order_by("data")
-        .prefetch_related("punkty__glosowanie")
+        .prefetch_related("punkty__glosowania")
         .first()
     )
 
@@ -454,6 +454,65 @@ def sesja_edytuj(request, sesja_id):
                 messages.success(request, "Głosowanie zostało dodane.")
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
 
+        elif "zapisz_glosowanie" in request.POST:
+            glosowanie = get_object_or_404(
+                Glosowanie,
+                id=request.POST.get("glosowanie_id"),
+                punkt_obrad__sesja=sesja,
+            )
+
+            typ = request.POST.get("typ", glosowanie.typ)
+            jawnosc = request.POST.get("jawnosc", glosowanie.jawnosc)
+            wiekszosc = request.POST.get("wiekszosc", glosowanie.wiekszosc)
+            nazwa = (request.POST.get("nazwa") or glosowanie.nazwa).strip()
+            liczba_raw = (request.POST.get("liczba_uprawnionych") or "").strip()
+
+            typ_values = {k for k, _ in Glosowanie.TYP_CHOICES}
+            jawnosc_values = {k for k, _ in Glosowanie.JAWNOSC_CHOICES}
+            wiekszosc_values = {k for k, _ in Glosowanie.WIEKSZOSC_CHOICES}
+
+            if typ not in typ_values:
+                messages.error(request, "Nieprawidłowy typ głosowania.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+            if jawnosc not in jawnosc_values:
+                messages.error(request, "Nieprawidłowa jawność głosowania.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+            if wiekszosc not in wiekszosc_values:
+                messages.error(request, "Nieprawidłowy rodzaj większości.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+            liczba_uprawnionych = None
+            if liczba_raw:
+                try:
+                    liczba_uprawnionych = int(liczba_raw)
+                except ValueError:
+                    messages.error(request, "Liczba uprawnionych musi być liczbą całkowitą.")
+                    return redirect("sesja_edytuj", sesja_id=sesja.id)
+                if liczba_uprawnionych < 0:
+                    messages.error(request, "Liczba uprawnionych nie może być ujemna.")
+                    return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+            glosowanie.nazwa = nazwa or glosowanie.punkt_obrad.tytul
+            glosowanie.typ = typ
+            glosowanie.wiekszosc = wiekszosc
+            glosowanie.liczba_uprawnionych = liczba_uprawnionych
+            glosowanie.jawnosc = "tajne" if typ == "kandydaci" else jawnosc
+            glosowanie.save(
+                update_fields=["nazwa", "typ", "jawnosc", "wiekszosc", "liczba_uprawnionych"]
+            )
+            messages.success(request, "Głosowanie zostało zaktualizowane.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        elif "usun_glosowanie" in request.POST:
+            glosowanie = get_object_or_404(
+                Glosowanie,
+                id=request.POST.get("glosowanie_id"),
+                punkt_obrad__sesja=sesja,
+            )
+            glosowanie.delete()
+            messages.success(request, "Głosowanie zostało usunięte.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
         elif "dodaj_kandydata" in request.POST:
             punkt_id = request.POST.get("punkt_id")
             punkt = get_object_or_404(PunktObrad, id=punkt_id, sesja=sesja)
@@ -479,14 +538,14 @@ def sesja_edytuj(request, sesja_id):
             messages.success(request, "Zmiany w punkcie zostały zapisane.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
-    punkty = list(sesja.punkty.select_related("glosowanie").order_by("numer"))
+    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
     # Automatyczna renumeracja punktów (unikalne, rosnące numery)
     for idx, punkt in enumerate(punkty, start=1):
         if punkt.numer != idx:
             punkt.numer = idx
             punkt.save(update_fields=["numer"])
     # Ponownie pobierz punkty po renumeracji
-    punkty = list(sesja.punkty.select_related("glosowanie").order_by("numer"))
+    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
     aktywny_punkt = None
     for punkt in punkty:
         if getattr(punkt, "aktywny", False):
@@ -598,7 +657,7 @@ def prezidium_panel(request):
     if not _can_manage_session(request.user):
         return redirect("radny")
 
-    sesje = Sesja.objects.all().prefetch_related("punkty__glosowanie")
+    sesje = Sesja.objects.all().prefetch_related("punkty__glosowania")
     return render(request, "core/prezidium.html", {"sesje": sesje})
 
 
@@ -676,7 +735,7 @@ def radny(request):
     glosowania = []
     punkty = []
     if aktywna_sesja:
-        punkty = aktywna_sesja.punkty.select_related("glosowanie").order_by("numer")
+        punkty = aktywna_sesja.punkty.prefetch_related("glosowania").order_by("numer")
         glosowania = (
             Glosowanie.objects.filter(
                 punkt_obrad__sesja=aktywna_sesja,
@@ -890,8 +949,9 @@ def wyniki_publiczne(request, sesja_id=None):
     """
     sesja = Sesja.objects.filter(aktywna=True).first()
     if sesja:
-        punkty = sesja.punkty.select_related("glosowanie").prefetch_related(
-            "glosowanie__glos_set"
+        punkty = sesja.punkty.prefetch_related(
+            "glosowania",
+            "glosowania__glos_set",
         )
     else:
         punkty = []
@@ -957,7 +1017,7 @@ def api_aktywny_punkt(request, sesja_id):
 
     punkt = (
         sesja.punkty.filter(Q(aktywny=True) | Q())
-        .select_related("glosowanie")
+        .prefetch_related("glosowania")
         .order_by("numer")
         .first()
     )
@@ -1040,7 +1100,7 @@ def prezydium_agenda(request):
     if not _can_manage_session(request.user):
         return redirect("radny")
 
-    sesja = Sesja.objects.filter(aktywna=True).prefetch_related("punkty__glosowanie").first()
+    sesja = Sesja.objects.filter(aktywna=True).prefetch_related("punkty__glosowania").first()
     punkty = sesja.punkty.all() if sesja else []
 
     return render(request, "core/prezydium_agenda.html", {
@@ -1576,7 +1636,7 @@ def protokol_sesji_pdf(request):
 
     punkty = (
         sesja.punkty
-        .select_related("glosowanie")
+        .prefetch_related("glosowania")
         .order_by("numer")
     )
 

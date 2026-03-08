@@ -79,41 +79,142 @@
       </div>
     </div>
     <div class="row mt-2">
-      <div class="col-12 mb-2">
-        <div class="alert alert-warning">Debug: liczba punktów w sesji: {{ punkty|length }}</div>
-      </div>
       <div class="col-12">
         {% for punkt in punkty %}
           <div class="card mb-3 shadow-sm" id="punkt-{{ punkt.id }}">
             <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <span class="fw-bold fs-5">{{ punkt.numer }}. {{ punkt.tytul }}</span>
-                  {% if punkt.aktywny %}
-                    <span class="badge bg-primary ms-2">Aktualnie omawiany</span>
-                  {% endif %}
+              <div class="row g-3 align-items-start">
+                <div class="col-lg-9">
+                  <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <span class="fw-bold fs-5">{{ punkt.numer }}. {{ punkt.tytul }}</span>
+                    {% if punkt.aktywny %}
+                      <span class="badge bg-primary">Aktualnie omawiany</span>
+                    {% endif %}
+                  </div>
+
                   {% if punkt.opis %}
-                    <div class="text-muted small mt-1">{{ punkt.opis }}</div>
+                    <div class="text-muted small mb-2">{{ punkt.opis }}</div>
                   {% endif %}
+
+                  {% with glosowania=punkt.glosowania.all %}
+                    <div class="border rounded-3 p-2 bg-body-tertiary">
+                      {% if glosowania %}
+                        <div class="small text-muted mb-2">Głosowania przypisane do punktu: {{ glosowania|length }}</div>
+                        {% for gl in glosowania %}
+                          <div class="border rounded-2 p-2 mb-2 bg-white small">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                              <div>
+                                <div class="fw-semibold mb-1">{{ forloop.counter }}. {{ gl.nazwa }}</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                  <span class="badge rounded-pill bg-secondary">{{ gl.get_typ_display }}</span>
+                                  <span class="badge rounded-pill bg-dark">{{ gl.get_jawnosc_display }}</span>
+                                  <span class="badge rounded-pill bg-info text-dark">{{ gl.get_wiekszosc_display }}</span>
+                                  {% if gl.otwarte %}
+                                    <span class="badge rounded-pill bg-success">Otwarte</span>
+                                  {% else %}
+                                    <span class="badge rounded-pill bg-secondary">Zamknięte</span>
+                                  {% endif %}
+                                  {% if gl.liczba_uprawnionych %}
+                                    <span class="badge rounded-pill bg-light text-dark border">Uprawnieni: {{ gl.liczba_uprawnionych }}</span>
+                                  {% endif %}
+                                </div>
+                              </div>
+                              <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal" data-bs-target="#modalEdytujGlosowanie{{ gl.id }}">
+                                  Edytuj
+                                </button>
+                                <form method="post" onsubmit="return confirm('Usunąć to głosowanie?');">
+                                  {% csrf_token %}
+                                  <input type="hidden" name="glosowanie_id" value="{{ gl.id }}">
+                                  <button type="submit" name="usun_glosowanie" class="btn btn-sm btn-outline-danger">
+                                    Usuń
+                                  </button>
+                                </form>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="modal fade" id="modalEdytujGlosowanie{{ gl.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                              <div class="modal-content">
+                                <div class="modal-header">
+                                  <h5 class="modal-title">Edytuj głosowanie</h5>
+                                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+                                </div>
+                                <div class="modal-body">
+                                  <form method="post" class="row g-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="glosowanie_id" value="{{ gl.id }}">
+                                    <div class="col-12">
+                                      <label class="form-label mb-1">Nazwa głosowania</label>
+                                      <input type="text" name="nazwa" class="form-control" value="{{ gl.nazwa }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                      <label class="form-label mb-1">Typ głosowania</label>
+                                      <select name="typ" class="form-select">
+                                        <option value="zwykle" {% if gl.typ == 'zwykle' %}selected{% endif %}>Zwykłe (za/przeciw/wstrzymuje)</option>
+                                        <option value="kandydaci" {% if gl.typ == 'kandydaci' %}selected{% endif %}>Imienne na kandydata</option>
+                                      </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <label class="form-label mb-1">Jawność</label>
+                                      <select name="jawnosc" class="form-select">
+                                        <option value="jawne" {% if gl.jawnosc == 'jawne' %}selected{% endif %}>Jawne</option>
+                                        <option value="tajne" {% if gl.jawnosc == 'tajne' %}selected{% endif %}>Tajne</option>
+                                      </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <label class="form-label mb-1">Większość</label>
+                                      <select name="wiekszosc" class="form-select">
+                                        <option value="zwykla" {% if gl.wiekszosc == 'zwykla' %}selected{% endif %}>Większość zwykła</option>
+                                        <option value="bezwzgledna" {% if gl.wiekszosc == 'bezwzgledna' %}selected{% endif %}>Większość bezwzględna</option>
+                                      </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                      <label class="form-label mb-1">Uprawnieni (opcjonalnie)</label>
+                                      <input type="number" min="0" name="liczba_uprawnionych" class="form-control" value="{{ gl.liczba_uprawnionych|default:'' }}">
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                      <button type="submit" name="zapisz_glosowanie" class="btn btn-primary w-100">Zapisz zmiany</button>
+                                    </div>
+                                  </form>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      {% else %}
+                        <div class="small text-muted">Brak dodanego głosowania dla tego punktu.</div>
+                      {% endif %}
+                    </div>
+                  {% endwith %}
                 </div>
-                <div>
-                  {% if not forloop.first %}
-                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'up' %}" style="display:inline-block">
+
+                <div class="col-lg-3">
+                  <div class="d-grid gap-2">
+                    <div class="btn-group" role="group" aria-label="Przesuwanie punktu">
+                      {% if not forloop.first %}
+                        <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'up' %}" class="w-50">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-sm btn-outline-secondary w-100" title="Przesuń wyżej">&#8593;</button>
+                        </form>
+                      {% endif %}
+                      {% if not forloop.last %}
+                        <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'down' %}" class="w-50">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-sm btn-outline-secondary w-100" title="Przesuń niżej">&#8595;</button>
+                        </form>
+                      {% endif %}
+                    </div>
+
+                    <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}">
                       {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń wyżej">&#8593;</button>
+                      <button type="submit" class="btn btn-sm btn-outline-primary w-100">Ustaw jako aktywny</button>
                     </form>
-                  {% endif %}
-                  {% if not forloop.last %}
-                    <form method="post" action="{% url 'przesun_punkt_obrad' punkt.id 'down' %}" style="display:inline-block">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-outline-secondary" title="Przesuń niżej">&#8595;</button>
-                    </form>
-                  {% endif %}
-                  <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}" style="display:inline-block">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Ustaw jako aktywny</button>
-                  </form>
-                  <button type="button" class="btn btn-sm btn-outline-dark ms-2" data-bs-toggle="modal" data-bs-target="#modalEdytujPunkt{{ punkt.id }}">Edytuj</button>
+
+                    <button type="button" class="btn btn-sm btn-outline-dark w-100" data-bs-toggle="modal" data-bs-target="#modalEdytujPunkt{{ punkt.id }}">Edytuj punkt</button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -61,6 +61,18 @@ class PunktObrad(models.Model):
         ordering = ['numer']
 
 
+    @property
+    def glosowanie(self):
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("glosowania")
+        if prefetched is not None:
+            if not prefetched:
+                return None
+            otwarte = [g for g in prefetched if g.otwarte]
+            src = otwarte if otwarte else prefetched
+            return sorted(src, key=lambda g: (g.utworzone, g.id), reverse=True)[0]
+        return self.glosowania.order_by("-otwarte", "-utworzone", "-id").first()
+
+
 
     def __str__(self):
         return f"{self.numer}. {self.tytul}"
@@ -77,7 +89,7 @@ class Glosowanie(models.Model):
         ("bezwzgledna", "Większość bezwzględna"),
     ]
 
-    punkt_obrad = models.OneToOneField(PunktObrad, on_delete=models.CASCADE, related_name='glosowanie')
+    punkt_obrad = models.ForeignKey(PunktObrad, on_delete=models.CASCADE, related_name='glosowania')
     nazwa = models.CharField(max_length=200)
     otwarte = models.BooleanField(default=False)
     utworzone = models.DateTimeField(auto_now_add=True)

@@ -52,19 +52,39 @@
           {% if punkt.opis %}
             <div class="small text-muted">{{ punkt.opis }}</div>
           {% endif %}
-          {% if punkt.glosowanie %}
-            <div class="small text-muted mt-1">
-              Głosowanie: {{ punkt.glosowanie.nazwa }}
-              {% if punkt.glosowanie.otwarte %}
-                <span class="badge bg-success ms-1">Otwarte</span>
-              {% else %}
-                <span class="badge bg-secondary ms-1">Zamknięte</span>
-              {% endif %}
-            </div>
-            <div class="mt-2" id="wyniki-agenda-{{ punkt.glosowanie.id }}">
-              <div class="small text-muted">Ładowanie wyników...</div>
-            </div>
-          {% endif %}
+          {% with glosowania=punkt.glosowania.all %}
+            {% if glosowania %}
+              <div class="mt-2">
+                {% for gl in glosowania %}
+                  <div class="border rounded p-2 mb-2 bg-light small">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                      <div>
+                        <span class="fw-semibold">{{ forloop.counter }}. {{ gl.nazwa }}</span>
+                        <span class="badge bg-secondary ms-1">{{ gl.get_typ_display }}</span>
+                        <span class="badge bg-dark ms-1">{{ gl.get_jawnosc_display }}</span>
+                        <span class="badge bg-info text-dark ms-1">{{ gl.get_wiekszosc_display }}</span>
+                        {% if gl.otwarte %}
+                          <span class="badge bg-success ms-1" id="status-gl-{{ gl.id }}">Otwarte</span>
+                        {% else %}
+                          <span class="badge bg-secondary ms-1" id="status-gl-{{ gl.id }}">Zamknięte</span>
+                        {% endif %}
+                      </div>
+                      <button type="button"
+                              class="btn btn-sm btn-outline-success toggle-glosowanie"
+                              data-id="{{ gl.id }}">
+                        {% if gl.otwarte %}Zamknij głosowanie{% else %}Otwórz głosowanie{% endif %}
+                      </button>
+                    </div>
+                    <div class="mt-2" id="wyniki-agenda-{{ gl.id }}">
+                      <div class="small text-muted">Ładowanie wyników...</div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="small text-muted mt-2">Brak głosowań przypisanych do tego punktu.</div>
+            {% endif %}
+          {% endwith %}
         </div>
         <div class="text-end">
           {% if punkt.aktywny %}
@@ -77,14 +97,6 @@
               Ustaw jako aktywny
             </button>
           </form>
-
-          {% if punkt.glosowanie %}
-          <button type="button"
-                  class="btn btn-sm btn-outline-success w-100 toggle-glosowanie"
-                  data-id="{{ punkt.glosowanie.id }}">
-            {% if punkt.glosowanie.otwarte %}Zamknij głosowanie{% else %}Otwórz głosowanie{% endif %}
-          </button>
-          {% endif %}
         </div>
       </div>
       {% endfor %}
@@ -147,10 +159,10 @@ $(function () {
   }
 
   {% for punkt in punkty %}
-    {% if punkt.glosowanie %}
+    {% for gl in punkt.glosowania.all %}
       (function(glosowanieId) {
         function odswiezWyniki() {
-          $.get('{% url "api_wyniki" punkt.glosowanie.id %}', function(data) {
+          $.get('{% url "api_wyniki" gl.id %}', function(data) {
             renderWyniki(glosowanieId, data);
           }).fail(function() {
             $('#wyniki-agenda-' + glosowanieId).html('<div class="small text-danger">Nie udało się pobrać wyników.</div>');
@@ -159,18 +171,21 @@ $(function () {
 
         odswiezWyniki();
         setInterval(odswiezWyniki, 2000);
-      })({{ punkt.glosowanie.id }});
-    {% endif %}
+      })({{ gl.id }});
+    {% endfor %}
   {% endfor %}
 
   $('.toggle-glosowanie').click(function () {
     const id = $(this).data('id');
     const btn = $(this);
     $.get('/glosowanie/' + id + '/toggle/', function (data) {
+      const status = $('#status-gl-' + id);
       if (data.otwarte) {
         btn.text('Zamknij głosowanie');
+        status.removeClass('bg-secondary').addClass('bg-success').text('Otwarte');
       } else {
         btn.text('Otwórz głosowanie');
+        status.removeClass('bg-success').addClass('bg-secondary').text('Zamknięte');
       }
     });
   });
