@@ -1,0 +1,273 @@
+{% extends 'core/base.html' %}
+
+{% block title %}e-Identyfikator{% endblock %}
+
+{% block extra_head %}
+<style>
+  .esir-content {
+    padding: 0 !important;
+  }
+
+  .esir-footer {
+    display: none;
+  }
+
+  .eid-wrap {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  .eid-phone {
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+    background: linear-gradient(180deg, #eef3fb 0%, #dde7f6 100%);
+    padding: 16px 14px 24px;
+    box-shadow: none;
+  }
+
+  .eid-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: #111827;
+  }
+
+  .eid-title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 2rem;
+    margin: .2rem 0;
+  }
+
+  .eid-time {
+    text-align: center;
+    color: #4b5563;
+    margin-bottom: 12px;
+  }
+
+  .eid-card {
+    position: relative;
+    border-radius: 18px;
+    padding: 16px;
+    min-height: calc(100vh - 170px);
+    background:
+      radial-gradient(circle at 10% 16%, rgba(255,255,255,.72), rgba(255,255,255,0) 36%),
+      radial-gradient(circle at 88% 82%, rgba(255,255,255,.56), rgba(255,255,255,0) 32%),
+      linear-gradient(145deg, #f4f9ff 0%, #d9ebff 52%, #bfdcff 100%);
+    border: 1px solid rgba(23, 94, 182, .22);
+    box-shadow: 0 10px 30px rgba(29, 78, 216, .14);
+    overflow: hidden;
+  }
+
+  .eid-card::after {
+    content: "";
+    position: absolute;
+    right: -28px;
+    top: 22px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 2px solid rgba(37, 99, 235, .14);
+    box-shadow:
+      0 0 0 18px rgba(37, 99, 235, .09),
+      0 0 0 38px rgba(37, 99, 235, .06);
+    pointer-events: none;
+  }
+
+  .eid-row {
+    display: grid;
+    grid-template-columns: 148px 1fr;
+    gap: 12px;
+  }
+
+  .eid-photo {
+    height: 186px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #e3e8f1, #c4cfde);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1f2937;
+    font-size: 3.2rem;
+    font-weight: 700;
+    border: 1px solid rgba(17, 24, 39, .15);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+    overflow: hidden;
+  }
+
+  .eid-photo-label {
+    font-size: .72rem;
+    color: #6b7280;
+    margin-top: .3rem;
+  }
+
+  .eid-data .value {
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.05;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+
+  .eid-data .label {
+    color: #374151;
+    margin-bottom: .45rem;
+    display: block;
+  }
+
+  .eid-logo {
+    width: 126px;
+    height: 78px;
+    margin-top: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(30, 64, 175, .22);
+    background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(225, 238, 255, .95));
+    box-shadow: 0 6px 14px rgba(30, 64, 175, .12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .eid-logo .mark {
+    font-size: 1.55rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: #1d4ed8;
+  }
+
+  .eid-logo .sub {
+    font-size: .58rem;
+    font-weight: 700;
+    color: #334155;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+  }
+
+  .eid-footer {
+    margin-top: 10px;
+    font-size: .82rem;
+    color: #334155;
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    border-top: 1px solid rgba(30, 64, 175, .15);
+    padding-top: .55rem;
+  }
+
+  .eid-note {
+    margin-top: .85rem;
+    font-size: .82rem;
+    color: #475569;
+    text-align: center;
+  }
+
+  @media (max-width: 576px) {
+    .eid-row {
+      grid-template-columns: 112px 1fr;
+      gap: 10px;
+    }
+    .eid-photo {
+      height: 148px;
+      font-size: 2.3rem;
+    }
+    .eid-data .value {
+      font-size: 1.45rem;
+    }
+  }
+
+  @media (min-width: 992px) {
+    .eid-wrap {
+      min-height: 100%;
+    }
+
+    .eid-phone {
+      min-height: calc(100vh - 12px);
+      padding: 20px;
+    }
+
+    .eid-card {
+      min-height: calc(100vh - 220px);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eid-wrap">
+  <div class="eid-phone">
+    <div class="eid-top">
+      <a href="{% url 'panel' %}" class="btn btn-sm btn-outline-secondary" aria-label="Wstecz">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div class="small text-muted">e-SIR</div>
+      <div style="width: 38px;"></div>
+    </div>
+
+    <div class="eid-title">eIdentyfikator</div>
+    <div class="eid-time">Czas: <span id="eidNow"></span></div>
+
+    <div class="eid-card">
+      <div class="eid-row">
+        <div>
+          <div class="eid-photo">
+            {{ user.imie|slice:":1"|upper }}{{ user.nazwisko|slice:":1"|upper }}
+          </div>
+          <div class="eid-photo-label">Zdjęcie poglądowe</div>
+
+          <div class="eid-logo" aria-label="Logo MRM">
+            <div class="mark">MRM</div>
+            <div class="sub">Miejska Rada Młodzieży</div>
+          </div>
+        </div>
+
+        <div class="eid-data">
+          <div class="value">{{ user.imie }}</div>
+          <span class="label">Imię</span>
+
+          <div class="value">{{ user.nazwisko }}</div>
+          <span class="label">Nazwisko</span>
+
+          <div class="value">Polskie</div>
+          <span class="label">Obywatelstwo</span>
+
+          <div class="value">{{ user.rola }}</div>
+          <span class="label">Rola</span>
+
+          <div class="value">{{ user.username }}</div>
+          <span class="label">Identyfikator systemowy</span>
+        </div>
+      </div>
+
+      <div class="eid-footer">
+        <span>Jednostka: Rada</span>
+        <span>ID: ESIR-{{ user.id }}</span>
+      </div>
+    </div>
+
+    <div class="eid-note">Wzór inspirowany układem mobilnego dokumentu, nie jest oficjalnym dokumentem państwowym.</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const box = document.getElementById('eidNow');
+    function tick() {
+      const now = new Date();
+      const date = now.toLocaleDateString('pl-PL');
+      const time = now.toLocaleTimeString('pl-PL');
+      box.textContent = time + ' ' + date;
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+{% endblock %}

@@ -40,6 +40,7 @@ urlpatterns = [
 
     # Pomoc
     path("pomoc/", views.pomoc, name="pomoc"),
+    path("identyfikator/", views.e_identyfikator, name="e_identyfikator"),
 
     # PREZYDIUM
     path(

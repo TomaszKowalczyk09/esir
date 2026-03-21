@@ -342,6 +342,15 @@ def pomoc(request):
     return render(request, "core/pomoc.html")
 
 
+@login_required
+def e_identyfikator(request):
+    """Elektroniczny identyfikator użytkownika (radny/prezydium/administrator)."""
+    if not _is_radny_like(request.user):
+        return redirect("panel")
+
+    return render(request, "core/e_identyfikator.html")
+
+
 # --------------------------------------------------
 # Widoki PREZYDIUM
 # --------------------------------------------------
@@ -416,6 +425,7 @@ def sesja_edytuj(request, sesja_id):
         return redirect("radny")
 
     sesja = get_object_or_404(Sesja, id=sesja_id)
+    from .models import Obecnosc
 
     punkt_form = PunktForm()
     glosowanie_form = GlosowanieForm()
@@ -546,6 +556,34 @@ def sesja_edytuj(request, sesja_id):
             messages.success(request, "Zmiany w punkcie zostały zapisane.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
+        elif "zapisz_obecnosc" in request.POST:
+            uprawnieni = list(_uprawnieni_do_glosowania_qs())
+            obecnosci_map = {
+                o.radny_id: o
+                for o in Obecnosc.objects.filter(sesja=sesja, radny__in=uprawnieni)
+            }
+
+            for osoba in uprawnieni:
+                status = request.POST.get(f"obecnosc_{osoba.id}")
+                if status not in {"obecny", "nieobecny"}:
+                    continue
+
+                obecny_flag = status == "obecny"
+                obj = obecnosci_map.get(osoba.id)
+                if obj:
+                    if obj.obecny != obecny_flag:
+                        obj.obecny = obecny_flag
+                        obj.save(update_fields=["obecny", "timestamp"])
+                else:
+                    Obecnosc.objects.create(
+                        sesja=sesja,
+                        radny=osoba,
+                        obecny=obecny_flag,
+                    )
+
+            messages.success(request, "Lista obecności została zaktualizowana.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
     punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
     # Automatyczna renumeracja punktów (unikalne, rosnące numery)
     for idx, punkt in enumerate(punkty, start=1):
@@ -574,6 +612,26 @@ def sesja_edytuj(request, sesja_id):
             sesja.przerwa_czas = None
             sesja.save(update_fields=["przerwa_start", "przerwa_czas"])
 
+    uprawnieni_qs = _uprawnieni_do_glosowania_qs().order_by("nazwisko", "imie")
+    uprawnieni = list(uprawnieni_qs)
+    obecnosci_status = {
+        o.radny_id: o.obecny
+        for o in Obecnosc.objects.filter(sesja=sesja, radny__in=uprawnieni)
+    }
+    obecnosci = [
+        {
+            "id": osoba.id,
+            "imie": osoba.imie,
+            "nazwisko": osoba.nazwisko,
+            "obecny": bool(obecnosci_status.get(osoba.id, False)),
+        }
+        for osoba in uprawnieni
+    ]
+    obecnych_count = sum(1 for osoba in obecnosci if osoba["obecny"])
+    nieobecnych_count = len(obecnosci) - obecnych_count
+    wymagane_kworum = (len(obecnosci) // 2) + 1 if obecnosci else 0
+    kworum_osiagniete = obecnych_count >= wymagane_kworum if obecnosci else False
+
     context = {
         "sesja": sesja,
         "punkty": punkty,
@@ -582,6 +640,11 @@ def sesja_edytuj(request, sesja_id):
         "aktywny_punkt": aktywny_punkt,
         "przerwa_trwa": przerwa_trwa,
         "przerwa_pozostalo": przerwa_pozostalo,
+        "obecnosci": obecnosci,
+        "obecnych_count": obecnych_count,
+        "nieobecnych_count": nieobecnych_count,
+        "wymagane_kworum": wymagane_kworum,
+        "kworum_osiagniete": kworum_osiagniete,
     }
     return render(request, "core/sesja_edytuj.html", context)
 
