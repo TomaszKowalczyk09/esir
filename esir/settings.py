@@ -152,3 +152,9 @@ STORAGES = {
 # (opcjonalnie) media upload
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Marginesy PDF protokołów (mm)
+PROTOKOL_PDF_MARGIN_LEFT_MM = float(os.environ.get("PROTOKOL_PDF_MARGIN_LEFT_MM", "20"))
+PROTOKOL_PDF_MARGIN_RIGHT_MM = float(os.environ.get("PROTOKOL_PDF_MARGIN_RIGHT_MM", "20"))
+PROTOKOL_PDF_MARGIN_TOP_MM = float(os.environ.get("PROTOKOL_PDF_MARGIN_TOP_MM", "20"))
+PROTOKOL_PDF_MARGIN_BOTTOM_MM = float(os.environ.get("PROTOKOL_PDF_MARGIN_BOTTOM_MM", "20"))

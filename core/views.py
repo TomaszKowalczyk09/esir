@@ -138,10 +138,11 @@ def protokol_sesji_pdf_wybor(request):
             font_bold = "DejaVuSans-Bold"
     except Exception:
         pass
-    margin_left = 20 * mm
-    margin_right = 20 * mm
-    margin_top = 20 * mm
-    margin_bottom = 20 * mm
+    margin_left_mm, margin_right_mm, margin_top_mm, margin_bottom_mm = _protokol_pdf_margins_mm()
+    margin_left = margin_left_mm * mm
+    margin_right = margin_right_mm * mm
+    margin_top = margin_top_mm * mm
+    margin_bottom = margin_bottom_mm * mm
     usable_width = width - margin_left - margin_right
     def new_page(y_start=None):
         c.showPage()
@@ -276,6 +277,15 @@ def _can_manage_session(user):
 
 def _is_prezydium_or_admin(user):
     return getattr(user, "rola", None) in {"prezydium", "administrator"}
+
+def _protokol_pdf_margins_mm():
+    from django.conf import settings
+
+    left = float(getattr(settings, "PROTOKOL_PDF_MARGIN_LEFT_MM", 20))
+    right = float(getattr(settings, "PROTOKOL_PDF_MARGIN_RIGHT_MM", 20))
+    top = float(getattr(settings, "PROTOKOL_PDF_MARGIN_TOP_MM", 20))
+    bottom = float(getattr(settings, "PROTOKOL_PDF_MARGIN_BOTTOM_MM", 20))
+    return left, right, top, bottom
 
 
 def _radny_like_qs():
@@ -481,16 +491,14 @@ def sesja_edytuj(request, sesja_id):
                 messages.error(request, "Nieprawidłowy rodzaj większości.")
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
 
-            liczba_uprawnionych = None
-            if liczba_raw:
-                try:
-                    liczba_uprawnionych = int(liczba_raw)
-                except ValueError:
-                    messages.error(request, "Liczba uprawnionych musi być liczbą całkowitą.")
-                    return redirect("sesja_edytuj", sesja_id=sesja.id)
-                if liczba_uprawnionych < 0:
-                    messages.error(request, "Liczba uprawnionych nie może być ujemna.")
-                    return redirect("sesja_edytuj", sesja_id=sesja.id)
+            try:
+                liczba_uprawnionych = int(liczba_raw)
+            except ValueError:
+                messages.error(request, "Liczba uprawnionych musi być liczbą całkowitą.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+            if liczba_uprawnionych < 0:
+                messages.error(request, "Liczba uprawnionych nie może być ujemna.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
 
             glosowanie.nazwa = nazwa or glosowanie.punkt_obrad.tytul
             glosowanie.typ = typ
@@ -1669,11 +1677,11 @@ def protokol_sesji_pdf(request):
     except Exception:
         pass
 
-    # Marginesy: 20 mm z każdej strony
-    margin_left = 20 * mm
-    margin_right = 20 * mm
-    margin_top = 20 * mm
-    margin_bottom = 20 * mm
+    margin_left_mm, margin_right_mm, margin_top_mm, margin_bottom_mm = _protokol_pdf_margins_mm()
+    margin_left = margin_left_mm * mm
+    margin_right = margin_right_mm * mm
+    margin_top = margin_top_mm * mm
+    margin_bottom = margin_bottom_mm * mm
     usable_width = width - margin_left - margin_right
 
     def new_page(y_start=None):
@@ -1732,12 +1740,12 @@ def protokol_sesji_pdf(request):
                     y -= 4.5 * mm
                     if y < margin_bottom:
                         y = new_page()
-                        c.setFont(font_regular, 10)
+                        c.setFont(font_regular, 9)
             c.drawString(margin_left + 2 * mm, y, para)
             y -= 5 * mm
             if y < margin_bottom:
                 c.showPage()
-                y = height - 20 * mm
+                y = height - margin_top
                 c.setFont(font_regular, 10)
 
         gl = getattr(p, "glosowanie", None)
