@@ -782,10 +782,22 @@ def radny(request):
     - lista otwartych głosowań.
     """
     aktywna_sesja = Sesja.objects.filter(aktywna=True).first()
+    obecnosc_zgloszona = False
+    obecnosc_status = None
 
     glosowania = []
     punkty = []
     if aktywna_sesja:
+        from .models import Obecnosc
+
+        obecnosc_obj = Obecnosc.objects.filter(
+            sesja=aktywna_sesja,
+            radny=request.user,
+        ).first()
+        if obecnosc_obj is not None:
+            obecnosc_zgloszona = True
+            obecnosc_status = obecnosc_obj.obecny
+
         punkty = aktywna_sesja.punkty.prefetch_related("glosowania").order_by("numer")
         glosowania = (
             Glosowanie.objects.filter(
@@ -800,6 +812,8 @@ def radny(request):
         "sesja": aktywna_sesja,
         "punkty": punkty,
         "glosowania": glosowania,
+        "obecnosc_zgloszona": obecnosc_zgloszona,
+        "obecnosc_status": obecnosc_status,
     }
     return render(request, "core/radny.html", context)
 

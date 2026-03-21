@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Uzytkownik
-from core.models import Sesja, PunktObrad, Glosowanie
+from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc
 
 
 class AuthorizationMatrixTests(TestCase):
@@ -109,3 +109,42 @@ class AuthorizationMatrixTests(TestCase):
 		response_radny = self.client.get(url)
 		self.assertEqual(response_radny.status_code, 403)
 		self.assertEqual(response_radny.json().get("error"), "Brak uprawnień")
+
+
+class AttendanceButtonsVisibilityTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.radny = Uzytkownik.objects.create_user(
+			username="radny_obecnosc",
+			password="test12345",
+			rola="radny",
+			imie="Olga",
+			nazwisko="Nowak",
+		)
+		cls.sesja = Sesja.objects.create(
+			nazwa="Sesja obecności",
+			data=timezone.now(),
+			aktywna=True,
+		)
+
+	def test_buttons_visible_before_attendance_submission(self):
+		self.client.force_login(self.radny)
+		response = self.client.get(reverse("radny"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Potwierdź obecność")
+		self.assertContains(response, "Zgłoś nieobecność")
+
+	def test_buttons_hidden_after_attendance_submission(self):
+		Obecnosc.objects.create(
+			sesja=self.sesja,
+			radny=self.radny,
+			obecny=True,
+		)
+		self.client.force_login(self.radny)
+		response = self.client.get(reverse("radny"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertNotContains(response, "Potwierdź obecność")
+		self.assertNotContains(response, "Zgłoś nieobecność")
+		self.assertContains(response, "Obecność potwierdzona")

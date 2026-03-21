@@ -83,15 +83,25 @@
 
       <hr class="my-3" />
 
-      <form method="post" action="{% url 'ustaw_obecnosc' %}" class="d-flex gap-2 align-items-center">
-        {% csrf_token %}
-        <button type="submit" name="obecny" value="1" class="btn btn-outline-success btn-sm">
-          <i class="bi bi-person-check me-1"></i> Potwierdź obecność
-        </button>
-        <button type="submit" name="obecny" value="0" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-person-x me-1"></i> Zgłoś nieobecność
-        </button>
-      </form>
+      {% if obecnosc_zgloszona %}
+        <div class="alert alert-light border mb-0 py-2">
+          {% if obecnosc_status %}
+            <span class="badge bg-success"><i class="bi bi-person-check me-1"></i>Obecność potwierdzona</span>
+          {% else %}
+            <span class="badge bg-secondary"><i class="bi bi-person-x me-1"></i>Zgłoszono nieobecność</span>
+          {% endif %}
+        </div>
+      {% else %}
+        <form method="post" action="{% url 'ustaw_obecnosc' %}" class="d-flex gap-2 align-items-center">
+          {% csrf_token %}
+          <button type="submit" name="obecny" value="1" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-person-check me-1"></i> Potwierdź obecność
+          </button>
+          <button type="submit" name="obecny" value="0" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-person-x me-1"></i> Zgłoś nieobecność
+          </button>
+        </form>
+      {% endif %}
     </div>
   </div>
 
