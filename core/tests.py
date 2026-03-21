@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Uzytkownik
-from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc
+from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos
 
 
 class AuthorizationMatrixTests(TestCase):
@@ -148,3 +148,55 @@ class AttendanceButtonsVisibilityTests(TestCase):
 		self.assertNotContains(response, "Potwierdź obecność")
 		self.assertNotContains(response, "Zgłoś nieobecność")
 		self.assertContains(response, "Obecność potwierdzona")
+
+
+class VotingButtonsVisibilityTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.radny = Uzytkownik.objects.create_user(
+			username="radny_glos",
+			password="test12345",
+			rola="radny",
+			imie="Marek",
+			nazwisko="Głosujący",
+		)
+		sesja = Sesja.objects.create(
+			nazwa="Sesja głosowania",
+			data=timezone.now(),
+			aktywna=True,
+		)
+		punkt = PunktObrad.objects.create(
+			sesja=sesja,
+			numer=1,
+			tytul="Punkt głosowania",
+		)
+		cls.glosowanie = Glosowanie.objects.create(
+			punkt_obrad=punkt,
+			nazwa="Głosowanie jawne",
+			otwarte=True,
+			typ="zwykle",
+		)
+
+	def test_voting_buttons_visible_before_vote(self):
+		self.client.force_login(self.radny)
+		response = self.client.get(reverse("radny"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'name="glos" value="za"')
+		self.assertContains(response, 'name="glos" value="przeciw"')
+		self.assertContains(response, 'name="glos" value="wstrzymuje"')
+
+	def test_voting_buttons_hidden_after_vote(self):
+		Glos.objects.create(
+			glosowanie=self.glosowanie,
+			uzytkownik=self.radny,
+			glos="za",
+		)
+		self.client.force_login(self.radny)
+		response = self.client.get(reverse("radny"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertNotContains(response, 'name="glos" value="za"')
+		self.assertNotContains(response, 'name="glos" value="przeciw"')
+		self.assertNotContains(response, 'name="glos" value="wstrzymuje"')
+		self.assertContains(response, "Już oddałeś głos w tym głosowaniu")

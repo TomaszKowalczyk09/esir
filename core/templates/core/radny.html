@@ -153,7 +153,9 @@
             </div>
 
             {% if glosowanie.otwarte %}
-              {% if glosowanie.typ == 'kandydaci' %}
+              {% if glosowanie.id in oddane_glosy_ids %}
+                <div class="alert alert-info mb-0">Już oddałeś głos w tym głosowaniu</div>
+              {% elif glosowanie.typ == 'kandydaci' %}
                 <form method="post"
                       action="{% url 'oddaj_glos' glosowanie.id %}"
                       id="form-{{ glosowanie.id }}"

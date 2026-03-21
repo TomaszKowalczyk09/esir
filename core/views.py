@@ -786,6 +786,7 @@ def radny(request):
     obecnosc_status = None
 
     glosowania = []
+    oddane_glosy_ids = []
     punkty = []
     if aktywna_sesja:
         from .models import Obecnosc
@@ -807,11 +808,18 @@ def radny(request):
             .select_related("punkt_obrad")
             .order_by("punkt_obrad__numer")
         )
+        oddane_glosy_ids = list(
+            Glos.objects.filter(
+                uzytkownik=request.user,
+                glosowanie__in=glosowania,
+            ).values_list("glosowanie_id", flat=True)
+        )
 
     context = {
         "sesja": aktywna_sesja,
         "punkty": punkty,
         "glosowania": glosowania,
+        "oddane_glosy_ids": oddane_glosy_ids,
         "obecnosc_zgloszona": obecnosc_zgloszona,
         "obecnosc_status": obecnosc_status,
     }
