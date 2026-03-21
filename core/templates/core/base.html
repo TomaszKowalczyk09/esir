@@ -194,6 +194,22 @@
             text-decoration: none;
         }
 
+        .esir-mobilebar .btn {
+          min-height: 40px;
+        }
+
+        .esir-mobile-close {
+          display: none;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.22);
+          color: #fff;
+          border-radius: 10px;
+          width: 36px;
+          height: 36px;
+          align-items: center;
+          justify-content: center;
+        }
+
         /* Touch targets */
         @media (pointer: coarse) {
             .esir-sidebar .list-group-item {
@@ -210,24 +226,52 @@
                 flex-direction: column;
             }
 
+          body.esir-nav-open {
+            overflow: hidden;
+          }
+
             .esir-mobilebar {
                 display: block;
             }
 
             .esir-content {
                 padding: 1rem;
+            padding-bottom: 1.25rem;
             }
 
             .esir-sidebar {
                 position: fixed;
                 top: 0;
                 left: 0;
+            width: min(88vw, 320px);
                 height: 100vh;
                 transform: translateX(-105%);
                 transition: transform .2s ease-in-out;
                 z-index: 1040;
                 box-shadow: 0 18px 45px rgba(2,6,23,.35);
             }
+
+          .esir-mobile-close {
+            display: inline-flex;
+          }
+
+          .esir-sidebar .list-group-item {
+            min-height: 44px;
+          }
+
+          .esir-content .btn,
+          .esir-content .btn-sm,
+          .esir-content .form-control,
+          .esir-content .form-select,
+          .esir-content .input-group-text {
+            min-height: 44px;
+          }
+
+          .esir-content .btn-sm {
+            padding-top: .45rem;
+            padding-bottom: .45rem;
+            font-size: .95rem;
+          }
 
             body.esir-nav-open .esir-sidebar {
                 transform: translateX(0);
@@ -341,6 +385,14 @@
             width: 100%;
             max-width: none;
         }
+
+        .table-responsive {
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .esir-sidebar .list-group-item.active {
+          font-weight: 600;
+        }
     </style>
 
     {% block extra_head %}{% endblock %}
@@ -373,6 +425,9 @@
               <strong>e-SIR</strong>
               <span>Elektroniczny System Informacji i Rady</span>
             </div>
+            <button type="button" class="esir-mobile-close ms-auto" id="esirNavClose" aria-label="Zamknij menu">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
 
           <div class="esir-sidebar-collapse">
@@ -534,6 +589,7 @@
     <script>
       (function () {
         const toggle = document.getElementById('esirNavToggle');
+        const closeBtn = document.getElementById('esirNavClose');
         const backdrop = document.getElementById('esirNavBackdrop');
         function closeNav() {
           document.body.classList.remove('esir-nav-open');
@@ -550,6 +606,12 @@
         if (backdrop) {
           backdrop.addEventListener('click', closeNav);
         }
+        if (closeBtn) {
+          closeBtn.addEventListener('click', closeNav);
+        }
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closeNav();
+        });
         // Zamknij menu po kliknięciu w link na mobile
         document.addEventListener('click', function (e) {
           if (!document.body.classList.contains('esir-nav-open')) return;
@@ -604,6 +666,24 @@
 
         // po wczytaniu
         setupCollapsedTooltips();
+
+        // Podświetlenie aktywnej pozycji menu
+        const currentPath = (window.location.pathname || '').replace(/\/+$/, '') || '/';
+        document.querySelectorAll('.esir-sidebar .list-group-item[href]').forEach(function (link) {
+          const href = (link.getAttribute('href') || '').replace(/\/+$/, '') || '/';
+          if (href === currentPath) {
+            link.classList.add('active');
+          }
+        });
+
+        // Automatyczne opakowanie tabel w table-responsive (jeśli brak)
+        document.querySelectorAll('.esir-content table.table').forEach(function (table) {
+          if (table.closest('.table-responsive')) return;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'table-responsive';
+          table.parentNode.insertBefore(wrapper, table);
+          wrapper.appendChild(table);
+        });
       })();
     </script>
 
