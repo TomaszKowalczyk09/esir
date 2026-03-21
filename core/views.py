@@ -1240,32 +1240,6 @@ def wniosek_zatwierdz(request, wniosek_id):
 
 
 @login_required
-def glosowanie_ekran(request, glosowanie_id):
-    """Pełnoekranowy ekran głosowania (wyniki na żywo) – dla radnych (radny + administrator)."""
-    if not _is_radny_like(request.user):
-        messages.info(request, "Ekran pełnoekranowy jest dostępny tylko dla radnych.")
-        return redirect("panel")
-
-    glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
-    punkt = glosowanie.punkt_obrad
-    sesja = punkt.sesja
-
-    return render(
-        request,
-        "core/glosowanie_ekran.html",
-        {"sesja": sesja, "punkt": punkt, "glosowanie": glosowanie},
-    )
-
-
-@require_GET
-@login_required
-def api_glosowanie_status(request, glosowanie_id):
-    """API: zwraca status głosowania (otwarte/closed)."""
-    glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
-    return JsonResponse({"otwarte": glosowanie.otwarte})
-
-
-@login_required
 @require_http_methods(["GET", "POST"])
 def reset_danych_testowych(request):
     """Reset danych sesji/głosowań (tylko do testów) – usuwa wszystkie sesje i dane powiązane.
