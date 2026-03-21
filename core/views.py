@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.db import models
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
+from .permissions import require_manage_session
 # Panel wyboru sesji do generowania protokołu PDF
 from .models import Sesja
 
@@ -10,9 +11,8 @@ from django.core.cache import cache
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def ekran_komunikat(request):
-    if not _can_manage_session(request.user):
-        return redirect("radny")
     komunikat = ""
     if request.method == "POST":
         if "usun_komunikat" in request.POST:
@@ -53,9 +53,8 @@ def api_ekran_komunikat(request):
 # Usuwanie punktu obrad
 @login_required
 @require_POST
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def usun_punkt_obrad(request, punkt_id):
-    if not _can_manage_session(request.user):
-        return redirect("radny")
     punkt = get_object_or_404(PunktObrad, id=punkt_id)
     sesja_id = punkt.sesja.id
     punkt.delete()
@@ -65,10 +64,8 @@ def usun_punkt_obrad(request, punkt_id):
 # Przesuwanie punktów obrad (góra/dół)
 @login_required
 @require_POST
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def przesun_punkt_obrad(request, punkt_id, kierunek):
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     punkt = get_object_or_404(PunktObrad, id=punkt_id)
     sesja = punkt.sesja
     if kierunek == "up":
@@ -96,16 +93,16 @@ def przesun_punkt_obrad(request, punkt_id, kierunek):
     url = reverse('sesja_edytuj', args=[sesja.id]) + f"#punkt-{punkt.id}"
     return redirect(url)
 
+@login_required
+@require_manage_session(on_fail="forbidden")
 def protokol_sesji_wybor(request):
-    if not _can_manage_session(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
     sesje = Sesja.objects.filter(jest_usunieta=False).order_by('-data')
     return render(request, "core/protokol_sesji_wybor.html", {"sesje": sesje})
 
 # Generowanie PDF dla wybranej sesji
+@login_required
+@require_manage_session(on_fail="forbidden")
 def protokol_sesji_pdf_wybor(request):
-    if not _can_manage_session(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
     sesja_id = request.GET.get("sesja_id")
     sesja = get_object_or_404(Sesja, id=sesja_id)
     # poniżej kod jak w protokol_sesji_pdf, ale dla wybranej sesji
@@ -257,26 +254,37 @@ from django.utils import timezone
 from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek
 from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm
 from accounts.models import Uzytkownik
+from .permissions import (
+    has_any_role,
+    is_prezydium,
+    is_radny_like,
+    can_manage_session,
+    is_prezydium_or_admin,
+    require_manage_session,
+    require_prezydium_only,
+    require_prezydium_or_admin,
+    require_radny_like,
+)
 
 
 # Helpers (role checks)
 
 def _is_prezydium(user):
-    return getattr(user, "rola", None) == "prezydium"
+    return is_prezydium(user)
 
 
 def _is_radny_like(user):
     # roles that can act as a councillor (can vote / see councillor views)
-    return getattr(user, "rola", None) in {"radny", "administrator", "prezydium"}
+    return is_radny_like(user)
 
 
 def _can_manage_session(user):
     # session operator permissions: prezydium + administrator
-    return getattr(user, "rola", None) in {"prezydium", "administrator"}
+    return can_manage_session(user)
 
 
 def _is_prezydium_or_admin(user):
-    return getattr(user, "rola", None) in {"prezydium", "administrator"}
+    return is_prezydium_or_admin(user)
 
 def _protokol_pdf_margins_mm():
     from django.conf import settings
@@ -343,11 +351,9 @@ def pomoc(request):
 
 
 @login_required
+@require_radny_like(on_fail="redirect", redirect_to="panel")
 def e_identyfikator(request):
     """Elektroniczny identyfikator użytkownika (radny/prezydium/administrator)."""
-    if not _is_radny_like(request.user):
-        return redirect("panel")
-
     return render(request, "core/e_identyfikator.html")
 
 
@@ -356,13 +362,11 @@ def e_identyfikator(request):
 # --------------------------------------------------
 
 @login_required
+@require_prezydium_only(on_fail="redirect", redirect_to="radny")
 def prezydium_dashboard(request):
     """
     Prosty dashboard: pokazuje najbliższą sesję, liczbę punktów i otwartych głosowań.
     """
-    if not _is_prezydium(request.user):
-        return redirect("radny")
-
     najblizsza = (
         Sesja.objects.order_by("data")
         .prefetch_related("punkty__glosowania")
@@ -383,25 +387,21 @@ def prezydium_dashboard(request):
 
 
 @login_required
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def prezydium_sesje(request):
     """
     Lista wszystkich sesji z podstawowymi akcjami (bez szczegółowej edycji).
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesje = Sesja.objects.all().order_by("-data")
     return render(request, "core/prezydium_sesje.html", {"sesje": sesje})
 
 
 @login_required
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def sesja_nowa(request):
     """
     Kreator tworzenia nowej sesji – po zapisaniu przekierowuje do edycji sesji.
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     if request.method == "POST":
         form = SesjaCreateForm(request.POST)
         if form.is_valid():
@@ -415,15 +415,13 @@ def sesja_nowa(request):
 
 
 @login_required
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def sesja_edytuj(request, sesja_id):
     """
     Jeden ekran do zarządzania porządkiem obrad:
     - dodawanie punktów,
     - dodawanie głosowań do punktów.
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesja = get_object_or_404(Sesja, id=sesja_id)
     from .models import Obecnosc
 
@@ -651,13 +649,11 @@ def sesja_edytuj(request, sesja_id):
 
 @login_required
 @require_POST
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def ustaw_sesje_aktywna(request, sesja_id):
     """
     Ustawia daną sesję jako aktywną, inne sesje dezaktywuje.
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesja = get_object_or_404(Sesja, id=sesja_id)
     Sesja.objects.update(aktywna=False)
     sesja.aktywna = True
@@ -668,10 +664,8 @@ def ustaw_sesje_aktywna(request, sesja_id):
 
 @login_required
 @require_POST
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def dezaktywuj_sesje(request, sesja_id):
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesja = get_object_or_404(Sesja, id=sesja_id)
     sesja.aktywna = False
     sesja.save()
@@ -681,10 +675,8 @@ def dezaktywuj_sesje(request, sesja_id):
 
 @login_required
 @require_POST
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def usun_sesje(request, sesja_id):
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesja = get_object_or_404(Sesja, id=sesja_id)
     sesja.delete()
     messages.success(request, "Sesja została usunięta.")
@@ -692,13 +684,11 @@ def usun_sesje(request, sesja_id):
 
 
 @login_required
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def porzadek_obrad_prezidium(request):
     """
     Widok porządku obrad dla prezydium – pracuje zawsze na aktywnej sesji.
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesja = Sesja.objects.filter(aktywna=True).prefetch_related("punkty").first()
 
     if request.method == "POST" and sesja:
@@ -720,32 +710,29 @@ def porzadek_obrad_prezidium(request):
 
 
 @login_required
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def prezidium_panel(request):
     """
     Dotychczasowy widok głosowań prezydium – lista sesji, punktów i głosowań + otwieranie/zamykanie.
     Zostaje jako zakładka „Głosowania”.
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesje = Sesja.objects.all().prefetch_related("punkty__glosowania")
     return render(request, "core/prezidium.html", {"sesje": sesje})
 
 
 @login_required
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def nadchodzace_sesje_prezidium(request):
     """
     Prosta lista sesji (np. aktywnych lub wszystkich) – wykorzystasz w menu 'Nadchodzące sesje'.
     Na razie pokazuje wszystkie sesje posortowane rosnąco po dacie.
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesje = Sesja.objects.all().order_by("data")
     return render(request, "core/nadchodzace_sesje_prezidium.html", {"sesje": sesje})
 
 
 @login_required
+@require_prezydium_or_admin(on_fail="forbidden")
 def prezydium_uczestnicy(request):
     """Lista wszystkich radnych (dla prezydium i administratorów).
 
@@ -754,19 +741,14 @@ def prezydium_uczestnicy(request):
     - prezydium
     - administrator (też jest radnym)
     """
-    if not _is_prezydium_or_admin(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
-
     radni = _uprawnieni_do_glosowania_qs().order_by("nazwisko", "imie")
     return render(request, "core/prezydium_uczestnicy.html", {"radni": radni})
 
 
 @login_required
+@require_prezydium_or_admin(on_fail="forbidden")
 def prezydium_uczestnik_szczegoly(request, user_id: int):
     """Szczegóły wybranego uczestnika (dla prezydium i administratorów)."""
-    if not _is_prezydium_or_admin(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
-
     # Dopuszczamy podgląd także prezydium i administratorów,
     # bo są częścią listy i mają status „radny” w sensie uprawnień do głosowania.
     radny = get_object_or_404(
@@ -791,6 +773,7 @@ def radny_panel(request):
 
 
 @login_required
+@require_radny_like(on_fail="redirect", redirect_to="prezydium_dashboard")
 def radny(request):
     """
     Główna strona radnego:
@@ -798,9 +781,6 @@ def radny(request):
     - porządek obrad (lista punktów),
     - lista otwartych głosowań.
     """
-    if not _is_radny_like(request.user):
-        return redirect("prezydium_dashboard")
-
     aktywna_sesja = Sesja.objects.filter(aktywna=True).first()
 
     glosowania = []
@@ -830,15 +810,13 @@ def radny(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@require_manage_session(on_fail="json")
 def toggle_glosowanie(request, glosowanie_id):
     """Otwieranie / zamykanie głosowania – prezydium lub administrator.
 
     Preferowane jest POST (bezpieczniejsze). Dla kompatybilności
     stary JS używający GET nadal zadziała.
     """
-    if not _can_manage_session(request.user):
-        return JsonResponse({"error": "Brak uprawnień"}, status=403)
-
     glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
     glosowanie.otwarte = not glosowanie.otwarte
     glosowanie.save(update_fields=["otwarte"])
@@ -1149,10 +1127,8 @@ def api_aktywny_punkt(request, sesja_id):
 
 @login_required
 @require_POST
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def ustaw_punkt_aktywny(request, punkt_id):
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     punkt = get_object_or_404(PunktObrad, id=punkt_id)
     PunktObrad.objects.filter(sesja=punkt.sesja).update(aktywny=False)
     punkt.aktywny = True
@@ -1161,6 +1137,7 @@ def ustaw_punkt_aktywny(request, punkt_id):
 
 
 @login_required
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def prezydium_agenda(request):
     """
     Prosty ekran sterowania sesją dla prezydium:
@@ -1168,9 +1145,6 @@ def prezydium_agenda(request):
     - pozwala ustawić aktywny punkt,
     - pokazuje stan głosowania (otwarte/zamknięte).
     """
-    if not _can_manage_session(request.user):
-        return redirect("radny")
-
     sesja = Sesja.objects.filter(aktywna=True).prefetch_related("punkty__glosowania").first()
     punkty = sesja.punkty.all() if sesja else []
 
@@ -1202,6 +1176,7 @@ def admin_sesja_panel(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@require_radny_like(on_fail="redirect", redirect_to="prezydium_dashboard")
 def wnioski_radny(request):
     """Panel radnego do składania i podglądu własnych wniosków.
 
@@ -1211,9 +1186,6 @@ def wnioski_radny(request):
 
     System automatycznie nadaje sygnaturę przy zapisie.
     """
-    if not _is_radny_like(request.user):
-        return redirect("prezydium_dashboard")
-
     sesja = Sesja.objects.filter(aktywna=True).first()
     punkt = None
     if sesja:
@@ -1257,11 +1229,9 @@ def wnioski_radny(request):
 
 @login_required
 @require_http_methods(["GET"])
+@require_prezydium_only(on_fail="redirect", redirect_to="radny")
 def wnioski_prezidium(request):
     """Panel prezydium do przeglądu i zatwierdzania wniosków w aktywnej sesji."""
-    if not _is_prezydium(request.user):
-        return redirect("radny")
-
     sesja = Sesja.objects.filter(aktywna=True).first()
     punkt = None
     if sesja:
@@ -1290,11 +1260,9 @@ def wnioski_prezidium(request):
 
 @login_required
 @require_POST
+@require_prezydium_only(on_fail="forbidden")
 def wniosek_zatwierdz(request, wniosek_id):
     """Zatwierdź/odrzuć wniosek (toggle) - tylko prezydium."""
-    if not _is_prezydium(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
-
     wniosek = get_object_or_404(Wniosek, id=wniosek_id)
     wniosek.zatwierdzony = not wniosek.zatwierdzony
     wniosek.save(update_fields=["zatwierdzony"])
@@ -1304,6 +1272,7 @@ def wniosek_zatwierdz(request, wniosek_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@require_prezydium_only(on_fail="redirect", redirect_to="radny")
 def reset_danych_testowych(request):
     """Reset danych sesji/głosowań (tylko do testów) – usuwa wszystkie sesje i dane powiązane.
 
@@ -1311,9 +1280,6 @@ def reset_danych_testowych(request):
     - tylko rola prezydium
     - dodatkowe potwierdzenie frazą w formularzu
     """
-    if request.user.rola != "prezydium":
-        return redirect("radny")
-
     if request.method == "POST":
         confirm = (request.POST.get("confirm") or "").strip()
         if confirm != "USUN WSZYSTKO":
@@ -1335,11 +1301,9 @@ def reset_danych_testowych(request):
 
 @login_required
 @require_http_methods(["GET"])
+@require_manage_session(on_fail="redirect", redirect_to="radny")
 def obecnosci_prezidium(request):
     """Panel prezydium do sprawdzania obecności i quorum w aktywnej sesji."""
-    if request.user.rola not in ["prezydium", "administrator"]:
-        return redirect("radny")
-
     sesja = Sesja.objects.filter(aktywna=True).first()
     # Uprawnieni: radni + administrator + prezydium
     uprawnieni_qs = _uprawnieni_do_glosowania_qs().order_by("rola", "nazwisko", "imie")
@@ -1371,6 +1335,7 @@ def obecnosci_prezidium(request):
 
 @login_required
 @require_POST
+@require_radny_like(on_fail="redirect", redirect_to="prezydium_dashboard")
 def ustaw_obecnosc(request):
     """Radny potwierdza obecność w aktywnej sesji.
 
@@ -1378,9 +1343,6 @@ def ustaw_obecnosc(request):
     - radny może zgłosić obecność/nieobecność tylko raz (pierwszy zapis dla danej sesji)
     - po zgłoszeniu, zmiany może dokonywać wyłącznie prezydium
     """
-    if not _is_radny_like(request.user):
-        return redirect("prezydium_dashboard")
-
     sesja = Sesja.objects.filter(aktywna=True).first()
     if not sesja:
         messages.error(request, "Brak aktywnej sesji.")
@@ -1412,11 +1374,9 @@ def ustaw_obecnosc(request):
 
 @login_required
 @require_POST
+@require_prezydium_only(on_fail="json")
 def obecnosci_toggle_prezidium(request, sesja_id, radny_id):
     """Prezydium ręcznie przełącza obecność danego uprawnionego w danej sesji."""
-    if request.user.rola != "prezydium":
-        return JsonResponse({"error": "Brak uprawnień"}, status=403)
-
     sesja = get_object_or_404(Sesja, id=sesja_id)
     radny = get_object_or_404(Uzytkownik, id=radny_id, rola__in=["radny", "administrator", "prezydium"])
 
@@ -1445,10 +1405,8 @@ def obecnosci_toggle_prezidium(request, sesja_id, radny_id):
 # --------------------------------------------------
 
 @login_required
+@require_radny_like(on_fail="redirect", redirect_to="panel")
 def komisje_moje(request):
-    if request.user.rola not in ["radny", "administrator", "prezydium"]:
-        return redirect("panel")
-
     komisje = Komisja.objects.filter(Q(czlonkowie=request.user) | Q(przewodniczacy=request.user)).distinct()
     return render(request, "core/komisje_moje.html", {"komisje": komisje})
 
@@ -1487,21 +1445,17 @@ def komisja_wnioski(request, komisja_id):
 
 
 @login_required
+@require_prezydium_only(on_fail="forbidden")
 def komisja_skrzynka_rady(request):
     """Skrzynka prezydium: wnioski komisji do zatwierdzenia/wysłania do rady."""
-    if not _is_prezydium(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
-
     qs = KomisjaWniosek.objects.select_related("komisja", "autor").all()
     return render(request, "core/komisja_skrzynka_rady.html", {"wnioski": qs})
 
 
 @login_required
 @require_POST
+@require_prezydium_only(on_fail="forbidden")
 def komisja_wniosek_wyslij_do_rady(request, wniosek_id):
-    if not _is_prezydium(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
-
     obj = get_object_or_404(KomisjaWniosek, id=wniosek_id)
     obj.zatwierdzony_przez_prezydium = True
     obj.data_zatwierdzenia = timezone.now()
@@ -1515,10 +1469,8 @@ def komisja_wniosek_wyslij_do_rady(request, wniosek_id):
 
 @login_required
 @require_GET
+@require_radny_like(on_fail="redirect", redirect_to="prezydium_dashboard")
 def wnioski_radny_pdf(request):
-    if not _is_radny_like(request.user):
-        return redirect("prezydium_dashboard")
-
     wnioski = (
         Wniosek.objects.filter(radny=request.user)
         .select_related("punkt_obrad", "punkt_obrad__sesja", "radny")
@@ -1545,7 +1497,7 @@ def wniosek_pdf(request, wniosek_id):
 
     if _is_radny_like(request.user) and w.radny_id != request.user.id and not _is_prezydium(request.user):
         return HttpResponseForbidden("Brak uprawnień")
-    if request.user.rola not in ["radny", "administrator", "prezydium"]:
+    if not has_any_role(request.user, ["radny", "administrator", "prezydium"]):
         return HttpResponseForbidden("Brak uprawnień")
 
     safe_sig = (w.sygnatura or str(w.id)).replace("/", "-")
@@ -1662,6 +1614,7 @@ def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
 
 @login_required
 @require_GET
+@require_manage_session(on_fail="forbidden")
 def protokol_sesji_pdf(request):
     """Podstawowy protokół PDF dla aktywnej sesji.
 
@@ -1672,9 +1625,6 @@ def protokol_sesji_pdf(request):
 
     Dostęp: prezydium oraz administrator.
     """
-    if not _can_manage_session(request.user):
-        return HttpResponseForbidden("Brak uprawnień")
-
     sesja = Sesja.objects.filter(aktywna=True).first()
     if not sesja:
         return HttpResponse("Brak aktywnej sesji.", content_type="text/plain")
