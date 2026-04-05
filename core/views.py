@@ -50,6 +50,18 @@ def api_ekran_komunikat(request):
     komunikat = cache.get("ekran_komunikat_global", "")
     return JsonResponse({"komunikat": komunikat})
 
+
+def custom_404(request, exception):
+    return render(
+        request,
+        "404.html",
+        {
+            "force_public_layout": True,
+            "requested_path": request.path,
+        },
+        status=404,
+    )
+
 # Usuwanie punktu obrad
 @login_required
 @require_POST

@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -263,3 +263,13 @@ class SessionEditingAndAgendaTests(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertFalse(PunktObrad.objects.filter(id=self.punkt.id).exists())
+
+
+class Custom404PageTests(TestCase):
+	@override_settings(DEBUG=False)
+	def test_custom_404_page_is_rendered(self):
+		response = self.client.get("/to-nie-istnieje/")
+
+		self.assertEqual(response.status_code, 404)
+		self.assertContains(response, "Nie znaleziono tej strony.", status_code=404)
+		self.assertContains(response, "Przejdź do panelu", status_code=404)
