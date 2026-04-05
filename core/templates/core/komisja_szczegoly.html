@@ -92,8 +92,17 @@
   <div class="list-group shadow-sm">
     {% for s in sesje %}
       <div class="list-group-item">
-        <div class="fw-semibold">{{ s.nazwa }}</div>
-        <div class="small text-muted">{{ s.data }}</div>
+        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+          <div>
+            <div class="fw-semibold">{{ s.nazwa }}</div>
+            <div class="small text-muted">{{ s.data }}</div>
+          </div>
+          {% if can_manage_komisja %}
+            <a href="{% url 'komisja_sesja_edytuj' komisja.id s.id %}" class="btn btn-sm btn-outline-primary">
+              Edytuj sesję
+            </a>
+          {% endif %}
+        </div>
       </div>
     {% endfor %}
   </div>

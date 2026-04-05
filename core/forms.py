@@ -1,5 +1,15 @@
 from django import forms
-from .models import Sesja, PunktObrad, Glosowanie, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek
+from .models import (
+    Sesja,
+    PunktObrad,
+    Glosowanie,
+    Wniosek,
+    Komisja,
+    KomisjaSesja,
+    KomisjaPunktObrad,
+    KomisjaWniosek,
+    KomisjaGlosowanie,
+)
 
 
 class SesjaCreateForm(forms.ModelForm):
@@ -106,4 +116,16 @@ class KomisjaWniosekForm(forms.ModelForm):
         fields = ["typ", "tresc"]
         widgets = {
             "tresc": forms.Textarea(attrs={"rows": 4}),
+        }
+
+
+class KomisjaGlosowanieForm(forms.ModelForm):
+    class Meta:
+        model = KomisjaGlosowanie
+        fields = ["nazwa", "jawnosc", "wiekszosc", "liczba_uprawnionych"]
+        widgets = {
+            "nazwa": forms.TextInput(attrs={"class": "form-control"}),
+            "jawnosc": forms.Select(attrs={"class": "form-select"}),
+            "wiekszosc": forms.Select(attrs={"class": "form-select"}),
+            "liczba_uprawnionych": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
         }

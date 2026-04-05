@@ -288,6 +288,79 @@ class KomisjaPunktObrad(models.Model):
     def __str__(self):
         return f"{self.numer}. {self.tytul}"
 
+    @property
+    def glosowanie(self):
+        return self.glosowania.order_by("-otwarte", "-utworzone", "-id").first()
+
+
+class KomisjaGlosowanie(models.Model):
+    JAWNOSC_CHOICES = [
+        ("jawne", "Jawne"),
+        ("tajne", "Tajne"),
+    ]
+
+    WIEKSZOSC_CHOICES = [
+        ("zwykla", "Większość zwykła"),
+        ("bezwzgledna", "Większość bezwzględna"),
+    ]
+
+    punkt_obrad = models.ForeignKey(KomisjaPunktObrad, on_delete=models.CASCADE, related_name="glosowania")
+    nazwa = models.CharField(max_length=200)
+    otwarte = models.BooleanField(default=False)
+    utworzone = models.DateTimeField(auto_now_add=True)
+    jawnosc = models.CharField(max_length=10, choices=JAWNOSC_CHOICES, default="jawne")
+    wiekszosc = models.CharField(max_length=15, choices=WIEKSZOSC_CHOICES, default="zwykla")
+    liczba_uprawnionych = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Jeśli puste, system przyjmie liczbę oddanych głosów jako bazę dla większości bezwzględnej.",
+    )
+
+    class Meta:
+        ordering = ["-utworzone"]
+
+    def __str__(self):
+        return self.nazwa
+
+    def wynik_podsumowanie(self):
+        za = KomisjaGlos.objects.filter(glosowanie=self, glos="za").count()
+        przeciw = KomisjaGlos.objects.filter(glosowanie=self, glos="przeciw").count()
+        wstrzymuje = KomisjaGlos.objects.filter(glosowanie=self, glos="wstrzymuje").count()
+
+        if self.wiekszosc == "zwykla":
+            przeszedl = za > przeciw
+            prog = None
+        else:
+            baza = self.liczba_uprawnionych
+            if baza is None:
+                baza = za + przeciw + wstrzymuje
+            prog = (baza // 2) + 1
+            przeszedl = za >= prog
+
+        return {
+            "za": za,
+            "przeciw": przeciw,
+            "wstrzymuje": wstrzymuje,
+            "przeszedl": przeszedl,
+            "prog": prog,
+        }
+
+
+class KomisjaGlos(models.Model):
+    GLOS_CHOICES = [
+        ("za", "Za"),
+        ("przeciw", "Przeciw"),
+        ("wstrzymuje", "Wstrzymuję się"),
+    ]
+
+    glosowanie = models.ForeignKey(KomisjaGlosowanie, on_delete=models.CASCADE, related_name="glosy")
+    uzytkownik = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE, related_name="komisja_glosy")
+    glos = models.CharField(max_length=10, choices=GLOS_CHOICES)
+
+    class Meta:
+        unique_together = ["glosowanie", "uzytkownik"]
+        ordering = ["uzytkownik"]
+
 
 class KomisjaWniosek(models.Model):
     TYP_CHOICES = [

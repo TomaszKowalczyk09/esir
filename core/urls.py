@@ -174,6 +174,7 @@ path(
     path("komisje/", views.komisje_moje, name="komisje_moje"),
     path("komisje/utworz/", views.komisja_utworz, name="komisja_utworz"),
     path("komisje/<int:komisja_id>/", views.komisja_szczegoly, name="komisja_szczegoly"),
+    path("komisje/<int:komisja_id>/sesje/<int:sesja_id>/edytuj/", views.komisja_sesja_edytuj, name="komisja_sesja_edytuj"),
     path("komisje/<int:komisja_id>/sesje/dodaj/", views.komisja_dodaj_sesje, name="komisja_dodaj_sesje"),
     path("komisje/<int:komisja_id>/czlonkowie/dodaj/", views.komisja_dodaj_czlonka, name="komisja_dodaj_czlonka"),
     path("komisje/<int:komisja_id>/czlonkowie/<int:user_id>/usun/", views.komisja_usun_czlonka, name="komisja_usun_czlonka"),

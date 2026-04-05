@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Uzytkownik
-from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos, Komisja, KomisjaSesja, KomisjaWniosek
+from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos, Komisja, KomisjaSesja, KomisjaWniosek, KomisjaPunktObrad, KomisjaGlosowanie
 
 
 class AuthorizationMatrixTests(TestCase):
@@ -439,3 +439,109 @@ class KomisjaManagementTests(TestCase):
 		inbox_response = self.client.get(reverse("komisja_skrzynka_rady"))
 		self.assertEqual(inbox_response.status_code, 200)
 		self.assertContains(inbox_response, "Prosba o analizę.")
+
+
+class KomisjaSessionEditingTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.admin = Uzytkownik.objects.create_user(
+			username="admin_kom_sesja",
+			password="test12345",
+			rola="administrator",
+			imie="Ala",
+			nazwisko="Admin",
+		)
+		cls.chair = Uzytkownik.objects.create_user(
+			username="chair_kom_sesja",
+			password="test12345",
+			rola="radny",
+			imie="Cezary",
+			nazwisko="Chair",
+		)
+		cls.member = Uzytkownik.objects.create_user(
+			username="member_kom_sesja",
+			password="test12345",
+			rola="radny",
+			imie="Marta",
+			nazwisko="Member",
+		)
+		cls.other_chair = Uzytkownik.objects.create_user(
+			username="chair_kom_sesja_2",
+			password="test12345",
+			rola="radny",
+			imie="Olga",
+			nazwisko="Other",
+		)
+
+		cls.komisja = Komisja.objects.create(
+			nazwa="Komisja IT",
+			przewodniczacy=cls.chair,
+		)
+		cls.komisja.czlonkowie.add(cls.chair, cls.member)
+		cls.sesja = KomisjaSesja.objects.create(
+			komisja=cls.komisja,
+			nazwa="Posiedzenie IT",
+			data=timezone.now(),
+		)
+
+		cls.inna_komisja = Komisja.objects.create(
+			nazwa="Komisja GEO",
+			przewodniczacy=cls.other_chair,
+		)
+		cls.inna_komisja.czlonkowie.add(cls.other_chair)
+		cls.inna_sesja = KomisjaSesja.objects.create(
+			komisja=cls.inna_komisja,
+			nazwa="Posiedzenie GEO",
+			data=timezone.now(),
+		)
+
+	def test_chair_can_add_point_and_voting(self):
+		self.client.force_login(self.chair)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{"dodaj_punkt": "1", "numer": 1, "tytul": "Budżet", "opis": "Omówienie"},
+		)
+		self.assertEqual(response.status_code, 302)
+
+		punkt = KomisjaPunktObrad.objects.get(sesja=self.sesja, tytul="Budżet")
+
+		response2 = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{
+				"dodaj_glosowanie": "1",
+				"punkt_id": str(punkt.id),
+				"nazwa": "Głosowanie budżet",
+				"jawnosc": "jawne",
+				"wiekszosc": "zwykla",
+				"liczba_uprawnionych": "5",
+			},
+		)
+		self.assertEqual(response2.status_code, 302)
+		self.assertTrue(KomisjaGlosowanie.objects.filter(punkt_obrad=punkt, nazwa="Głosowanie budżet").exists())
+
+	def test_chair_can_edit_session_meta(self):
+		self.client.force_login(self.chair)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{"zapisz_sesje": "1", "nazwa": "Posiedzenie IT - aktualizacja", "data": "2026-04-08T11:15", "status": "aktywna"},
+		)
+		self.assertEqual(response.status_code, 302)
+		self.sesja.refresh_from_db()
+		self.assertEqual(self.sesja.nazwa, "Posiedzenie IT - aktualizacja")
+		self.assertTrue(self.sesja.aktywna)
+
+	def test_member_cannot_edit_committee_session(self):
+		self.client.force_login(self.member)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{"dodaj_punkt": "1", "numer": 1, "tytul": "Niedozwolone", "opis": "X"},
+		)
+		self.assertEqual(response.status_code, 403)
+
+	def test_chair_cannot_edit_other_committee_session(self):
+		self.client.force_login(self.chair)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.inna_komisja.id, self.inna_sesja.id]),
+			{"dodaj_punkt": "1", "numer": 1, "tytul": "Niedozwolone", "opis": "X"},
+		)
+		self.assertEqual(response.status_code, 403)

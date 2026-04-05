@@ -266,8 +266,8 @@ from datetime import datetime, date, time
 import re
 from django.utils.html import escape
 
-from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek
-from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm
+from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek, KomisjaGlosowanie
+from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm, KomisjaGlosowanieForm
 from accounts.models import Uzytkownik
 from .permissions import (
     has_any_role,
@@ -1678,6 +1678,177 @@ def komisja_usun_czlonka(request, komisja_id, user_id):
     komisja.czlonkowie.remove(radny)
     messages.success(request, "Usunięto członka komisji.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+@require_radny_like(on_fail="forbidden")
+def komisja_sesja_edytuj(request, komisja_id, sesja_id):
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    sesja = get_object_or_404(KomisjaSesja, id=sesja_id, komisja=komisja)
+
+    if not _can_manage_komisja(request.user, komisja):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    punkt_form = KomisjaPunktForm()
+    glosowanie_form = KomisjaGlosowanieForm()
+
+    if request.method == "POST":
+        if "zapisz_sesje" in request.POST:
+            nazwa = (request.POST.get("nazwa") or "").strip()
+            data_raw = (request.POST.get("data") or "").strip()
+
+            if not nazwa:
+                messages.error(request, "Nazwa sesji nie może być pusta.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+            if data_raw:
+                try:
+                    parsed = datetime.strptime(data_raw, "%Y-%m-%dT%H:%M")
+                    sesja.data = timezone.make_aware(parsed, timezone.get_current_timezone())
+                except ValueError:
+                    messages.error(request, "Nieprawidłowy format daty sesji.")
+                    return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+            sesja.nazwa = nazwa
+            sesja.aktywna = request.POST.get("status") == "aktywna"
+            sesja.save(update_fields=["nazwa", "data", "aktywna"])
+            messages.success(request, "Dane sesji komisji zostały zapisane.")
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "dodaj_punkt" in request.POST:
+            punkt_form = KomisjaPunktForm(request.POST)
+            if punkt_form.is_valid():
+                punkt = punkt_form.save(commit=False)
+                punkt.sesja = sesja
+                max_numer = sesja.punkty.aggregate(max_num=models.Max("numer"))["max_num"] or 0
+                punkt.numer = max_numer + 1
+                punkt.save()
+                messages.success(request, "Punkt obrad został dodany.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "zapisz_punkt" in request.POST:
+            punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+            punkt.tytul = (request.POST.get("tytul") or "").strip()
+            punkt.opis = request.POST.get("opis", "")
+            if not punkt.tytul:
+                messages.error(request, "Tytuł punktu nie może być pusty.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+            punkt.save(update_fields=["tytul", "opis"])
+            messages.success(request, "Punkt został zaktualizowany.")
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "usun_punkt" in request.POST:
+            punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+            punkt.delete()
+            messages.success(request, "Punkt obrad został usunięty.")
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "ustaw_punkt_aktywny" in request.POST:
+            punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+            if punkt.aktywny:
+                punkt.aktywny = False
+                punkt.save(update_fields=["aktywny"])
+            else:
+                sesja.punkty.update(aktywny=False)
+                punkt.aktywny = True
+                punkt.save(update_fields=["aktywny"])
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "przesun_punkt" in request.POST:
+            punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+            kierunek = request.POST.get("kierunek")
+            if kierunek == "up":
+                poprzedni = sesja.punkty.filter(numer__lt=punkt.numer).order_by("-numer").first()
+                if poprzedni:
+                    punkt.numer, poprzedni.numer = poprzedni.numer, punkt.numer
+                    punkt.save(update_fields=["numer"])
+                    poprzedni.save(update_fields=["numer"])
+            elif kierunek == "down":
+                nastepny = sesja.punkty.filter(numer__gt=punkt.numer).order_by("numer").first()
+                if nastepny:
+                    punkt.numer, nastepny.numer = nastepny.numer, punkt.numer
+                    punkt.save(update_fields=["numer"])
+                    nastepny.save(update_fields=["numer"])
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "dodaj_glosowanie" in request.POST:
+            glosowanie_form = KomisjaGlosowanieForm(request.POST)
+            if glosowanie_form.is_valid():
+                punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+                gl = glosowanie_form.save(commit=False)
+                gl.punkt_obrad = punkt
+                if not gl.nazwa.strip():
+                    gl.nazwa = punkt.tytul
+                gl.save()
+                messages.success(request, "Głosowanie komisji zostało dodane.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "zapisz_glosowanie" in request.POST:
+            glosowanie = get_object_or_404(
+                KomisjaGlosowanie,
+                id=request.POST.get("glosowanie_id"),
+                punkt_obrad__sesja=sesja,
+            )
+            nazwa = (request.POST.get("nazwa") or "").strip()
+            jawnosc = request.POST.get("jawnosc", glosowanie.jawnosc)
+            wiekszosc = request.POST.get("wiekszosc", glosowanie.wiekszosc)
+            liczba_raw = (request.POST.get("liczba_uprawnionych") or "").strip()
+
+            if jawnosc not in {k for k, _ in KomisjaGlosowanie.JAWNOSC_CHOICES}:
+                messages.error(request, "Nieprawidłowa jawność głosowania.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+            if wiekszosc not in {k for k, _ in KomisjaGlosowanie.WIEKSZOSC_CHOICES}:
+                messages.error(request, "Nieprawidłowy rodzaj większości.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+            liczba_uprawnionych = None
+            if liczba_raw:
+                try:
+                    liczba_uprawnionych = int(liczba_raw)
+                except ValueError:
+                    messages.error(request, "Liczba uprawnionych musi być liczbą całkowitą.")
+                    return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+                if liczba_uprawnionych < 0:
+                    messages.error(request, "Liczba uprawnionych nie może być ujemna.")
+                    return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+            glosowanie.nazwa = nazwa or glosowanie.punkt_obrad.tytul
+            glosowanie.jawnosc = jawnosc
+            glosowanie.wiekszosc = wiekszosc
+            glosowanie.liczba_uprawnionych = liczba_uprawnionych
+            glosowanie.save(update_fields=["nazwa", "jawnosc", "wiekszosc", "liczba_uprawnionych"])
+            messages.success(request, "Głosowanie komisji zostało zaktualizowane.")
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "usun_glosowanie" in request.POST:
+            glosowanie = get_object_or_404(
+                KomisjaGlosowanie,
+                id=request.POST.get("glosowanie_id"),
+                punkt_obrad__sesja=sesja,
+            )
+            glosowanie.delete()
+            messages.success(request, "Głosowanie komisji zostało usunięte.")
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
+    for idx, punkt in enumerate(punkty, start=1):
+        if punkt.numer != idx:
+            punkt.numer = idx
+            punkt.save(update_fields=["numer"])
+    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
+
+    return render(
+        request,
+        "core/komisja_sesja_edytuj.html",
+        {
+            "komisja": komisja,
+            "sesja": sesja,
+            "punkty": punkty,
+            "punkt_form": punkt_form,
+            "glosowanie_form": glosowanie_form,
+        },
+    )
 
 
 @login_required
