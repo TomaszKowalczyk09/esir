@@ -264,6 +264,34 @@ class SessionEditingAndAgendaTests(TestCase):
 		self.assertEqual(response.status_code, 302)
 		self.assertFalse(PunktObrad.objects.filter(id=self.punkt.id).exists())
 
+	def test_active_point_api_returns_formatted_safe_description_html(self):
+		self.punkt.opis = "**Wazne**\n*kursywa*\n__podkreslenie__\n- pierwszy\n- drugi\n<script>alert(1)</script>"
+		self.punkt.save(update_fields=["opis"])
+
+		self.client.force_login(self.prezydium)
+		response = self.client.get(reverse("api_aktywny_punkt", args=[self.sesja.id]))
+
+		self.assertEqual(response.status_code, 200)
+		payload = response.json()
+		html = payload.get("opis_html", "")
+		self.assertIn("<strong>Wazne</strong>", html)
+		self.assertIn("<em>kursywa</em>", html)
+		self.assertIn("<u>podkreslenie</u>", html)
+		self.assertIn("<ul>", html)
+		self.assertIn("<li>pierwszy</li>", html)
+		self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
+
+	def test_session_edit_template_renders_formatted_description(self):
+		self.punkt.opis = "**Wazne** i *kursywa*"
+		self.punkt.save(update_fields=["opis"])
+
+		self.client.force_login(self.prezydium)
+		response = self.client.get(reverse("sesja_edytuj", args=[self.sesja.id]))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "<strong>Wazne</strong>")
+		self.assertContains(response, "<em>kursywa</em>")
+
 
 class Custom404PageTests(TestCase):
 	@override_settings(DEBUG=False)

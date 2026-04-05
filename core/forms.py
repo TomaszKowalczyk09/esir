@@ -28,7 +28,13 @@ class PunktForm(forms.ModelForm):
         fields = ["tytul", "opis"]
         widgets = {
             "tytul": forms.TextInput(attrs={"class": "form-control"}),
-            "opis": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            "opis": forms.Textarea(
+                attrs={
+                    "class": "form-control punkt-opis-editor",
+                    "rows": 4,
+                    "placeholder": "Możesz użyć formatowania: **pogrubienie**, *kursywa*, __podkreślenie__, - lista",
+                }
+            ),
         }
         labels = {
             "tytul": "Tytuł",

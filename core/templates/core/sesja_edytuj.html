@@ -1,5 +1,6 @@
 
 {% extends 'core/base.html' %}
+{% load core_extras %}
 
 {% block title %}Edycja sesji{% endblock %}
 
@@ -93,7 +94,7 @@
                   </div>
 
                   {% if punkt.opis %}
-                    <div class="text-muted small mb-2">{{ punkt.opis }}</div>
+                    <div class="text-muted small mb-2">{{ punkt.opis|format_opis }}</div>
                   {% endif %}
 
                   {% with glosowania=punkt.glosowania.all %}
@@ -244,7 +245,16 @@
                     </div>
                     <div class="mb-3">
                       <label class="form-label">Opis</label>
-                      <textarea name="opis" class="form-control" rows="3">{{ punkt.opis }}</textarea>
+                      <div class="format-editor-wrap">
+                        <div class="btn-toolbar mb-2 gap-1" role="toolbar" aria-label="Formatowanie opisu">
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="bold" title="Pogrubienie">B</button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="italic" title="Kursywa"><i>I</i></button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="underline" title="Podkreślenie"><u>U</u></button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="list" title="Lista punktowana"><i class="bi bi-list-ul"></i></button>
+                        </div>
+                        <textarea name="opis" class="form-control punkt-opis-editor" rows="3">{{ punkt.opis }}</textarea>
+                        <small class="text-muted">Formatowanie: <strong>**pogrubienie**</strong>, <em>*kursywa*</em>, <u>__podkreślenie__</u>, lista: <code>- element</code>.</small>
+                      </div>
                     </div>
                     <button type="submit" name="zapisz_punkt" class="btn btn-primary">Zapisz zmiany</button>
                   </form>
@@ -306,7 +316,21 @@
           <div class="modal-body">
             <form method="post">
               {% csrf_token %}
-              {{ punkt_form.as_p }}
+              <div class="mb-3">
+                <label for="id_tytul" class="form-label">Tytuł</label>
+                {{ punkt_form.tytul }}
+              </div>
+              <div class="mb-3 format-editor-wrap">
+                <label for="id_opis" class="form-label">Opis</label>
+                <div class="btn-toolbar mb-2 gap-1" role="toolbar" aria-label="Formatowanie opisu">
+                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="bold" title="Pogrubienie">B</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="italic" title="Kursywa"><i>I</i></button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="underline" title="Podkreślenie"><u>U</u></button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="list" title="Lista punktowana"><i class="bi bi-list-ul"></i></button>
+                </div>
+                {{ punkt_form.opis }}
+                <small class="text-muted">Formatowanie: <strong>**pogrubienie**</strong>, <em>*kursywa*</em>, <u>__podkreślenie__</u>, lista: <code>- element</code>.</small>
+              </div>
               <button type="submit" class="btn btn-primary w-100 mt-3" name="dodaj_punkt">
                 <i class="bi bi-plus-lg me-1"></i> Dodaj punkt
               </button>
@@ -448,4 +472,62 @@
         </div>
       </div>
     </div>
+    <script>
+      (function () {
+        function wrapSelection(textarea, before, after) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const value = textarea.value;
+          const selected = value.slice(start, end);
+          const next = value.slice(0, start) + before + selected + after + value.slice(end);
+          textarea.value = next;
+          textarea.focus();
+          const cursorPos = start + before.length + selected.length + after.length;
+          textarea.setSelectionRange(cursorPos, cursorPos);
+        }
+
+        function prefixSelectionLines(textarea, prefix) {
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const value = textarea.value;
+          const blockStart = value.lastIndexOf('\n', start - 1) + 1;
+          const blockEnd = value.indexOf('\n', end);
+          const realEnd = blockEnd === -1 ? value.length : blockEnd;
+          const block = value.slice(blockStart, realEnd);
+          const prefixed = block
+            .split('\n')
+            .map((line) => {
+              if (!line.trim()) {
+                return line;
+              }
+              return line.trim().startsWith('- ') ? line : prefix + line;
+            })
+            .join('\n');
+
+          textarea.value = value.slice(0, blockStart) + prefixed + value.slice(realEnd);
+          textarea.focus();
+          textarea.setSelectionRange(blockStart, blockStart + prefixed.length);
+        }
+
+        document.querySelectorAll('.format-opis-btn').forEach((btn) => {
+          btn.addEventListener('click', function () {
+            const wrap = this.closest('.format-editor-wrap');
+            if (!wrap) return;
+            const textarea = wrap.querySelector('textarea');
+            if (!textarea) return;
+
+            const mode = this.dataset.format;
+            if (mode === 'bold') {
+              wrapSelection(textarea, '**', '**');
+            } else if (mode === 'italic') {
+              wrapSelection(textarea, '*', '*');
+            } else if (mode === 'underline') {
+              wrapSelection(textarea, '__', '__');
+            } else if (mode === 'list') {
+              prefixSelectionLines(textarea, '- ');
+            }
+          });
+        });
+      })();
+    </script>
 {% endblock %}

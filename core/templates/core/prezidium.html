@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load core_extras %}
 
 {% block title %}Głosowania (Prezydium){% endblock %}
 
@@ -55,7 +56,7 @@
                 {{ punkt.numer }}. {{ punkt.tytul }}
               </h6>
               {% if punkt.opis %}
-                <p class="mb-1 text-muted">{{ punkt.opis }}</p>
+                <div class="mb-1 text-muted">{{ punkt.opis|format_opis }}</div>
               {% endif %}
             </div>
           </div>

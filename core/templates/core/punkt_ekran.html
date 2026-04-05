@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load core_extras %}
 
 {% block title %}Ekran punktu{% endblock %}
 
@@ -7,7 +8,7 @@
     <h1>{{ punkt.sesja.nazwa }}</h1>
     <h2 class="mt-4">Punkt {{ punkt.numer }} – {{ punkt.tytul }}</h2>
     {% if punkt.opis %}
-    <p class="lead mt-3">{{ punkt.opis }}</p>
+    <div class="lead mt-3">{{ punkt.opis|format_opis }}</div>
     {% endif %}
 
     {% if glosowanie %}

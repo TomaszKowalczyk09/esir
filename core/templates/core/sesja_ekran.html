@@ -58,6 +58,16 @@
         font-size: 22px;
         margin-bottom: 35px;
       }
+      .ekran-opis p {
+        margin-bottom: 10px;
+      }
+      .ekran-opis ul {
+        margin: 0 0 10px 24px;
+        padding: 0;
+      }
+      .ekran-opis li {
+        margin-bottom: 4px;
+      }
       .ekran-wyniki-header {
         font-size: 26px;
         font-weight: 600;
@@ -419,6 +429,14 @@
 
   function sameKey(a, b) { return a === b; }
 
+  function ustawOpis(opisEl, data) {
+    if (data.opis_html) {
+      opisEl.html(data.opis_html);
+    } else {
+      opisEl.text(data.opis || '');
+    }
+  }
+
   // Ładowanie aktywnego punktu i wyników
   function zaladujAktywnyPunkt() {
     // anuluj poprzedni request, jeśli jeszcze trwa
@@ -472,7 +490,7 @@
         }
         tytulEl.text(data.numer + '. ' + (data.tytul || 'Punkt porządku obrad'));
         subEl.text(data.podtytul || '');
-        opisEl.text(data.opis || '');
+        ustawOpis(opisEl, data);
         lastRenderKey = renderKey;
       }
 
@@ -630,7 +648,7 @@
             wynikiBox.hide();
             rollWrap.hide();
             $('#ekran-glosowanie-nazwa').text('');
-            opisEl.text(data.opis || '');
+            ustawOpis(opisEl, data);
             lastVotesKey = votesKey;
           }
         });
@@ -641,7 +659,7 @@
           wynikiBox.hide();
           rollWrap.hide();
           $('#ekran-glosowanie-nazwa').text('');
-          opisEl.text(data.opis || '');
+          ustawOpis(opisEl, data);
           lastVotesKey = votesKey;
         }
       }

@@ -1,5 +1,6 @@
 {% extends "core/base.html" %}
 {% load static %}
+{% load core_extras %}
 
 {% block title %}Nadchodzące sesje{% endblock %}
 
@@ -50,7 +51,7 @@
                     <li class="mb-1">
                       {{ punkt.tytul }}
                       {% if punkt.opis %}
-                        <br><small class="text-muted">{{ punkt.opis }}</small>
+                        <br><small class="text-muted">{{ punkt.opis|format_opis }}</small>
                       {% endif %}
                     </li>
                   {% endfor %}

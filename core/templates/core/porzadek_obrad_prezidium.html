@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load core_extras %}
 
 {% block title %}Porządek obrad (Prezydium){% endblock %}
 
@@ -72,7 +73,7 @@
                     {% endif %}
                   </h6>
                   {% if punkt.opis %}
-                    <p class="mb-1 text-muted">{{ punkt.opis }}</p>
+                    <div class="mb-1 text-muted">{{ punkt.opis|format_opis }}</div>
                   {% endif %}
                 </div>
                 <div class="d-flex flex-column align-items-end">

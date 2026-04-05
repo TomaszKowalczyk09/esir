@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load core_extras %}
 
 {% block title %}Porządek obrad{% endblock %}
 
@@ -45,7 +46,7 @@
                   <span class="badge bg-primary ms-1">Aktualnie omawiany</span>
                 {% endif %}
                 {% if punkt.opis %}
-                  <div class="text-muted small">{{ punkt.opis }}</div>
+                  <div class="text-muted small">{{ punkt.opis|format_opis }}</div>
                 {% endif %}
               </div>
               {% if punkt.glosowanie %}

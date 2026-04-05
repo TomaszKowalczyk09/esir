@@ -263,6 +263,8 @@ from django.views.decorators.http import require_http_methods, require_POST, req
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import datetime, date, time
+import re
+from django.utils.html import escape
 
 from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek
 from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm
@@ -298,6 +300,59 @@ def _can_manage_session(user):
 
 def _is_prezydium_or_admin(user):
     return is_prezydium_or_admin(user)
+
+
+def _format_opis_inline(text):
+    rendered = escape(text)
+    rendered = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", rendered)
+    rendered = re.sub(r"\*(.+?)\*", r"<em>\1</em>", rendered)
+    rendered = re.sub(r"__(.+?)__", r"<u>\1</u>", rendered)
+    return rendered
+
+
+def _format_punkt_opis_html(opis):
+    if not opis:
+        return ""
+
+    lines = (opis or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    html = []
+    in_list = False
+    paragraph_buffer = []
+
+    def flush_paragraph():
+        nonlocal paragraph_buffer
+        if paragraph_buffer:
+            html.append(f"<p>{'<br>'.join(paragraph_buffer)}</p>")
+            paragraph_buffer = []
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            flush_paragraph()
+            if in_list:
+                html.append("</ul>")
+                in_list = False
+            continue
+
+        list_match = re.match(r"^[-*•]\s+(.+)$", line)
+        if list_match:
+            flush_paragraph()
+            if not in_list:
+                html.append("<ul>")
+                in_list = True
+            html.append(f"<li>{_format_opis_inline(list_match.group(1))}</li>")
+            continue
+
+        if in_list:
+            html.append("</ul>")
+            in_list = False
+        paragraph_buffer.append(_format_opis_inline(line))
+
+    flush_paragraph()
+    if in_list:
+        html.append("</ul>")
+
+    return "".join(html)
 
 def _protokol_pdf_margins_mm():
     from django.conf import settings
@@ -1140,6 +1195,7 @@ def api_aktywny_punkt(request, sesja_id):
         "tytul": punkt.tytul,
         "podtytul": "",
         "opis": punkt.opis or "",
+        "opis_html": _format_punkt_opis_html(punkt.opis or ""),
         "glosowanie_id": glosowanie.id if glosowanie else None,
         "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
         "za": 0,
