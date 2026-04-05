@@ -20,6 +20,7 @@ from django.forms import ModelForm
 class Sesja(models.Model):
     nazwa = models.CharField(max_length=200)
     data = models.DateTimeField(default=timezone.now)
+    opis = models.TextField(blank=True)
     aktywna = models.BooleanField(default=True)
     jest_usunieta = models.BooleanField(default=False)  # NOWE POLE
     opublikowana = models.BooleanField(default=False)  # widoczna dla radnych przed startem

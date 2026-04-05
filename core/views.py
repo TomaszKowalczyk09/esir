@@ -250,6 +250,7 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.db.models import Count, Q
 from django.utils import timezone
+from datetime import datetime, date, time
 
 from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek
 from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm
@@ -428,6 +429,34 @@ def sesja_edytuj(request, sesja_id):
     punkt_form = PunktForm()
     glosowanie_form = GlosowanieForm()
     if request.method == "POST":
+        if "zapisz_sesje" in request.POST:
+            data_raw = (request.POST.get("data") or "").strip()
+            czas_raw = (request.POST.get("czas") or "").strip()
+            opis = request.POST.get("opis", "")
+            status = request.POST.get("status", "aktywna")
+
+            if not data_raw or not czas_raw:
+                messages.error(request, "Podaj poprawną datę i godzinę sesji.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+            try:
+                data_sesji = date.fromisoformat(data_raw)
+                czas_sesji = time.fromisoformat(czas_raw)
+            except ValueError:
+                messages.error(request, "Podana data lub godzina ma nieprawidłowy format.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+            nowa_data = datetime.combine(data_sesji, czas_sesji)
+            if timezone.is_naive(nowa_data):
+                nowa_data = timezone.make_aware(nowa_data, timezone.get_current_timezone())
+
+            sesja.data = nowa_data
+            sesja.opis = opis
+            sesja.aktywna = status == "aktywna"
+            sesja.save(update_fields=["data", "opis", "aktywna"])
+            messages.success(request, "Dane sesji zostały zapisane.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
         if "oglos_przerwe" in request.POST:
             czas_przerwy = int(request.POST.get("czas_przerwy", 0))
             if czas_przerwy > 0:
@@ -1086,12 +1115,7 @@ def api_aktywny_punkt(request, sesja_id):
     """
     sesja = get_object_or_404(Sesja, id=sesja_id)
 
-    punkt = (
-        sesja.punkty.filter(Q(aktywny=True) | Q())
-        .prefetch_related("glosowania")
-        .order_by("numer")
-        .first()
-    )
+    punkt = sesja.punkty.filter(aktywny=True).prefetch_related("glosowania").order_by("numer").first()
 
     if not punkt:
         return JsonResponse({"aktywny": False})
@@ -1152,10 +1176,18 @@ def api_aktywny_punkt(request, sesja_id):
 @require_manage_session(on_fail="redirect", redirect_to="radny")
 def ustaw_punkt_aktywny(request, punkt_id):
     punkt = get_object_or_404(PunktObrad, id=punkt_id)
-    PunktObrad.objects.filter(sesja=punkt.sesja).update(aktywny=False)
-    punkt.aktywny = True
-    punkt.save()
-    return redirect("prezydium_agenda")
+    if punkt.aktywny:
+        punkt.aktywny = False
+        punkt.save(update_fields=["aktywny"])
+    else:
+        PunktObrad.objects.filter(sesja=punkt.sesja).update(aktywny=False)
+        punkt.aktywny = True
+        punkt.save(update_fields=["aktywny"])
+
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
+    return redirect("sesja_edytuj", sesja_id=punkt.sesja.id)
 
 
 @login_required

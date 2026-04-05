@@ -93,8 +93,15 @@
 
           <form method="post" action="{% url 'ustaw_punkt_aktywny' punkt.id %}" class="mb-1">
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-primary w-100">
-              Ustaw jako aktywny
+            <button type="submit" class="btn btn-sm {% if punkt.aktywny %}btn-warning{% else %}btn-outline-primary{% endif %} w-100">
+              {% if punkt.aktywny %}Dezaktywuj{% else %}Ustaw jako aktywny{% endif %}
+            </button>
+          </form>
+
+          <form method="post" action="{% url 'usun_punkt_obrad' punkt.id %}" onsubmit="return confirm('Na pewno usunąć ten punkt z porządku obrad?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+              Usuń punkt
             </button>
           </form>
         </div>

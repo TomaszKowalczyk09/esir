@@ -137,6 +137,11 @@ urlpatterns = [
         views.ustaw_punkt_aktywny,
         name="ustaw_punkt_aktywny",
 ),
+    path(
+        "punkty/<int:punkt_id>/usun/",
+        views.usun_punkt_obrad,
+        name="usun_punkt_obrad",
+    ),
 path(
     "prezydium/agenda/",
     views.prezydium_agenda,

@@ -200,3 +200,66 @@ class VotingButtonsVisibilityTests(TestCase):
 		self.assertNotContains(response, 'name="glos" value="przeciw"')
 		self.assertNotContains(response, 'name="glos" value="wstrzymuje"')
 		self.assertContains(response, "Już oddałeś głos w tym głosowaniu")
+
+
+class SessionEditingAndAgendaTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.prezydium = Uzytkownik.objects.create_user(
+			username="prezydium_edit",
+			password="test12345",
+			rola="prezydium",
+			imie="Ewa",
+			nazwisko="Edytor",
+		)
+		cls.sesja = Sesja.objects.create(
+			nazwa="Sesja edycji",
+			data=timezone.now(),
+			aktywna=False,
+		)
+		cls.punkt = PunktObrad.objects.create(
+			sesja=cls.sesja,
+			numer=1,
+			tytul="Punkt edytowany",
+			aktywny=True,
+		)
+
+	def test_session_edit_saves_datetime_and_description(self):
+		self.client.force_login(self.prezydium)
+		response = self.client.post(
+			reverse("sesja_edytuj", args=[self.sesja.id]),
+			{
+				"zapisz_sesje": "1",
+				"data": "2026-04-06",
+				"czas": "13:45",
+				"opis": "Nowy opis sesji",
+				"status": "aktywna",
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.sesja.refresh_from_db()
+		lokalna_data = timezone.localtime(self.sesja.data)
+		self.assertEqual(lokalna_data.date().isoformat(), "2026-04-06")
+		self.assertEqual(lokalna_data.strftime("%H:%M"), "13:45")
+		self.assertEqual(self.sesja.opis, "Nowy opis sesji")
+		self.assertTrue(self.sesja.aktywna)
+
+	def test_deactivating_point_removes_it_from_active_api(self):
+		self.client.force_login(self.prezydium)
+		response = self.client.post(reverse("ustaw_punkt_aktywny", args=[self.punkt.id]))
+
+		self.assertEqual(response.status_code, 302)
+		self.punkt.refresh_from_db()
+		self.assertFalse(self.punkt.aktywny)
+
+		api_response = self.client.get(reverse("api_aktywny_punkt", args=[self.sesja.id]))
+		self.assertEqual(api_response.status_code, 200)
+		self.assertFalse(api_response.json()["aktywny"])
+
+	def test_deleting_point_removes_it_from_session(self):
+		self.client.force_login(self.prezydium)
+		response = self.client.post(reverse("usun_punkt_obrad", args=[self.punkt.id]))
+
+		self.assertEqual(response.status_code, 302)
+		self.assertFalse(PunktObrad.objects.filter(id=self.punkt.id).exists())
