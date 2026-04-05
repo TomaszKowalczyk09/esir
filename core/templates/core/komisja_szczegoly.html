@@ -16,6 +16,77 @@
   </div>
 </div>
 
+{% if can_manage_komisja %}
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">Nowa sesja komisji</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'komisja_dodaj_sesje' komisja.id %}">
+            {% csrf_token %}
+            <div class="mb-2">
+              <label for="sesja_nazwa" class="form-label">Nazwa sesji</label>
+              <input id="sesja_nazwa" name="nazwa" class="form-control" required>
+            </div>
+            <div class="mb-2">
+              <label for="sesja_data" class="form-label">Data i godzina</label>
+              <input id="sesja_data" name="data" type="datetime-local" class="form-control">
+            </div>
+            <div class="form-check mb-3">
+              <input id="sesja_aktywna" name="aktywna" type="checkbox" class="form-check-input">
+              <label for="sesja_aktywna" class="form-check-label">Sesja aktywna</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Dodaj sesję</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">Członkowie komisji</div>
+        <div class="card-body">
+          <form method="post" action="{% url 'komisja_dodaj_czlonka' komisja.id %}" class="mb-3">
+            {% csrf_token %}
+            <label for="radny_id" class="form-label">Dodaj radnego</label>
+            <div class="d-flex gap-2">
+              <select id="radny_id" name="radny_id" class="form-select">
+                <option value="">Wybierz</option>
+                {% for r in dostepni_radni %}
+                  <option value="{{ r.id }}">{{ r.imie }} {{ r.nazwisko }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-outline-primary">Dodaj</button>
+            </div>
+          </form>
+
+          {% if czlonkowie %}
+            <div class="list-group">
+              {% for c in czlonkowie %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    {{ c.imie }} {{ c.nazwisko }}
+                    {% if c.id == komisja.przewodniczacy_id %}
+                      <span class="badge bg-primary ms-2">Przewodniczący</span>
+                    {% endif %}
+                  </div>
+                  {% if c.id != komisja.przewodniczacy_id %}
+                    <form method="post" action="{% url 'komisja_usun_czlonka' komisja.id c.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger">Usuń</button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-muted">Brak członków komisji.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
 <h5 class="mb-2">Sesje komisji</h5>
 {% if sesje %}
   <div class="list-group shadow-sm">

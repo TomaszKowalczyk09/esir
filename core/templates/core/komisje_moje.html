@@ -3,7 +3,40 @@
 {% block title %}Komisje{% endblock %}
 
 {% block content %}
-<h3 class="mb-3">Moje komisje</h3>
+<h3 class="mb-3">{% if user.rola == 'administrator' %}Komisje{% else %}Moje komisje{% endif %}</h3>
+
+{% if can_create_komisja %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">Nowa komisja</div>
+    <div class="card-body">
+      <form method="post" action="{% url 'komisja_utworz' %}">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-5">
+            <label for="komisja_nazwa" class="form-label">Nazwa</label>
+            <input id="komisja_nazwa" name="nazwa" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label for="komisja_przewodniczacy" class="form-label">Przewodniczący</label>
+            <select id="komisja_przewodniczacy" name="przewodniczacy" class="form-select" required>
+              <option value="">Wybierz</option>
+              {% for r in radni %}
+                <option value="{{ r.id }}">{{ r.imie }} {{ r.nazwisko }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Utwórz komisję</button>
+          </div>
+          <div class="col-12">
+            <label for="komisja_opis" class="form-label">Opis (opcjonalnie)</label>
+            <textarea id="komisja_opis" name="opis" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endif %}
 
 {% if komisje %}
   <div class="list-group shadow-sm">

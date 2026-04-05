@@ -172,7 +172,11 @@ path(
 
     # KOMISJE
     path("komisje/", views.komisje_moje, name="komisje_moje"),
+    path("komisje/utworz/", views.komisja_utworz, name="komisja_utworz"),
     path("komisje/<int:komisja_id>/", views.komisja_szczegoly, name="komisja_szczegoly"),
+    path("komisje/<int:komisja_id>/sesje/dodaj/", views.komisja_dodaj_sesje, name="komisja_dodaj_sesje"),
+    path("komisje/<int:komisja_id>/czlonkowie/dodaj/", views.komisja_dodaj_czlonka, name="komisja_dodaj_czlonka"),
+    path("komisje/<int:komisja_id>/czlonkowie/<int:user_id>/usun/", views.komisja_usun_czlonka, name="komisja_usun_czlonka"),
     path("komisje/<int:komisja_id>/wnioski/", views.komisja_wnioski, name="komisja_wnioski"),
     path("prezydium/komisje/skrzynka/", views.komisja_skrzynka_rady, name="komisja_skrzynka_rady"),
     path("prezydium/komisje/wniosek/<int:wniosek_id>/wyslij/", views.komisja_wniosek_wyslij_do_rady, name="komisja_wniosek_wyslij_do_rady"),

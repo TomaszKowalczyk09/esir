@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Uzytkownik
-from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos
+from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos, Komisja, KomisjaSesja, KomisjaWniosek
 
 
 class AuthorizationMatrixTests(TestCase):
@@ -301,3 +301,141 @@ class Custom404PageTests(TestCase):
 		self.assertEqual(response.status_code, 404)
 		self.assertContains(response, "Nie znaleziono tej strony.", status_code=404)
 		self.assertContains(response, "Przejdź do panelu", status_code=404)
+
+
+class KomisjaManagementTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.admin = Uzytkownik.objects.create_user(
+			username="admin_kom",
+			password="test12345",
+			rola="administrator",
+			imie="Admin",
+			nazwisko="Komisji",
+		)
+		cls.prezydium = Uzytkownik.objects.create_user(
+			username="prez_kom",
+			password="test12345",
+			rola="prezydium",
+			imie="Pola",
+			nazwisko="Prezydium",
+		)
+		cls.przewodniczacy = Uzytkownik.objects.create_user(
+			username="chair_kom",
+			password="test12345",
+			rola="radny",
+			imie="Piotr",
+			nazwisko="Przewodniczacy",
+		)
+		cls.czlonek = Uzytkownik.objects.create_user(
+			username="member_kom",
+			password="test12345",
+			rola="radny",
+			imie="Celina",
+			nazwisko="Czlonek",
+		)
+		cls.nowy_radny = Uzytkownik.objects.create_user(
+			username="new_kom",
+			password="test12345",
+			rola="radny",
+			imie="Norbert",
+			nazwisko="Nowy",
+		)
+		cls.inny_przewodniczacy = Uzytkownik.objects.create_user(
+			username="chair_kom2",
+			password="test12345",
+			rola="radny",
+			imie="Irena",
+			nazwisko="Inna",
+		)
+
+		cls.komisja = Komisja.objects.create(
+			nazwa="Komisja Finansow",
+			opis="Test",
+			przewodniczacy=cls.przewodniczacy,
+		)
+		cls.komisja.czlonkowie.add(cls.przewodniczacy, cls.czlonek)
+
+		cls.inna_komisja = Komisja.objects.create(
+			nazwa="Komisja Oswiaty",
+			przewodniczacy=cls.inny_przewodniczacy,
+		)
+		cls.inna_komisja.czlonkowie.add(cls.inny_przewodniczacy)
+
+	def test_admin_can_create_komisja(self):
+		self.client.force_login(self.admin)
+		response = self.client.post(
+			reverse("komisja_utworz"),
+			{
+				"nazwa": "Komisja Zdrowia",
+				"opis": "Nowa komisja",
+				"przewodniczacy": str(self.czlonek.id),
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertTrue(Komisja.objects.filter(nazwa="Komisja Zdrowia").exists())
+		nowa = Komisja.objects.get(nazwa="Komisja Zdrowia")
+		self.assertEqual(nowa.przewodniczacy_id, self.czlonek.id)
+		self.assertTrue(nowa.czlonkowie.filter(id=self.czlonek.id).exists())
+
+	def test_chair_can_create_session_for_own_komisja(self):
+		self.client.force_login(self.przewodniczacy)
+		response = self.client.post(
+			reverse("komisja_dodaj_sesje", args=[self.komisja.id]),
+			{"nazwa": "Posiedzenie 1", "data": "2026-04-10T10:30", "aktywna": "on"},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		sesja = KomisjaSesja.objects.get(komisja=self.komisja, nazwa="Posiedzenie 1")
+		self.assertTrue(sesja.aktywna)
+
+	def test_chair_cannot_create_session_for_other_komisja(self):
+		self.client.force_login(self.przewodniczacy)
+		response = self.client.post(
+			reverse("komisja_dodaj_sesje", args=[self.inna_komisja.id]),
+			{"nazwa": "Niedozwolona sesja"},
+		)
+
+		self.assertEqual(response.status_code, 403)
+		self.assertFalse(KomisjaSesja.objects.filter(komisja=self.inna_komisja, nazwa="Niedozwolona sesja").exists())
+
+	def test_admin_can_add_and_remove_member(self):
+		self.client.force_login(self.admin)
+		add_response = self.client.post(
+			reverse("komisja_dodaj_czlonka", args=[self.komisja.id]),
+			{"radny_id": str(self.nowy_radny.id)},
+		)
+		self.assertEqual(add_response.status_code, 302)
+		self.assertTrue(self.komisja.czlonkowie.filter(id=self.nowy_radny.id).exists())
+
+		remove_response = self.client.post(
+			reverse("komisja_usun_czlonka", args=[self.komisja.id, self.nowy_radny.id]),
+		)
+		self.assertEqual(remove_response.status_code, 302)
+		self.assertFalse(self.komisja.czlonkowie.filter(id=self.nowy_radny.id).exists())
+
+	def test_regular_member_cannot_manage_members(self):
+		self.client.force_login(self.czlonek)
+		response = self.client.post(
+			reverse("komisja_dodaj_czlonka", args=[self.komisja.id]),
+			{"radny_id": str(self.nowy_radny.id)},
+		)
+
+		self.assertEqual(response.status_code, 403)
+
+	def test_commission_request_is_visible_in_prezydium_inbox(self):
+		self.client.force_login(self.czlonek)
+		create_response = self.client.post(
+			reverse("komisja_wnioski", args=[self.komisja.id]),
+			{"typ": "wniosek", "tresc": "Prosba o analizę."},
+		)
+		self.assertEqual(create_response.status_code, 302)
+
+		wniosek = KomisjaWniosek.objects.get(komisja=self.komisja)
+		self.assertFalse(wniosek.wyslany_do_rady)
+
+		self.client.force_login(self.prezydium)
+		inbox_response = self.client.get(reverse("komisja_skrzynka_rady"))
+		self.assertEqual(inbox_response.status_code, 200)
+		self.assertContains(inbox_response, "Prosba o analizę.")

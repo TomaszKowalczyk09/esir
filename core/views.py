@@ -275,6 +275,7 @@ from .permissions import (
     is_radny_like,
     can_manage_session,
     is_prezydium_or_admin,
+    require_roles,
     require_manage_session,
     require_prezydium_only,
     require_prezydium_or_admin,
@@ -300,6 +301,18 @@ def _can_manage_session(user):
 
 def _is_prezydium_or_admin(user):
     return is_prezydium_or_admin(user)
+
+
+def _can_manage_komisja(user, komisja):
+    return getattr(user, "rola", None) == "administrator" or user == komisja.przewodniczacy
+
+
+def _can_view_komisja(user, komisja):
+    if getattr(user, "rola", None) in {"administrator", "prezydium"}:
+        return True
+    if user == komisja.przewodniczacy:
+        return True
+    return komisja.czlonkowie.filter(id=user.id).exists()
 
 
 def _format_opis_inline(text):
@@ -1529,25 +1542,149 @@ def obecnosci_toggle_prezidium(request, sesja_id, radny_id):
 @login_required
 @require_radny_like(on_fail="redirect", redirect_to="panel")
 def komisje_moje(request):
-    komisje = Komisja.objects.filter(Q(czlonkowie=request.user) | Q(przewodniczacy=request.user)).distinct()
-    return render(request, "core/komisje_moje.html", {"komisje": komisje})
+    user = request.user
+
+    if user.rola in {"administrator", "prezydium"}:
+        komisje = Komisja.objects.select_related("przewodniczacy").all()
+    else:
+        komisje = Komisja.objects.filter(Q(czlonkowie=user) | Q(przewodniczacy=user)).distinct()
+
+    return render(
+        request,
+        "core/komisje_moje.html",
+        {
+            "komisje": komisje,
+            "can_create_komisja": user.rola == "administrator",
+            "radni": Uzytkownik.objects.filter(rola="radny").order_by("nazwisko", "imie"),
+        },
+    )
+
+
+@login_required
+@require_POST
+@require_roles("administrator", on_fail="forbidden")
+def komisja_utworz(request):
+    nazwa = (request.POST.get("nazwa") or "").strip()
+    opis = (request.POST.get("opis") or "").strip()
+    przewodniczacy_id = request.POST.get("przewodniczacy")
+
+    if not nazwa or not przewodniczacy_id:
+        messages.error(request, "Podaj nazwę komisji i przewodniczącego.")
+        return redirect("komisje_moje")
+
+    przewodniczacy = get_object_or_404(Uzytkownik, id=przewodniczacy_id, rola="radny")
+    komisja = Komisja.objects.create(
+        nazwa=nazwa,
+        opis=opis,
+        przewodniczacy=przewodniczacy,
+        aktywna=True,
+    )
+    komisja.czlonkowie.add(przewodniczacy)
+    messages.success(request, "Komisja została utworzona.")
+    return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
 
 @login_required
 def komisja_szczegoly(request, komisja_id):
     komisja = get_object_or_404(Komisja, id=komisja_id)
-    if request.user not in komisja.czlonkowie.all() and request.user != komisja.przewodniczacy and request.user.rola != "prezydium":
+    if not _can_view_komisja(request.user, komisja):
         return HttpResponseForbidden("Brak uprawnień")
 
     sesje = komisja.sesje.all()
-    return render(request, "core/komisja_szczegoly.html", {"komisja": komisja, "sesje": sesje})
+    czlonkowie = komisja.czlonkowie.order_by("nazwisko", "imie")
+    dostepni_radni = Uzytkownik.objects.filter(rola="radny").exclude(
+        id__in=czlonkowie.values_list("id", flat=True)
+    ).order_by("nazwisko", "imie")
+
+    return render(
+        request,
+        "core/komisja_szczegoly.html",
+        {
+            "komisja": komisja,
+            "sesje": sesje,
+            "czlonkowie": czlonkowie,
+            "dostepni_radni": dostepni_radni,
+            "can_manage_komisja": _can_manage_komisja(request.user, komisja),
+        },
+    )
+
+
+@login_required
+@require_POST
+@require_radny_like(on_fail="forbidden")
+def komisja_dodaj_sesje(request, komisja_id):
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    if not _can_manage_komisja(request.user, komisja):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    nazwa = (request.POST.get("nazwa") or "").strip()
+    data_raw = (request.POST.get("data") or "").strip()
+
+    if not nazwa:
+        messages.error(request, "Podaj nazwę sesji komisji.")
+        return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+    data = timezone.now()
+    if data_raw:
+        try:
+            parsed = datetime.strptime(data_raw, "%Y-%m-%dT%H:%M")
+            data = timezone.make_aware(parsed, timezone.get_current_timezone())
+        except ValueError:
+            messages.error(request, "Nieprawidłowy format daty sesji.")
+            return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+    KomisjaSesja.objects.create(
+        komisja=komisja,
+        nazwa=nazwa,
+        data=data,
+        aktywna=request.POST.get("aktywna") in ["1", "on", "true", "True"],
+    )
+    messages.success(request, "Dodano sesję komisji.")
+    return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+
+@login_required
+@require_POST
+@require_radny_like(on_fail="forbidden")
+def komisja_dodaj_czlonka(request, komisja_id):
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    if not _can_manage_komisja(request.user, komisja):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    radny_id = request.POST.get("radny_id")
+    if not radny_id:
+        messages.error(request, "Wybierz radnego do dodania.")
+        return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+    radny = get_object_or_404(Uzytkownik, id=radny_id, rola="radny")
+    komisja.czlonkowie.add(radny)
+    messages.success(request, "Dodano członka komisji.")
+    return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+
+@login_required
+@require_POST
+@require_radny_like(on_fail="forbidden")
+def komisja_usun_czlonka(request, komisja_id, user_id):
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    if not _can_manage_komisja(request.user, komisja):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    if komisja.przewodniczacy_id == user_id:
+        messages.error(request, "Nie można usunąć przewodniczącego z komisji.")
+        return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+    radny = get_object_or_404(Uzytkownik, id=user_id, rola="radny")
+    komisja.czlonkowie.remove(radny)
+    messages.success(request, "Usunięto członka komisji.")
+    return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def komisja_wnioski(request, komisja_id):
     komisja = get_object_or_404(Komisja, id=komisja_id)
-    if request.user not in komisja.czlonkowie.all() and request.user != komisja.przewodniczacy:
+    if not _can_view_komisja(request.user, komisja):
         return HttpResponseForbidden("Brak uprawnień")
 
     if request.method == "POST":
@@ -1557,7 +1694,7 @@ def komisja_wnioski(request, komisja_id):
             obj.komisja = komisja
             obj.autor = request.user
             obj.save()
-            messages.success(request, "Wniosek komisji zapisany.")
+            messages.success(request, "Wniosek komisji przekazano do skrzynki prezydium.")
             return redirect("komisja_wnioski", komisja_id=komisja.id)
     else:
         form = KomisjaWniosekForm()
