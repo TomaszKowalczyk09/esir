@@ -6,7 +6,6 @@
 
 {% block content %}
 
-
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-9 mx-auto">
@@ -137,7 +136,7 @@
                           </div>
 
                           <div class="modal fade" id="modalEdytujGlosowanie{{ gl.id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog">
+                            <div class="modal-dialog modal-lg">
                               <div class="modal-content">
                                 <div class="modal-header">
                                   <h5 class="modal-title">Edytuj głosowanie</h5>
@@ -180,6 +179,51 @@
                                       <button type="submit" name="zapisz_glosowanie" class="btn btn-primary w-100">Zapisz zmiany</button>
                                     </div>
                                   </form>
+
+                                  {% if gl.typ == 'kandydaci' %}
+                                    <hr class="my-3">
+                                    <h6 class="mb-3">Zarządzanie kandydatami</h6>
+                                    
+                                    <!-- Candidates assigned to this voting -->
+                                    <div class="mb-3">
+                                      <label class="form-label mb-2"><strong>Kandydaci do głosowania:</strong></label>
+                                      {% if gl.kandydaci.all %}
+                                        <div class="list-group list-group-sm">
+                                          {% for kandydat in gl.kandydaci.all %}
+                                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                              <span>{{ kandydat.nazwisko }} {{ kandydat.imie }}</span>
+                                              <form method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="glosowanie_id" value="{{ gl.id }}">
+                                                <input type="hidden" name="kandydat_id" value="{{ kandydat.id }}">
+                                                <button type="submit" name="usun_kandydata_z_glosowania" class="btn btn-sm btn-outline-danger">Usuń</button>
+                                              </form>
+                                            </div>
+                                          {% endfor %}
+                                        </div>
+                                      {% else %}
+                                        <div class="alert alert-info small mb-3">Brak przypisanych kandydatów do tego głosowania.</div>
+                                      {% endif %}
+                                    </div>
+
+                                    <!-- Add candidates from councillors -->
+                                    <div>
+                                      <label class="form-label mb-2"><strong>Dodaj kandydata:</strong></label>
+                                      <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="glosowanie_id" value="{{ gl.id }}">
+                                        <div class="mb-2">
+                                          <select name="radny_id" class="form-select radni-select" size="8" required>
+                                            <option value="">-- Wybierz radnego do dodania --</option>
+                                            {% for radny in radni %}
+                                              <option value="{{ radny.id }}">{{ radny.nazwisko }} {{ radny.imie }}</option>
+                                            {% endfor %}
+                                          </select>
+                                        </div>
+                                        <button type="submit" name="dodaj_radnego_jako_kandydata" class="btn btn-sm btn-outline-primary w-100">Dodaj wybranego radnego</button>
+                                      </form>
+                                    </div>
+                                  {% endif %}
                                 </div>
                               </div>
                             </div>

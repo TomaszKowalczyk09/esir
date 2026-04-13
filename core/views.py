@@ -638,6 +638,69 @@ def sesja_edytuj(request, sesja_id):
             messages.success(request, "Głosowanie zostało usunięte.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
+        elif "dodaj_kandydata_do_glosowania" in request.POST:
+            glosowanie_id = request.POST.get("glosowanie_id")
+            glosowanie = get_object_or_404(
+                Glosowanie,
+                id=glosowanie_id,
+                punkt_obrad__sesja=sesja,
+            )
+            kandydat_id = request.POST.get("kandydat_id")
+            if kandydat_id:
+                kandydat = get_object_or_404(
+                    Kandydat,
+                    id=kandydat_id,
+                    punkt_obrad=glosowanie.punkt_obrad,
+                )
+                glosowanie.kandydaci.add(kandydat)
+                messages.success(request, f"Kandydat {kandydat.nazwisko} {kandydat.imie} został dodany do głosowania.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        elif "usun_kandydata_z_glosowania" in request.POST:
+            glosowanie_id = request.POST.get("glosowanie_id")
+            kandydat_id = request.POST.get("kandydat_id")
+            glosowanie = get_object_or_404(
+                Glosowanie,
+                id=glosowanie_id,
+                punkt_obrad__sesja=sesja,
+            )
+            kandydat = get_object_or_404(Kandydat, id=kandydat_id)
+            glosowanie.kandydaci.remove(kandydat)
+            messages.success(request, f"Kandydat {kandydat.nazwisko} {kandydat.imie} został usunięty z głosowania.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        elif "dodaj_radnego_jako_kandydata" in request.POST:
+            glosowanie_id = request.POST.get("glosowanie_id")
+            glosowanie = get_object_or_404(
+                Glosowanie,
+                id=glosowanie_id,
+                punkt_obrad__sesja=sesja,
+            )
+            radny_id = request.POST.get("radny_id")
+            if radny_id:
+                radny = get_object_or_404(Uzytkownik, id=radny_id)
+                punkt = glosowanie.punkt_obrad
+                # Avoid get_or_create on non-unique fields to prevent MultipleObjectsReturned.
+                kandydat = Kandydat.objects.filter(
+                    punkt_obrad=punkt,
+                    imie=radny.imie,
+                    nazwisko=radny.nazwisko,
+                ).first()
+                created = False
+                if kandydat is None:
+                    kandydat = Kandydat.objects.create(
+                        punkt_obrad=punkt,
+                        imie=radny.imie,
+                        nazwisko=radny.nazwisko,
+                        opis="",
+                    )
+                    created = True
+                # Add to voting
+                glosowanie.kandydaci.add(kandydat)
+                msg = "Radny" if created else "Kandydat"
+                messages.success(request, f"{msg} {kandydat.nazwisko} {kandydat.imie} został dodany do głosowania.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
         elif "dodaj_kandydata" in request.POST:
             punkt_id = request.POST.get("punkt_id")
             punkt = get_object_or_404(PunktObrad, id=punkt_id, sesja=sesja)
@@ -645,7 +708,6 @@ def sesja_edytuj(request, sesja_id):
             nazwisko = request.POST.get("nazwisko")
             opis = request.POST.get("opis", "")
             if imie and nazwisko:
-                from .models import Kandydat
                 Kandydat.objects.create(punkt_obrad=punkt, imie=imie, nazwisko=nazwisko, opis=opis)
                 messages.success(request, "Kandydat został dodany.")
             else:
@@ -739,6 +801,9 @@ def sesja_edytuj(request, sesja_id):
     wymagane_kworum = (len(obecnosci) // 2) + 1 if obecnosci else 0
     kworum_osiagniete = obecnych_count >= wymagane_kworum if obecnosci else False
 
+    # Get list of councillors for candidate voting management
+    radni = Uzytkownik.objects.filter(rola__in=["radny", "administrator"]).order_by("nazwisko", "imie")
+
     context = {
         "sesja": sesja,
         "punkty": punkty,
@@ -752,6 +817,7 @@ def sesja_edytuj(request, sesja_id):
         "nieobecnych_count": nieobecnych_count,
         "wymagane_kworum": wymagane_kworum,
         "kworum_osiagniete": kworum_osiagniete,
+        "radni": radni,
     }
     return render(request, "core/sesja_edytuj.html", context)
 
@@ -1038,7 +1104,11 @@ def api_wyniki(request, glosowanie_id):
         })
 
     if glosowanie.typ == "kandydaci":
-        kandydaci = glosowanie.punkt_obrad.kandydaci.all().order_by("nazwisko", "imie")
+        # Use candidates assigned to this specific voting, or fall back to agenda point candidates
+        if glosowanie.kandydaci.exists():
+            kandydaci = glosowanie.kandydaci.all().order_by("nazwisko", "imie")
+        else:
+            kandydaci = glosowanie.punkt_obrad.kandydaci.all().order_by("nazwisko", "imie")
         wyniki_kandydaci = []
         suma_glosow = 0
         for kandydat in kandydaci:

@@ -90,6 +90,7 @@ class Glosowanie(models.Model):
     jawnosc = models.CharField(max_length=10, choices=JAWNOSC_CHOICES, default="jawne")
     wiekszosc = models.CharField(max_length=15, choices=WIEKSZOSC_CHOICES, default="zwykla")
     liczba_uprawnionych = models.PositiveIntegerField(null=True, blank=True)
+    kandydaci = models.ManyToManyField(Kandydat, blank=True, related_name='glosowania')
 
     class Meta:
         verbose_name = "Głosowanie"

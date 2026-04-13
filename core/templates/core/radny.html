@@ -165,9 +165,17 @@
                   <div class="mb-3">
                     <label for="kandydat-{{ glosowanie.id }}" class="form-label">Wybierz kandydata:</label>
                     <select name="kandydat" id="kandydat-{{ glosowanie.id }}" class="form-select">
-                      {% for kandydat in glosowanie.punkt_obrad.kandydaci.all %}
-                        <option value="{{ kandydat.id }}">{{ kandydat.nazwisko }} {{ kandydat.imie }}</option>
-                      {% endfor %}
+                      {% with voting_candidates=glosowanie.kandydaci.all %}
+                        {% if voting_candidates %}
+                          {% for kandydat in voting_candidates %}
+                            <option value="{{ kandydat.id }}">{{ kandydat.nazwisko }} {{ kandydat.imie }}</option>
+                          {% endfor %}
+                        {% else %}
+                          {% for kandydat in glosowanie.punkt_obrad.kandydaci.all %}
+                            <option value="{{ kandydat.id }}">{{ kandydat.nazwisko }} {{ kandydat.imie }}</option>
+                          {% endfor %}
+                        {% endif %}
+                      {% endwith %}
                     </select>
                   </div>
                   <button type="submit" class="btn btn-primary w-100">Oddaj głos</button>
