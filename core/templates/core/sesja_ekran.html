@@ -10,306 +10,932 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
+      :root {
+        --ekran-bg: #eef3fb;
+        --ekran-surface: #ffffff;
+        --ekran-surface-soft: #f7f9fd;
+        --ekran-surface-strong: #f1f5fb;
+        --ekran-line: rgba(15, 23, 42, 0.08);
+        --ekran-text: #0f172a;
+        --ekran-muted: #5f718d;
+        --ekran-accent: #0b2a55;
+        --ekran-accent-2: #1e3a8a;
+        --ekran-success: #198754;
+        --ekran-warning: #b45309;
+        --ekran-danger: #b91c1c;
+      }
+
       html, body {
-        height: 100%;
+        min-height: 100%;
         margin: 0;
-        background-color: #ffffff;
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--ekran-text);
+        font-family: "Segoe UI", "Aptos", Arial, sans-serif;
+        background: var(--ekran-bg);
       }
-      .ekran-topbar {
-        background-color: #0066cc;
-        color: #ffffff;
-        padding: 12px 40px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .ekran-topbar-title {
-        font-size: 24px;
-        font-weight: 600;
-      }
-      .ekran-topbar-sub {
-        font-size: 16px;
-        opacity: 0.85;
-      }
-      .ekran-topbar-right {
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .ekran-main {
-        padding: 35px 60px 20px 60px;
-        min-height: calc(100% - 80px);
-        box-sizing: border-box;
-      }
-      .ekran-punkt-tytul {
-        color: #222222;
-        font-size: 40px;
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-      .ekran-punkt-sub {
-        font-size: 22px;
-        color: #555555;
-        margin-bottom: 25px;
-      }
-      .ekran-opis {
-        font-size: 22px;
-        margin-bottom: 35px;
-      }
-      .ekran-opis p {
-        margin-bottom: 10px;
-      }
-      .ekran-opis ul {
-        margin: 0 0 10px 24px;
-        padding: 0;
-      }
-      .ekran-opis li {
-        margin-bottom: 4px;
-      }
-      .ekran-wyniki-header {
-        font-size: 26px;
-        font-weight: 600;
-        margin-bottom: 15px;
-      }
-      .ekran-wyniki-row {
-        font-size: 22px;
-        margin-bottom: 10px;
-      }
-      .ekran-progbar {
-        height: 32px;
-        font-size: 18px;
-      }
-      .ekran-bottombar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #f1f3f5;
-        border-top: 1px solid #dee2e6;
-        padding: 6px 40px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 18px;
-      }
-      .ekran-rollcall-wrap {
-        margin-top: 18px;
-        background: #ffffff;
-        border: 1px solid #dfe3e7;
-        border-radius: 10px;
-        padding: 0;
-        overflow: hidden;
-      }
-      .ekran-rollcall-head {
-        background: #0b5ed7;
-        color: #fff;
-        padding: 10px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .ekran-rollcall-head .title {
-        font-weight: 800;
-        font-size: 20px;
-        letter-spacing: .2px;
-      }
-      .ekran-rollcall-head .sub {
-        font-size: 16px;
-        opacity: .9;
-      }
-      .ekran-rollcall-banner {
-        background: #e55353;
-        color: #fff;
-        font-weight: 900;
-        letter-spacing: 1px;
-        text-align: center;
-        padding: 8px 16px;
-        font-size: 18px;
-      }
-      .ekran-rollcall-grid {
+
+      .ekran-shell {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
-        width: 100%;
+        position: relative;
+        z-index: 1;
       }
-      .ekran-rollcall-col {
-        border-right: none;
-      }
-      .ekran-rollcall-row {
+
+      .ekran-topbar {
         display: flex;
-        flex-direction: row;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: flex-start;
+        padding: clamp(14px, 2vw, 24px) clamp(18px, 3vw, 36px);
+        border-bottom: 1px solid var(--ekran-line);
+        background: #0b2a55;
+        border-bottom-color: rgba(255, 255, 255, 0.18);
+      }
+
+      .ekran-brand {
+        max-width: min(980px, 100%);
+      }
+
+      .ekran-kicker {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .ekran-brand h1 {
+        margin: 4px 0 6px;
+        font-size: clamp(28px, 2.8vw, 44px);
+        line-height: 1.12;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+      }
+
+      .ekran-brand p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: clamp(14px, 1.1vw, 17px);
+        line-height: 1.5;
+      }
+
+      .ekran-topbar-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+        min-width: 240px;
+      }
+
+      .ekran-clock {
+        font-size: clamp(18px, 1.6vw, 26px);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: #ffffff;
+      }
+
+      .ekran-pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .ekran-pill {
+        display: inline-flex;
         align-items: center;
-        padding: 1px 3px;
-        border-bottom: 1px solid #edf0f2;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
         font-size: 12px;
-        min-height: 18px;
+        font-weight: 600;
+        white-space: nowrap;
       }
-      .ekran-rollcall-row:nth-child(even) {
-        background: #f8f9fa;
+
+      .ekran-pill i {
+        color: #ffffff;
       }
-      .ekran-rollcall-lp {
+
+      .ekran-pill.is-warning {
+        color: #92400e;
+        background: #fff7ed;
+        border-color: #fdba74;
+      }
+
+      .ekran-pill.is-success {
+        color: #166534;
+        background: #f0fdf4;
+        border-color: #86efac;
+      }
+
+      .ekran-main {
+        flex: 1;
+        padding: clamp(12px, 1.5vw, 18px) clamp(8px, 1.2vw, 16px) clamp(14px, 1.5vw, 18px);
+      }
+
+      .ekran-stage {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .ekran-stage-grid {
+        display: block;
+      }
+
+      .ekran-primary {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-height: 0;
+      }
+
+      .ekran-panel,
+      .ekran-empty-state,
+      .ekran-results,
+      .ekran-rollcall-wrap,
+      .ekran-info-card,
+      .ekran-break-banner {
+        background: var(--ekran-surface);
+        border: 1px solid var(--ekran-line);
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+      }
+
+      .ekran-panel,
+      .ekran-empty-state,
+      .ekran-results,
+      .ekran-rollcall-wrap,
+      .ekran-info-card,
+      .ekran-break-banner {
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      .ekran-panel {
+        padding: clamp(16px, 1.8vw, 24px);
+      }
+
+      .ekran-panel-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .ekran-section-label,
+      .ekran-info-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 0;
+        color: var(--ekran-muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .ekran-punkt-tytul {
+        margin: 10px 0 0;
+        font-size: clamp(30px, 3.1vw, 46px);
+        line-height: 1.16;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        color: var(--ekran-accent);
+      }
+
+      .ekran-punkt-sub {
+        margin-top: 6px;
+        font-size: clamp(15px, 1.1vw, 18px);
+        font-weight: 600;
+        color: var(--ekran-muted);
+      }
+
+      .ekran-opis {
+        font-size: clamp(18px, 1.35vw, 22px);
+        line-height: 1.55;
+        color: var(--ekran-text);
+      }
+
+      .ekran-opis p {
+        margin-bottom: 12px;
+      }
+
+      .ekran-opis ul {
+        margin: 0 0 12px 24px;
+        padding: 0;
+      }
+
+      .ekran-opis li {
+        margin-bottom: 6px;
+      }
+
+      .ekran-empty-state {
+        display: none;
+        padding: clamp(24px, 3vw, 40px);
+        text-align: center;
+        background: #ffffff;
+      }
+
+      .ekran-empty-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.03);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        color: var(--ekran-muted);
+        font-size: 13px;
         font-weight: 800;
-        color: #495057;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .ekran-empty-state h2 {
+        margin: 14px auto 10px;
+        font-size: clamp(30px, 3.2vw, 48px);
+        line-height: 1.14;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+      }
+
+      .ekran-empty-text {
+        max-width: 920px;
+        margin: 0 auto;
+        font-size: clamp(17px, 1.2vw, 20px);
+        line-height: 1.5;
+        color: #334155;
+      }
+
+      .ekran-empty-note {
+        margin-top: 12px;
+        font-size: 16px;
+        color: var(--ekran-muted);
+      }
+
+      .ekran-info-card {
+        padding: 14px 16px;
+      }
+
+      .ekran-info-title {
+        margin-bottom: 8px;
+      }
+
+      .ekran-info-value {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        margin-bottom: 6px;
+        color: var(--ekran-accent);
+      }
+
+      .ekran-info-detail,
+      .ekran-info-text,
+      .ekran-status-sub {
+        color: var(--ekran-muted);
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      .ekran-status-line {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--ekran-text);
+      }
+
+      .ekran-break-banner {
+        padding: 14px 16px;
+        margin-bottom: 2px;
+        background: linear-gradient(180deg, #fffaf0 0%, #ffffff 100%);
+        border-color: #fcd34d;
+      }
+
+      .ekran-break-banner .break-label {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #a16207;
+        margin-bottom: 4px;
+      }
+
+      .ekran-break-banner .break-title {
+        font-size: clamp(22px, 2vw, 32px);
+        font-weight: 700;
+        margin-bottom: 4px;
+        letter-spacing: -0.01em;
+        color: var(--ekran-accent);
+      }
+
+      .ekran-break-banner .break-time {
+        font-size: clamp(15px, 1.05vw, 18px);
+        color: var(--ekran-muted);
+      }
+
+      .ekran-results {
+        padding: clamp(16px, 1.8vw, 22px);
+      }
+
+      .ekran-results .ekran-wyniki-header {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: var(--ekran-accent);
+      }
+
+      .ekran-results .ekran-wyniki-label {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: var(--ekran-text);
+      }
+
+      .ekran-results .ekran-wyniki-progbar {
+        height: 28px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--ekran-surface-strong);
+      }
+
+      .ekran-results .ekran-wyniki-liczba {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-left: 10px;
+      }
+
+      .ekran-results .ekran-wyniki-procent {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-left: 6px;
+        color: var(--ekran-muted);
+      }
+
+      .ekran-results .table {
+        color: var(--ekran-text);
+        margin-bottom: 0;
+      }
+
+      .ekran-results .table thead th {
+        color: var(--ekran-muted);
+        border-color: var(--ekran-line);
+        background: var(--ekran-surface-soft);
+      }
+
+      .ekran-results .table td,
+      .ekran-results .table th {
+        border-color: var(--ekran-line);
+      }
+
+      .ekran-results .alert {
+        border-radius: 10px;
+      }
+
+      .ekran-results .progress {
+        background: var(--ekran-surface-strong);
+      }
+
+      .ekran-results .badge {
+        border-radius: 999px;
+        padding-inline: 16px;
+      }
+
+      .ekran-vote-summary {
+        display: grid;
+        grid-template-columns: minmax(340px, 1fr) minmax(240px, 340px);
+        gap: 24px;
+        align-items: center;
+      }
+
+      .ekran-vote-title {
+        margin: 0;
+        font-size: clamp(28px, 2.6vw, 42px);
+        line-height: 1.1;
+        color: #d62828;
+        font-weight: 800;
+      }
+
+      .ekran-vote-subtitle {
+        margin-top: 6px;
+        color: #7b8798;
+        font-size: clamp(18px, 1.35vw, 26px);
+        line-height: 1.25;
+        border-bottom: 1px solid var(--ekran-line);
+        padding-bottom: 10px;
+      }
+
+      .ekran-vote-table {
+        margin-top: 16px;
+      }
+
+      .ekran-vote-table-head,
+      .ekran-vote-row,
+      .ekran-vote-valid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 80px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .ekran-vote-table-head {
+        font-size: 17px;
+        color: #374151;
+        margin-bottom: 4px;
+        padding: 0 2px;
+      }
+
+      .ekran-vote-row {
+        min-height: 42px;
+        font-size: 30px;
+      }
+
+      .ekran-vote-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+      }
+
+      .ekran-vote-percent,
+      .ekran-vote-count {
+        font-weight: 500;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ekran-vote-label.yes,
+      .ekran-vote-percent.yes,
+      .ekran-vote-count.yes {
+        color: #2f9e44;
+      }
+
+      .ekran-vote-label.no,
+      .ekran-vote-percent.no,
+      .ekran-vote-count.no {
+        color: #c84b3a;
+      }
+
+      .ekran-vote-label.abstain,
+      .ekran-vote-percent.abstain,
+      .ekran-vote-count.abstain {
+        color: #8d8d8d;
+      }
+
+      .ekran-vote-valid {
+        margin-top: 8px;
+        font-size: 30px;
+        color: #333;
+      }
+
+      .ekran-vote-valid .label {
+        font-weight: 500;
+      }
+
+      .ekran-vote-valid .value {
+        grid-column: 3;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ekran-vote-donut-wrap {
+        display: flex;
+        justify-content: center;
+      }
+
+      .ekran-vote-donut {
+        --yes: 0;
+        --no: 0;
+        --abstain: 100;
+        width: clamp(210px, 20vw, 300px);
+        height: clamp(210px, 20vw, 300px);
+        border-radius: 50%;
+        background: conic-gradient(
+          #4caf50 0 calc(var(--yes) * 1%),
+          #e57373 calc(var(--yes) * 1%) calc((var(--yes) + var(--no)) * 1%),
+          #a6a6a6 calc((var(--yes) + var(--no)) * 1%) 100%
+        );
+        position: relative;
+      }
+
+      .ekran-vote-donut::after {
+        content: "";
+        position: absolute;
+        inset: 26%;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      .ekran-rollcall-wrap {
+        margin-top: 0;
+      }
+
+      .ekran-rollcall-head {
+        background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+        color: var(--ekran-text);
+        padding: 12px 14px;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: flex-start;
+        border-bottom: 1px solid var(--ekran-line);
+      }
+
+      .ekran-rollcall-head .title {
+        font-weight: 700;
+        font-size: clamp(18px, 1.4vw, 24px);
+        letter-spacing: -0.01em;
+      }
+
+      .ekran-rollcall-head .sub {
+        font-size: 13px;
+        color: var(--ekran-muted);
+      }
+
+      .ekran-rollcall-banner {
+        background: #fef2f2;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-align: center;
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #991b1b;
+        border-bottom: 1px solid #fecaca;
+      }
+
+      .ekran-rollcall-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .ekran-rollcall-col {
+        border-right: 1px solid var(--ekran-line);
+      }
+
+      .ekran-rollcall-col:last-child {
+        border-right: 0;
+      }
+
+      .ekran-rollcall-row {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--ekran-line);
+        font-size: 17px;
+        min-height: 46px;
+      }
+
+      .ekran-rollcall-row:nth-child(even) {
+        background: var(--ekran-surface-soft);
+      }
+
+      .ekran-rollcall-lp {
+        font-weight: 900;
+        color: var(--ekran-muted);
         text-align: right;
         padding-right: 4px;
-        min-width: 22px;
       }
+
       .ekran-rollcall-name {
         font-weight: 800;
-        color: #212529;
+        color: var(--ekran-text);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        flex: 1;
       }
+
       .ekran-rollcall-vote {
         display: flex;
         justify-content: flex-end;
-        min-width: 50px;
+        min-width: 130px;
       }
+
       .vote-badge {
-        display: inline-block;
-        min-width: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 86px;
         text-align: center;
-        padding: 1px 3px;
+        padding: 6px 10px;
         border-radius: 999px;
-        font-weight: 900;
+        font-weight: 700;
         font-size: 11px;
+        letter-spacing: 0.04em;
       }
-      .vb-za { background: rgba(25,135,84,.15); color: #198754; border: 1px solid rgba(25,135,84,.35); }
-      .vb-przeciw { background: rgba(220,53,69,.12); color: #dc3545; border: 1px solid rgba(220,53,69,.30); }
-      .vb-wstrzymuje { background: rgba(255,193,7,.18); color: #8a6d00; border: 1px solid rgba(255,193,7,.45); }
-      .vb-brak { background: rgba(108,117,125,.10); color: #6c757d; border: 1px solid rgba(108,117,125,.25); }
-      .ekran-wyniki-bar {
-        margin-bottom: 18px;
+
+      .ekran-rollcall-wrap.compact .ekran-rollcall-row {
+        padding: 7px 10px;
+        min-height: 36px;
+        font-size: 14px;
       }
-      .ekran-wyniki-label {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin-bottom: 6px;
+
+      .ekran-rollcall-wrap.compact .ekran-rollcall-vote {
+        min-width: 82px;
       }
-      .ekran-wyniki-progbar {
-        height: 32px;
-        font-size: 1.2rem;
-        font-weight: 600;
-        border-radius: 8px;
+
+      .ekran-rollcall-wrap.compact .vote-badge {
+        min-width: 72px;
+        font-size: 10px;
+        padding: 4px 8px;
       }
-      .ekran-wyniki-liczba {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin-left: 12px;
+
+      body.ekran-rollcall-mode .ekran-main {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        padding-left: 6px;
+        padding-right: 6px;
       }
-      .ekran-wyniki-procent {
-        font-size: 1.1rem;
-        font-weight: 500;
-        margin-left: 8px;
-        color: #555;
+
+      body.ekran-rollcall-mode .ekran-topbar {
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+
+      body.ekran-rollcall-mode .ekran-punkt-panel,
+      body.ekran-rollcall-mode #ekran-plansza-tytulowa,
+      body.ekran-rollcall-mode #ekran-wyniki,
+      body.ekran-rollcall-mode .ekran-footer {
+        display: none !important;
+      }
+
+      body.ekran-rollcall-mode .ekran-stage,
+      body.ekran-rollcall-mode .ekran-stage-grid,
+      body.ekran-rollcall-mode .ekran-primary {
+        height: 100%;
+      }
+
+      body.ekran-rollcall-mode #ekran-rollcall-wrap {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+      }
+
+      body.ekran-rollcall-mode .ekran-rollcall-grid {
+        flex: 1;
+        min-height: 0;
+      }
+
+      body.ekran-rollcall-mode .ekran-rollcall-col {
+        min-height: 0;
+      }
+
+      .vb-za { background: rgba(25, 135, 84, 0.10); color: #0f5132; border: 1px solid rgba(25, 135, 84, 0.20); }
+      .vb-przeciw { background: rgba(185, 28, 28, 0.10); color: #991b1b; border: 1px solid rgba(185, 28, 28, 0.18); }
+      .vb-wstrzymuje { background: rgba(180, 83, 9, 0.12); color: #92400e; border: 1px solid rgba(180, 83, 9, 0.18); }
+      .vb-brak { background: #f8fafc; color: var(--ekran-muted); border: 1px solid var(--ekran-line); }
+
+      .ekran-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 18px;
+        border-top: 1px solid var(--ekran-line);
+        background: #ffffff;
+        color: var(--ekran-muted);
+        font-size: 13px;
+      }
+
+      .ekran-footer strong {
+        color: var(--ekran-text);
+      }
+
+      .modal-content {
+        background: #ffffff;
+        color: var(--ekran-text);
+        border: 1px solid var(--ekran-line);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+      }
+
+      .modal-header,
+      .modal-footer {
+        border-color: var(--ekran-line) !important;
+      }
+
+      .modal-body {
+        color: var(--ekran-text);
+      }
+
+      .modal-header {
+        background: #f8fbff;
+      }
+
+      @media (max-width: 1100px) {
+        .ekran-topbar,
+        .ekran-footer {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .ekran-topbar-right {
+          align-items: flex-start;
+          min-width: 0;
+        }
+
+        .ekran-stage-grid {
+          display: block;
+        }
+
+        .ekran-rollcall-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .ekran-rollcall-col {
+          border-right: 0;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .ekran-main {
+          padding-inline: 14px;
+        }
+
+        .ekran-topbar {
+          padding-inline: 14px;
+        }
+
+        .ekran-panel,
+        .ekran-empty-state,
+        .ekran-results,
+        .ekran-rollcall-wrap,
+        .ekran-info-card,
+        .ekran-break-banner {
+          border-radius: 12px;
+        }
+
+        .ekran-panel-head {
+          flex-direction: column;
+        }
+
+        .ekran-punkt-sub {
+          white-space: normal;
+        }
+
+        .ekran-rollcall-row {
+          grid-template-columns: 48px minmax(0, 1fr);
+          grid-auto-flow: row;
+        }
+
+        .ekran-rollcall-vote {
+          grid-column: 1 / -1;
+          justify-content: flex-start;
+          min-width: 0;
+        }
+
+        body.ekran-rollcall-mode .ekran-main {
+          padding-inline: 10px;
+        }
+
+        .ekran-vote-summary {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .ekran-vote-row,
+        .ekran-vote-valid {
+          font-size: 22px;
+        }
+
+        .ekran-vote-table-head {
+          font-size: 14px;
+        }
       }
     </style>
 </head>
 <body>
-<div class="ekran-topbar">
-  <div>
-    <div class="ekran-topbar-title">
-      {{ sesja.nazwa }}
+<div class="ekran-shell">
+  <div class="ekran-topbar">
+    <div class="ekran-brand">
+      <div class="ekran-kicker">System e-SIR</div>
+      <h1>{{ sesja.nazwa }}</h1>
+      <p>{{ sesja.data|date:'d.m.Y H:i' }}{% if sesja.opis %} · {{ sesja.opis }}{% endif %}</p>
     </div>
-    <div class="ekran-topbar-sub">
-      {{ sesja.data }}
-    </div>
-  </div>
-  <div class="ekran-topbar-right">
-    <span id="ekran-czas"></span>
-  </div>
-</div>
-
-<div class="ekran-main">
-  {% if przerwa_trwa %}
-    <div id="ekran-przerwa-banner" class="alert alert-warning text-center py-4 mb-4" style="font-size:2rem;">
-      <i class="bi bi-pause-circle me-2"></i>
-      Przerwa w obradach<br>
-      Pozostały czas: <span id="ekran-przerwa-odliczanie">{{ przerwa_pozostalo }}</span>
-    </div>
-    <script>
-      var pozostalo = {{ przerwa_pozostalo|default:0 }};
-      var licznik = document.getElementById('ekran-przerwa-odliczanie');
-      function formatujCzas(s) {
-        var min = Math.floor(s/60);
-        var sek = s%60;
-        return min + ' min ' + sek + ' sek';
-      }
-      if (licznik && pozostalo > 0) {
-        licznik.innerText = formatujCzas(pozostalo);
-        var timer = setInterval(function() {
-          pozostalo--;
-          if (pozostalo <= 0) {
-            licznik.innerText = 'Przerwa zakończona';
-            clearInterval(timer);
-          } else {
-            licznik.innerText = formatujCzas(pozostalo);
-          }
-        }, 1000);
-      }
-    </script>
-  {% endif %}
-  <!-- Komunikat globalny (jeśli ustawiony) -->
-  <!-- MODAL komunikatu globalnego -->
-  <div class="modal fade" id="ekranKomunikatModal" tabindex="-1" aria-labelledby="ekranKomunikatModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-warning-subtle">
-          <h5 class="modal-title" id="ekranKomunikatModalLabel"><i class="bi bi-megaphone"></i> Komunikat</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-        </div>
-        <div class="modal-body text-center fs-4" id="ekran-komunikat-text"></div>
-        <div class="modal-footer justify-content-center">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
-          <button type="button" class="btn btn-outline-danger d-none" id="ekran-komunikat-clear-btn"><i class="bi bi-x-circle"></i> Usuń komunikat</button>
-        </div>
+    <div class="ekran-topbar-right">
+      <div id="ekran-czas" class="ekran-clock"></div>
+      <div class="ekran-pill-row">
+        <span class="ekran-pill"><i class="bi bi-display"></i> Projektor</span>
+        {% if przerwa_trwa %}
+          <span class="ekran-pill is-warning"><i class="bi bi-pause-circle"></i> Przerwa w obradach</span>
+        {% else %}
+          <span class="ekran-pill is-success"><i class="bi bi-broadcast"></i> Widok na żywo</span>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Plansza tytułowa sesji, gdy brak aktywnego punktu -->
-  <div id="ekran-plansza-tytulowa" style="display:none;">
-    <div class="text-center py-5">
-      <h1 class="fw-bold" style="font-size:3rem;">{{ sesja.nazwa }}</h1>
-      <div class="mb-3 fs-3 text-muted">{{ sesja.data|date:'d.m.Y H:i' }}</div>
-      {% if sesja.opis %}
-        <div class="mb-4 fs-4">{{ sesja.opis }}</div>
+  <main class="ekran-main">
+    <section class="ekran-stage">
+      {% if przerwa_trwa %}
+        <div id="ekran-przerwa-banner" class="ekran-break-banner mb-1">
+          <div class="break-label"><i class="bi bi-pause-circle me-1"></i> Przerwa w obradach</div>
+          <div class="break-title">Obrady są czasowo wstrzymane</div>
+          <div class="break-time">Pozostały czas: <span id="ekran-przerwa-odliczanie">{{ przerwa_pozostalo }}</span></div>
+        </div>
+        <script>
+          var pozostalo = {{ przerwa_pozostalo|default:0 }};
+          var licznik = document.getElementById('ekran-przerwa-odliczanie');
+          function formatujCzas(s) {
+            var min = Math.floor(s / 60);
+            var sek = s % 60;
+            return min + ' min ' + sek + ' sek';
+          }
+          if (licznik && pozostalo > 0) {
+            licznik.innerText = formatujCzas(pozostalo);
+            var timer = setInterval(function() {
+              pozostalo--;
+              if (pozostalo <= 0) {
+                licznik.innerText = 'Przerwa zakończona';
+                clearInterval(timer);
+              } else {
+                licznik.innerText = formatujCzas(pozostalo);
+              }
+            }, 1000);
+          }
+        </script>
       {% endif %}
-      <span class="badge bg-secondary fs-4 py-2 px-4">Sesja jeszcze nie rozpoczęła punktów obrad</span>
+
+      <div class="modal fade" id="ekranKomunikatModal" tabindex="-1" aria-labelledby="ekranKomunikatModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="ekranKomunikatModalLabel"><i class="bi bi-megaphone me-1"></i> Komunikat</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body text-center fs-4 py-4" id="ekran-komunikat-text"></div>
+            <div class="modal-footer justify-content-center">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+              <button type="button" class="btn btn-outline-danger d-none" id="ekran-komunikat-clear-btn"><i class="bi bi-x-circle me-1"></i> Usuń komunikat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ekran-stage-grid">
+        <div class="ekran-primary">
+          <div id="ekran-plansza-tytulowa" class="ekran-empty-state">
+            <div class="ekran-empty-badge"><i class="bi bi-compass"></i> Oczekiwanie</div>
+            <h2>{{ sesja.nazwa }}</h2>
+            <div class="ekran-empty-text">
+              Sesja została uruchomiona, ale nie wskazano jeszcze aktywnego punktu obrad.
+            </div>
+            {% if sesja.opis %}
+              <div class="ekran-empty-note">{{ sesja.opis }}</div>
+            {% endif %}
+          </div>
+
+          <section id="ekran-punkt-panel" class="ekran-panel">
+            <div class="ekran-panel-head">
+              <div>
+                <div class="ekran-section-label">Punkt obrad</div>
+                <h2 id="ekran-punkt-tytul" class="ekran-punkt-tytul">Brak aktywnego punktu</h2>
+              </div>
+              <div id="ekran-punkt-sub" class="ekran-punkt-sub text-muted"></div>
+            </div>
+            <div id="ekran-opis" class="ekran-opis"></div>
+          </section>
+
+          <section id="ekran-wyniki" class="ekran-results" style="display:none;"></section>
+
+          <section id="ekran-rollcall-wrap" class="ekran-rollcall-wrap" style="display:none;">
+            <div class="ekran-rollcall-head">
+              <div>
+                <div class="title">Lista imienna</div>
+                <div class="sub">Nazwisko, imię • głos</div>
+              </div>
+            </div>
+            <div class="ekran-rollcall-banner" id="ekran-rollcall-banner">GŁOSOWANIE W TRAKCIE</div>
+            <div class="ekran-rollcall-grid">
+              <div class="ekran-rollcall-col" id="ekran-rollcall-col-1"></div>
+              <div class="ekran-rollcall-col" id="ekran-rollcall-col-2"></div>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <div class="ekran-footer">
+    <div>
+      Aktywna sesja: <strong>{{ sesja.nazwa }}</strong>
     </div>
-  </div>
-
-  <!-- Tytuł punktu i opis -->
-  <h1 id="ekran-punkt-tytul" class="ekran-punkt-tytul">Brak aktywnego punktu</h1>
-  <div id="ekran-punkt-sub" class="ekran-punkt-sub text-muted"></div>
-  <div id="ekran-opis" class="ekran-opis"></div>
-
-  <!-- Wyniki głosowania -->
-  <div id="ekran-wyniki" style="display:none;"></div>
-
-  <!-- Lista imienna (jawne) -->
-  <div id="ekran-rollcall-wrap" class="ekran-rollcall-wrap" style="display:none;">
-    <div class="ekran-rollcall-head">
-      <div class="title">Lista imienna</div>
-      <div class="sub">Nazwisko, imię • głos</div>
+    <div>
+      <span class="text-muted">System e-SIR</span>
     </div>
-    <div class="ekran-rollcall-banner" id="ekran-rollcall-banner">GŁOSOWANIE W TRAKCIE</div>
-    <div class="ekran-rollcall-grid">
-      <div class="ekran-rollcall-col" id="ekran-rollcall-col-1"></div>
-      <div class="ekran-rollcall-col" id="ekran-rollcall-col-2"></div>
-    </div>
-  </div>
-</div>
-
-<div class="ekran-bottombar">
-  <div>
-    Aktywna sesja: <strong>{{ sesja.nazwa }}</strong>
-  </div>
-  <div>
-    <span class="text-muted">System e-SIR</span>
   </div>
 </div>
 
@@ -386,6 +1012,10 @@
     return {t: 'BRAK', c: 'vb-brak'};
   }
 
+  function setRollcallMode(enabled) {
+    document.body.classList.toggle('ekran-rollcall-mode', !!enabled);
+  }
+
   function renderRollcall(list) {
     const items = [...(list || [])].sort((a, b) => {
       const an = normalize(a.nazwisko);
@@ -398,6 +1028,10 @@
       if (ai > bi) return 1;
       return 0;
     });
+    const wrap = $('#ekran-rollcall-wrap');
+    wrap.toggleClass('compact', items.length > 22);
+
+    const splitAt = Math.ceil(items.length / 2);
     let html1 = '';
     let html2 = '';
     items.forEach((it, idx) => {
@@ -410,7 +1044,7 @@
         '<div class="ekran-rollcall-name">' + nazw + ' ' + imie + '</div>' +
         '<div class="ekran-rollcall-vote"><span class="vote-badge ' + v.c + '">' + v.t + '</span></div>' +
       '</div>';
-      if (idx < 11) {
+      if (idx < splitAt) {
         html1 += htmlRow;
       } else {
         html2 += htmlRow;
@@ -448,6 +1082,7 @@
       const tytulEl = $('#ekran-punkt-tytul');
       const subEl = $('#ekran-punkt-sub');
       const opisEl = $('#ekran-opis');
+      const pointPanel = $('#ekran-punkt-panel');
       const wynikiBox = $('#ekran-wyniki');
       const rollWrap = $('#ekran-rollcall-wrap');
 
@@ -463,10 +1098,11 @@
       });
 
       if (!data.aktywny) {
+        setRollcallMode(false);
         wynikiBox.hide(); // Wyniki zawsze ukryte, gdy punkt nieaktywny
         // Pokaż planszę tytułową sesji
         $('#ekran-plansza-tytulowa').show();
-        $('#ekran-punkt-tytul').hide();
+        pointPanel.hide();
         subEl.hide();
         opisEl.hide();
         rollWrap.hide();
@@ -476,6 +1112,7 @@
         return;
       } else {
         $('#ekran-plansza-tytulowa').hide();
+        pointPanel.show();
         tytulEl.show();
         subEl.show();
         opisEl.show();
@@ -512,6 +1149,7 @@
 
           // Wyniki głosowania imiennego na kandydatów
           if (data.kandydaci && Array.isArray(data.kandydaci)) {
+            setRollcallMode(false);
             let html = `
               <div class="ekran-wyniki-header mb-3">
                 <h2 class="fw-bold text-center">Wyniki głosowania imiennego</h2>
@@ -542,52 +1180,10 @@
           if (!tajne && otwarte && data.glosowanie_id) {
               $.get('/api/glosy-jawne/' + data.glosowanie_id + '/', function (rollData) {
                 const items = rollData.items || [];
-                const maxPerCol = 11;
-                // Always use 2 columns, max 11 per column
-                let col1 = items.slice(0, maxPerCol);
-                let col2 = items.slice(maxPerCol, maxPerCol * 2);
-                let html = `
-                  <div class="ekran-wyniki-header mb-3">
-                    <h2 class="fw-bold text-center mb-2">Lista imienna głosowania</h2>
-                    <hr style="margin-bottom:10px;">
-                  </div>
-                  <div class="row justify-content-center">
-                    <div class="col-lg-6 col-md-12 mb-2"><ul class="list-group">`;
-                col1.forEach((r, i) => {
-                  const lp = i + 1;
-                  let badgeClass = '';
-                  let badgeText = '';
-                  if (r.glos === 'za') { badgeClass = 'bg-success text-white fw-bold'; badgeText = 'ZA'; }
-                  else if (r.glos === 'przeciw') { badgeClass = 'bg-danger text-white fw-bold'; badgeText = 'PRZECIW'; }
-                  else if (r.glos === 'wstrzymuje') { badgeClass = 'bg-warning text-dark fw-bold'; badgeText = 'WSTRZYMUJE'; }
-                  else if (r.glos === 'nieobecny' || r.glos === 'nieobecna') { badgeClass = 'bg-secondary text-white'; badgeText = 'NIEOBECNY'; }
-                  else { badgeClass = 'bg-light text-muted'; badgeText = 'BRAK'; }
-                  html += `<li class="list-group-item d-flex justify-content-between align-items-center" style="font-size:20px;padding:8px 16px;">`;
-                  html += `<span><span class="text-muted">${lp}.</span> <span class="fw-bold">${escapeHtml(r.nazwisko)} ${escapeHtml(r.imie)}</span></span>`;
-                  html += `<span class="badge ${badgeClass}" style="font-size:1.2rem;padding:8px 32px;border-radius:18px;min-width:120px;text-align:right;">${badgeText}</span>`;
-                  html += '</li>';
-                });
-                html += '</ul></div>';
-                html += '<div class="col-lg-6 col-md-12 mb-2"><ul class="list-group">';
-                col2.forEach((r, i) => {
-                  const lp = maxPerCol + i + 1;
-                  let badgeClass = '';
-                  let badgeText = '';
-                  if (r.glos === 'za') { badgeClass = 'bg-success text-white fw-bold'; badgeText = 'ZA'; }
-                  else if (r.glos === 'przeciw') { badgeClass = 'bg-danger text-white fw-bold'; badgeText = 'PRZECIW'; }
-                  else if (r.glos === 'wstrzymuje') { badgeClass = 'bg-warning text-dark fw-bold'; badgeText = 'WSTRZYMUJE'; }
-                  else if (r.glos === 'nieobecny' || r.glos === 'nieobecna') { badgeClass = 'bg-secondary text-white'; badgeText = 'NIEOBECNY'; }
-                  else { badgeClass = 'bg-light text-muted'; badgeText = 'BRAK'; }
-                  html += `<li class="list-group-item d-flex justify-content-between align-items-center" style="font-size:20px;padding:8px 16px;">`;
-                  html += `<span><span class="text-muted">${lp}.</span> <span class="fw-bold">${escapeHtml(r.nazwisko)} ${escapeHtml(r.imie)}</span></span>`;
-                  html += `<span class="badge ${badgeClass}" style="font-size:1.2rem;padding:8px 32px;border-radius:18px;min-width:120px;text-align:right;">${badgeText}</span>`;
-                  html += '</li>';
-                });
-                html += '</ul></div>';
-                html += '</div>';
-                $('#ekran-wyniki').html(html).show();
-                wynikiBox.show();
-                rollWrap.hide();
+                setRollcallMode(true);
+                renderRollcall(items);
+                wynikiBox.hide();
+                rollWrap.show();
                 lastVotesKey = votesKey;
               });
               return;
@@ -598,50 +1194,65 @@
           const wstrzymuje = wyn.wstrzymuje || 0;
           const suma = za + przeciw + wstrzymuje;
 
-          // Po zamknięciu głosowania, jeśli oddano jakikolwiek głos, pokaż informację o wynikach
-          if (!otwarte && suma > 0) {
-            // Oblicz procenty
-            const zaPct = suma ? Math.round(za / suma * 100) : 0;
-            const przeciwPct = suma ? Math.round(przeciw / suma * 100) : 0;
-            const wstrzymujePct = suma ? Math.round(wstrzymuje / suma * 100) : 0;
-            let html = `<div class="ekran-wyniki-header mb-4">
-              <h1 class="fw-bold text-center mb-2" style="font-size:2.2rem;">Wyniki głosowania</h1>
-              <hr style="margin-bottom:18px;">
-            </div>`;
-            html += `<div class="mb-4">
-              <div class="ekran-wyniki-label">Głosowanie: <span class="fw-normal">${escapeHtml(data.glosowanie_nazwa || '')}</span></div>
-            </div>`;
-            html += `<div class="ekran-wyniki-bar">
-              <div class="ekran-wyniki-label text-success">ZA</div>
-              <div class="progress ekran-wyniki-progbar mb-2">
-                <div class="progress-bar bg-success" role="progressbar" style="width: ${zaPct}%\" aria-valuenow=\"${za}\" aria-valuemin=\"0\" aria-valuemax=\"${suma}\">${za}</div>
+          // Po zamknięciu głosowania pokaż podsumowanie (lista + wykres donut)
+          if (!otwarte) {
+            setRollcallMode(false);
+            const pct = (n) => suma ? ((n * 100) / suma).toFixed(3) : '0.000';
+            const zaPct = pct(za);
+            const przeciwPct = pct(przeciw);
+            const wstrzymujePct = pct(wstrzymuje);
+            let html = `
+              <div class="ekran-vote-summary">
+                <div>
+                  <div class="ekran-vote-subtitle">${escapeHtml('Wyniki głosowania')}</div>
+
+                  <div class="ekran-vote-table">
+                    <div class="ekran-vote-table-head">
+                      <div></div>
+                                          </div>
+
+                    <div class="ekran-vote-valid">
+                      <div class="label">Głosowało:</div>
+                      <div class="value">${suma}</div>
+                    </div>
+
+                    <div class="ekran-vote-row">
+                      <div class="ekran-vote-label yes"><i class="bi bi-hand-thumbs-up-fill"></i> Za</div>
+                      <div class="ekran-vote-percent yes">(${zaPct} %)</div>
+                      <div class="ekran-vote-count yes">${za}</div>
+                    </div>
+
+                    <div class="ekran-vote-row">
+                      <div class="ekran-vote-label no"><i class="bi bi-hand-thumbs-down-fill"></i> Przeciw</div>
+                      <div class="ekran-vote-percent no">(${przeciwPct} %)</div>
+                      <div class="ekran-vote-count no">${przeciw}</div>
+                    </div>
+
+                    <div class="ekran-vote-row">
+                      <div class="ekran-vote-label abstain"><i class="bi bi-circle"></i> Wstrzymuje się</div>
+                      <div class="ekran-vote-percent abstain">(${wstrzymujePct} %)</div>
+                      <div class="ekran-vote-count abstain">${wstrzymuje}</div>
+                    </div>
+
+                    
+                  </div>
+                </div>
+
+                <div class="ekran-vote-donut-wrap">
+                  <div class="ekran-vote-donut" style="--yes:${zaPct}; --no:${przeciwPct}; --abstain:${wstrzymujePct};"></div>
+                </div>
               </div>
-              <span class="ekran-wyniki-liczba text-success">${za}</span>
-              <span class="ekran-wyniki-procent">${zaPct}%</span>
-            </div>`;
-            html += `<div class="ekran-wyniki-bar">
-              <div class="ekran-wyniki-label text-danger">PRZECIW</div>
-              <div class="progress ekran-wyniki-progbar mb-2">
-                <div class="progress-bar bg-danger" role="progressbar" style="width: ${przeciwPct}%\" aria-valuenow=\"${przeciw}\" aria-valuemin=\"0\" aria-valuemax=\"${suma}\">${przeciw}</div>
-              </div>
-              <span class="ekran-wyniki-liczba text-danger">${przeciw}</span>
-              <span class="ekran-wyniki-procent">${przeciwPct}%</span>
-            </div>`;
-            html += `<div class="ekran-wyniki-bar">
-              <div class="ekran-wyniki-label text-warning">WSTRZYMUJE SIĘ</div>
-              <div class="progress ekran-wyniki-progbar mb-2">
-                <div class="progress-bar bg-warning text-dark" role="progressbar" style="width: ${wstrzymujePct}%\" aria-valuenow=\"${wstrzymuje}\" aria-valuemin=\"0\" aria-valuemax=\"${suma}\">${wstrzymuje}</div>
-              </div>
-              <span class="ekran-wyniki-liczba text-warning">${wstrzymuje}</span>
-              <span class="ekran-wyniki-procent">${wstrzymujePct}%</span>
-            </div>`;
+            `;
             $('#ekran-wyniki').html(html).show();
             wynikiBox.show();
             rollWrap.hide();
             lastVotesKey = votesKey;
             return;
           }
+
+          setRollcallMode(false);
         }).fail(function () {
+          setRollcallMode(false);
           // Jeśli coś nie działa z API, nie migaj - tylko schowaj jeśli to zmiana
           const votesKey = 'ERR:' + (data.glosowanie_id || '');
           if (!sameKey(lastVotesKey, votesKey)) {
@@ -653,6 +1264,7 @@
           }
         });
       } else {
+        setRollcallMode(false);
         // brak głosowania
         const votesKey = 'NO_VOTE';
         if (!sameKey(lastVotesKey, votesKey)) {
