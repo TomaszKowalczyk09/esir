@@ -1,7 +1,6 @@
 from django.db import models
 from accounts.models import Uzytkownik
 from django.utils import timezone
-from django.forms import ModelForm
 
 class Kandydat(models.Model):
     imie = models.CharField(max_length=100)
@@ -9,12 +8,12 @@ class Kandydat(models.Model):
     punkt_obrad = models.ForeignKey('PunktObrad', on_delete=models.CASCADE, related_name='kandydaci')
     opis = models.TextField(blank=True)
 
+    class Meta:
+        verbose_name = "Kandydat"
+        verbose_name_plural = "Kandydaci"
+
     def __str__(self):
         return f"{self.nazwisko} {self.imie}"
-from django.db import models
-from accounts.models import Uzytkownik
-from django.utils import timezone
-from django.forms import ModelForm
 
 
 class Sesja(models.Model):
@@ -22,33 +21,33 @@ class Sesja(models.Model):
     data = models.DateTimeField(default=timezone.now)
     opis = models.TextField(blank=True)
     aktywna = models.BooleanField(default=True)
-    jest_usunieta = models.BooleanField(default=False)  # NOWE POLE
-    opublikowana = models.BooleanField(default=False)  # widoczna dla radnych przed startem
+    jest_usunieta = models.BooleanField(default=False)
+    opublikowana = models.BooleanField(default=False)
     przerwa_start = models.DateTimeField(null=True, blank=True)
     przerwa_czas = models.IntegerField(null=True, blank=True, help_text="Czas przerwy w sekundach")
+    jest_zamknieta = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["data"]
+        verbose_name = "Sesja"
+        verbose_name_plural = "Sesje"
+
+    def __str__(self):
+        return self.nazwa
 
     def ustaw_aktywna(self):
         # dezaktywuj wszystkie inne sesje
         Sesja.objects.exclude(id=self.id).update(aktywna=False)
         self.aktywna = True
-        jest_zamknieta = models.BooleanField(default=False)  # czy sesja zakończona
-        jest_usunieta = models.BooleanField(default=False)  # miękkie usunięcie (soft delete)
-
-        def zamknij(self):
-            self.jest_zamknieta = True
-            self.save()
-
-        def usun(self):
-            self.jest_usunieta = True
-            self.save()
-
         self.save()
 
-    def __str__(self):
-        return self.nazwa
+    def zamknij(self):
+        self.jest_zamknieta = True
+        self.save()
 
-    class Meta:
-        ordering = ["data"]
+    def usun(self):
+        self.jest_usunieta = True
+        self.save()
 
 
 class PunktObrad(models.Model):
@@ -60,7 +59,8 @@ class PunktObrad(models.Model):
 
     class Meta:
         ordering = ['numer']
-
+        verbose_name = "Punkt obrad"
+        verbose_name_plural = "Punkty obrad"
 
     @property
     def glosowanie(self):
@@ -73,54 +73,32 @@ class PunktObrad(models.Model):
             return sorted(src, key=lambda g: (g.utworzone, g.id), reverse=True)[0]
         return self.glosowania.order_by("-otwarte", "-utworzone", "-id").first()
 
-
-
     def __str__(self):
         return f"{self.numer}. {self.tytul}"
 
 
 class Glosowanie(models.Model):
-    JAWNOSC_CHOICES = [
-        ("jawne", "Jawne"),
-        ("tajne", "Tajne"),
-    ]
-
-    WIEKSZOSC_CHOICES = [
-        ("zwykla", "Większość zwykła"),
-        ("bezwzgledna", "Większość bezwzględna"),
-    ]
+    JAWNOSC_CHOICES = [("jawne", "Jawne"), ("tajne", "Tajne")]
+    WIEKSZOSC_CHOICES = [("zwykla", "Większość zwykła"), ("bezwzgledna", "Większość bezwzględna")]
+    TYP_CHOICES = [("zwykle", "Zwykłe (za/przeciw/wstrzymuje)"), ("kandydaci", "Imienne na kandydata")]
 
     punkt_obrad = models.ForeignKey(PunktObrad, on_delete=models.CASCADE, related_name='glosowania')
     nazwa = models.CharField(max_length=200)
     otwarte = models.BooleanField(default=False)
     utworzone = models.DateTimeField(auto_now_add=True)
-
-    # typ głosowania: zwykłe (za/przeciw/wstrzymuje) lub imienne na kandydata
-    TYP_CHOICES = [
-        ("zwykle", "Zwykłe (za/przeciw/wstrzymuje)"),
-        ("kandydaci", "Imienne na kandydata"),
-    ]
     typ = models.CharField(max_length=20, choices=TYP_CHOICES, default="zwykle")
-
     jawnosc = models.CharField(max_length=10, choices=JAWNOSC_CHOICES, default="jawne")
     wiekszosc = models.CharField(max_length=15, choices=WIEKSZOSC_CHOICES, default="zwykla")
-    liczba_uprawnionych = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Jeśli puste, system przyjmie liczbę oddanych głosów jako bazę dla większości bezwzględnej.",
-    )
+    liczba_uprawnionych = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Głosowanie"
+        verbose_name_plural = "Głosowania"
 
     def __str__(self):
         return self.nazwa
 
     def wynik_podsumowanie(self):
-        """Zwraca słownik z wynikami oraz informacją czy uchwała/wniosek przeszedł.
-
-        Uwaga: dla większości zwykłej przyjmujemy: ZA > PRZECIW.
-        Dla większości bezwzględnej: ZA > (uprawnieni/2).
-        """
-        from .models import Glos  # uniknięcie importu cyklicznego
-
         za = Glos.objects.filter(glosowanie=self, glos="za").count()
         przeciw = Glos.objects.filter(glosowanie=self, glos="przeciw").count()
         wstrzymuje = Glos.objects.filter(glosowanie=self, glos="wstrzymuje").count()
@@ -129,58 +107,31 @@ class Glosowanie(models.Model):
             przeszedl = za > przeciw
             prog = None
         else:
-            baza = self.liczba_uprawnionych
-            if baza is None:
-                baza = za + przeciw + wstrzymuje
+            baza = self.liczba_uprawnionych or (za + przeciw + wstrzymuje)
             prog = (baza // 2) + 1
             przeszedl = za >= prog
 
-        return {
-            "za": za,
-            "przeciw": przeciw,
-            "wstrzymuje": wstrzymuje,
-            "przeszedl": przeszedl,
-            "prog": prog,
-        }
+        return {"za": za, "przeciw": przeciw, "wstrzymuje": wstrzymuje, "przeszedl": przeszedl, "prog": prog}
 
 
 class Glos(models.Model):
     glosowanie = models.ForeignKey(Glosowanie, on_delete=models.CASCADE)
     uzytkownik = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE)
-    glos = models.CharField(
-        max_length=10,
-        choices=[('za', 'Za'), ('przeciw', 'Przeciw'), ('wstrzymuje', 'Wstrzymuję się')],
-        blank=True,
-        null=True,
-    )
+    glos = models.CharField(max_length=10, choices=[('za', 'Za'), ('przeciw', 'Przeciw'), ('wstrzymuje', 'Wstrzymuję się')], blank=True, null=True)
     kandydat = models.ForeignKey('Kandydat', on_delete=models.CASCADE, blank=True, null=True)
 
     class Meta:
         unique_together = ['glosowanie', 'uzytkownik']
         ordering = ['uzytkownik']
+        verbose_name = "Głos"
+        verbose_name_plural = "Głosy"
 
 
 class Wniosek(models.Model):
-    TYP_CHOICES = [
-        ("wniosek", "Wniosek"),
-        ("zwo_sesji", "Zwołanie sesji"),
-        ("proj_uchwaly", "Projekt uchwały"),
-        ("zapytanie", "Zapytanie"),
-    ]
-
-    punkt_obrad = models.ForeignKey(
-        PunktObrad,
-        on_delete=models.CASCADE,
-        related_name='wnioski',
-        null=True,
-        blank=True,
-        help_text="Jeśli puste, wniosek jest złożony poza sesją.",
-    )
+    TYP_CHOICES = [("wniosek", "Wniosek"), ("zwo_sesji", "Zwołanie sesji"), ("proj_uchwaly", "Projekt uchwały"), ("zapytanie", "Zapytanie")]
+    punkt_obrad = models.ForeignKey(PunktObrad, on_delete=models.CASCADE, related_name='wnioski', null=True, blank=True)
     radny = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE)
-
-    # automatyczna sygnatura, np. W/2026/0012
     sygnatura = models.CharField(max_length=32, unique=True, blank=True)
-
     tresc = models.TextField()
     data = models.DateTimeField(auto_now_add=True)
     zatwierdzony = models.BooleanField(default=False)
@@ -188,39 +139,20 @@ class Wniosek(models.Model):
 
     class Meta:
         ordering = ["-data"]
+        verbose_name = "Wniosek"
+        verbose_name_plural = "Wnioski"
 
     def __str__(self):
         sig = self.sygnatura or "(bez sygnatury)"
         return f"{sig} - {self.radny} - {self.tresc[:50]}"
 
-    def _next_sygnatura(self):
-        year = timezone.localdate().year
-        prefix = f"W/{year}/"
-        last = (
-            Wniosek.objects.filter(sygnatura__startswith=prefix)
-            .order_by("-sygnatura")
-            .values_list("sygnatura", flat=True)
-            .first()
-        )
-        if not last:
-            n = 1
-        else:
-            try:
-                n = int(last.split("/")[-1]) + 1
-            except Exception:
-                n = 1
-        return f"{prefix}{n:04d}"
-
     def save(self, *args, **kwargs):
         if not self.sygnatura:
-            # prosta generacja sygnatury; przy ewentualnym konflikcie dociągamy kolejną
-            for _ in range(20):
-                cand = self._next_sygnatura()
-                if not Wniosek.objects.filter(sygnatura=cand).exists():
-                    self.sygnatura = cand
-                    break
-            else:
-                raise ValueError("Nie udało się wygenerować unikalnej sygnatury wniosku")
+            year = timezone.localdate().year
+            prefix = f"W/{year}/"
+            last = Wniosek.objects.filter(sygnatura__startswith=prefix).order_by("-sygnatura").values_list("sygnatura", flat=True).first()
+            n = (int(last.split("/")[-1]) + 1) if last else 1
+            self.sygnatura = f"{prefix}{n:04d}"
         super().save(*args, **kwargs)
 
 
@@ -233,6 +165,8 @@ class Obecnosc(models.Model):
     class Meta:
         unique_together = ["sesja", "radny"]
         ordering = ["radny__nazwisko", "radny__imie"]
+        verbose_name = "Obecność"
+        verbose_name_plural = "Obecności"
 
     def __str__(self):
         return f"{self.radny} @ {self.sesja} = {'obecny' if self.obecny else 'nieobecny'}"
@@ -241,22 +175,14 @@ class Obecnosc(models.Model):
 class Komisja(models.Model):
     nazwa = models.CharField(max_length=200)
     opis = models.TextField(blank=True)
-    przewodniczacy = models.ForeignKey(
-        Uzytkownik,
-        on_delete=models.PROTECT,
-        related_name="komisje_przewodniczy",
-        limit_choices_to={"rola": "radny"},
-    )
-    czlonkowie = models.ManyToManyField(
-        Uzytkownik,
-        related_name="komisje",
-        blank=True,
-        limit_choices_to={"rola": "radny"},
-    )
+    przewodniczacy = models.ForeignKey(Uzytkownik, on_delete=models.PROTECT, related_name="komisje_przewodniczy", limit_choices_to={"rola": "radny"})
+    czlonkowie = models.ManyToManyField(Uzytkownik, related_name="komisje", blank=True, limit_choices_to={"rola": "radny"})
     aktywna = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["nazwa"]
+        verbose_name = "Komisja"
+        verbose_name_plural = "Komisje"
 
     def __str__(self):
         return self.nazwa
@@ -270,6 +196,8 @@ class KomisjaSesja(models.Model):
 
     class Meta:
         ordering = ["-data"]
+        verbose_name = "Sesja komisji"
+        verbose_name_plural = "Sesje komisji"
 
     def __str__(self):
         return f"{self.komisja.nazwa}: {self.nazwa}"
@@ -284,6 +212,8 @@ class KomisjaPunktObrad(models.Model):
 
     class Meta:
         ordering = ["numer"]
+        verbose_name = "Punkt obrad komisji"
+        verbose_name_plural = "Punkty obrad komisji"
 
     def __str__(self):
         return f"{self.numer}. {self.tytul}"
@@ -294,91 +224,46 @@ class KomisjaPunktObrad(models.Model):
 
 
 class KomisjaGlosowanie(models.Model):
-    JAWNOSC_CHOICES = [
-        ("jawne", "Jawne"),
-        ("tajne", "Tajne"),
-    ]
-
-    WIEKSZOSC_CHOICES = [
-        ("zwykla", "Większość zwykła"),
-        ("bezwzgledna", "Większość bezwzględna"),
-    ]
-
+    JAWNOSC_CHOICES = [("jawne", "Jawne"), ("tajne", "Tajne")]
+    WIEKSZOSC_CHOICES = [("zwykla", "Większość zwykła"), ("bezwzgledna", "Większość bezwzględna")]
     punkt_obrad = models.ForeignKey(KomisjaPunktObrad, on_delete=models.CASCADE, related_name="glosowania")
     nazwa = models.CharField(max_length=200)
     otwarte = models.BooleanField(default=False)
     utworzone = models.DateTimeField(auto_now_add=True)
     jawnosc = models.CharField(max_length=10, choices=JAWNOSC_CHOICES, default="jawne")
     wiekszosc = models.CharField(max_length=15, choices=WIEKSZOSC_CHOICES, default="zwykla")
-    liczba_uprawnionych = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Jeśli puste, system przyjmie liczbę oddanych głosów jako bazę dla większości bezwzględnej.",
-    )
+    liczba_uprawnionych = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["-utworzone"]
+        verbose_name = "Głosowanie komisji"
+        verbose_name_plural = "Głosowania komisji"
 
     def __str__(self):
         return self.nazwa
 
-    def wynik_podsumowanie(self):
-        za = KomisjaGlos.objects.filter(glosowanie=self, glos="za").count()
-        przeciw = KomisjaGlos.objects.filter(glosowanie=self, glos="przeciw").count()
-        wstrzymuje = KomisjaGlos.objects.filter(glosowanie=self, glos="wstrzymuje").count()
-
-        if self.wiekszosc == "zwykla":
-            przeszedl = za > przeciw
-            prog = None
-        else:
-            baza = self.liczba_uprawnionych
-            if baza is None:
-                baza = za + przeciw + wstrzymuje
-            prog = (baza // 2) + 1
-            przeszedl = za >= prog
-
-        return {
-            "za": za,
-            "przeciw": przeciw,
-            "wstrzymuje": wstrzymuje,
-            "przeszedl": przeszedl,
-            "prog": prog,
-        }
-
 
 class KomisjaGlos(models.Model):
-    GLOS_CHOICES = [
-        ("za", "Za"),
-        ("przeciw", "Przeciw"),
-        ("wstrzymuje", "Wstrzymuję się"),
-    ]
-
     glosowanie = models.ForeignKey(KomisjaGlosowanie, on_delete=models.CASCADE, related_name="glosy")
     uzytkownik = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE, related_name="komisja_glosy")
-    glos = models.CharField(max_length=10, choices=GLOS_CHOICES)
+    glos = models.CharField(max_length=10, choices=[("za", "Za"), ("przeciw", "Przeciw"), ("wstrzymuje", "Wstrzymuję się")])
 
     class Meta:
         unique_together = ["glosowanie", "uzytkownik"]
         ordering = ["uzytkownik"]
+        verbose_name = "Głos komisji"
+        verbose_name_plural = "Głosy komisji"
 
 
 class KomisjaWniosek(models.Model):
-    TYP_CHOICES = [
-        ("wniosek", "Wniosek"),
-        ("zapytanie", "Zapytanie"),
-        ("postulat", "Postulat"),
-    ]
-
+    TYP_CHOICES = [("wniosek", "Wniosek"), ("zapytanie", "Zapytanie"), ("postulat", "Postulat")]
     komisja = models.ForeignKey(Komisja, on_delete=models.CASCADE, related_name="wnioski")
     sesja = models.ForeignKey(KomisjaSesja, on_delete=models.SET_NULL, null=True, blank=True)
     punkt_obrad = models.ForeignKey(KomisjaPunktObrad, on_delete=models.SET_NULL, null=True, blank=True)
-
     autor = models.ForeignKey(Uzytkownik, on_delete=models.PROTECT, related_name="komisja_wnioski")
     typ = models.CharField(max_length=20, choices=TYP_CHOICES, default="wniosek")
     tresc = models.TextField()
     data = models.DateTimeField(auto_now_add=True)
-
-    # workflow do "centrali" (rada)
     wyslany_do_rady = models.BooleanField(default=False)
     data_wyslania = models.DateTimeField(null=True, blank=True)
     zatwierdzony_przez_prezydium = models.BooleanField(default=False)
@@ -386,6 +271,8 @@ class KomisjaWniosek(models.Model):
 
     class Meta:
         ordering = ["-data"]
+        verbose_name = "Wniosek komisji"
+        verbose_name_plural = "Wnioski komisji"
 
     def __str__(self):
         return f"{self.get_typ_display()} ({self.komisja})"
