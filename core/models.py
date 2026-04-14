@@ -15,7 +15,6 @@ class Kandydat(models.Model):
     def __str__(self):
         return f"{self.nazwisko} {self.imie}"
 
-
 class Sesja(models.Model):
     nazwa = models.CharField(max_length=200)
     data = models.DateTimeField(default=timezone.now)
@@ -36,7 +35,7 @@ class Sesja(models.Model):
         return self.nazwa
 
     def ustaw_aktywna(self):
-        # dezaktywuj wszystkie inne sesje
+        
         Sesja.objects.exclude(id=self.id).update(aktywna=False)
         self.aktywna = True
         self.save()
@@ -48,7 +47,6 @@ class Sesja(models.Model):
     def usun(self):
         self.jest_usunieta = True
         self.save()
-
 
 class PunktObrad(models.Model):
     sesja = models.ForeignKey(Sesja, on_delete=models.CASCADE, related_name='punkty')
@@ -75,7 +73,6 @@ class PunktObrad(models.Model):
 
     def __str__(self):
         return f"{self.numer}. {self.tytul}"
-
 
 class Glosowanie(models.Model):
     JAWNOSC_CHOICES = [("jawne", "Jawne"), ("tajne", "Tajne")]
@@ -114,7 +111,6 @@ class Glosowanie(models.Model):
 
         return {"za": za, "przeciw": przeciw, "wstrzymuje": wstrzymuje, "przeszedl": przeszedl, "prog": prog}
 
-
 class Glos(models.Model):
     glosowanie = models.ForeignKey(Glosowanie, on_delete=models.CASCADE)
     uzytkownik = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE)
@@ -126,7 +122,6 @@ class Glos(models.Model):
         ordering = ['uzytkownik']
         verbose_name = "Głos"
         verbose_name_plural = "Głosy"
-
 
 class Wniosek(models.Model):
     TYP_CHOICES = [("wniosek", "Wniosek"), ("zwo_sesji", "Zwołanie sesji"), ("proj_uchwaly", "Projekt uchwały"), ("zapytanie", "Zapytanie")]
@@ -156,7 +151,6 @@ class Wniosek(models.Model):
             self.sygnatura = f"{prefix}{n:04d}"
         super().save(*args, **kwargs)
 
-
 class Obecnosc(models.Model):
     sesja = models.ForeignKey(Sesja, on_delete=models.CASCADE, related_name="obecnosci")
     radny = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE, related_name="obecnosci")
@@ -171,7 +165,6 @@ class Obecnosc(models.Model):
 
     def __str__(self):
         return f"{self.radny} @ {self.sesja} = {'obecny' if self.obecny else 'nieobecny'}"
-
 
 class Komisja(models.Model):
     nazwa = models.CharField(max_length=200)
@@ -188,7 +181,6 @@ class Komisja(models.Model):
     def __str__(self):
         return self.nazwa
 
-
 class KomisjaSesja(models.Model):
     komisja = models.ForeignKey(Komisja, on_delete=models.CASCADE, related_name="sesje")
     nazwa = models.CharField(max_length=200)
@@ -202,7 +194,6 @@ class KomisjaSesja(models.Model):
 
     def __str__(self):
         return f"{self.komisja.nazwa}: {self.nazwa}"
-
 
 class KomisjaPunktObrad(models.Model):
     sesja = models.ForeignKey(KomisjaSesja, on_delete=models.CASCADE, related_name="punkty")
@@ -223,7 +214,6 @@ class KomisjaPunktObrad(models.Model):
     def glosowanie(self):
         return self.glosowania.order_by("-otwarte", "-utworzone", "-id").first()
 
-
 class KomisjaGlosowanie(models.Model):
     JAWNOSC_CHOICES = [("jawne", "Jawne"), ("tajne", "Tajne")]
     WIEKSZOSC_CHOICES = [("zwykla", "Większość zwykła"), ("bezwzgledna", "Większość bezwzględna")]
@@ -243,7 +233,6 @@ class KomisjaGlosowanie(models.Model):
     def __str__(self):
         return self.nazwa
 
-
 class KomisjaGlos(models.Model):
     glosowanie = models.ForeignKey(KomisjaGlosowanie, on_delete=models.CASCADE, related_name="glosy")
     uzytkownik = models.ForeignKey(Uzytkownik, on_delete=models.CASCADE, related_name="komisja_glosy")
@@ -254,7 +243,6 @@ class KomisjaGlos(models.Model):
         ordering = ["uzytkownik"]
         verbose_name = "Głos komisji"
         verbose_name_plural = "Głosy komisji"
-
 
 class KomisjaWniosek(models.Model):
     TYP_CHOICES = [("wniosek", "Wniosek"), ("zapytanie", "Zapytanie"), ("postulat", "Postulat")]

@@ -10,9 +10,8 @@ urlpatterns = [
 
 handler404 = custom_404
 
-# --- Static files in development (DEBUG=True) ---
-from django.conf import settings  # noqa: E402
-from django.conf.urls.static import static  # noqa: E402
+from django.conf import settings  
+from django.conf.urls.static import static  
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

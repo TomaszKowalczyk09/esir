@@ -6,7 +6,6 @@
 {% block content %}
 <h3 class="mb-3">Panel radnego</h3>
 
-<!-- Kafelki z najważniejszymi funkcjami -->
 <div class="row g-3 mb-4">
   <div class="col-12 col-md-6 col-xl-3">
     <a href="{% url 'radny' %}" class="text-decoration-none">
@@ -66,7 +65,7 @@
 </div>
 
 {% if sesja %}
-  <!-- Informacje o sesji -->
+  
   <div class="card mb-4 shadow-sm">
     <div class="card-body">
       <div class="d-flex justify-content-between flex-wrap">
@@ -107,7 +106,7 @@
   </div>
 
   <div class="row">
-    <!-- Porządek obrad -->
+    
     <div class="col-md-6 mb-4 order-2 order-md-1">
       <h5 class="mb-3">Porządek obrad</h5>
       {% if punkty %}
@@ -131,7 +130,7 @@
       {% endif %}
     </div>
 
-    <!-- Głosowania radnego -->
+    
     <div class="col-md-6 mb-4 order-1 order-md-2">
       <h5 class="mb-3">Głosowania</h5>
 

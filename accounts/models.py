@@ -2,7 +2,6 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-
 class Uzytkownik(AbstractUser):
     ROLA_WYBOR = [
         ('radny', 'Radny'),
@@ -14,7 +13,7 @@ class Uzytkownik(AbstractUser):
     nazwisko = models.CharField(max_length=50)
     must_change_password = models.BooleanField(default=True)
 
-    # profil
+    
     opis = models.TextField(blank=True, default="")
 
     def save(self, *args, **kwargs):
@@ -24,14 +23,14 @@ class Uzytkownik(AbstractUser):
         na podstawie własnych danych logowania.
         """
         if self.rola == "administrator":
-            # dostęp do panelu admina
+            
             self.is_staff = True
-            # pełne uprawnienia w panelu (bez konieczności ręcznego nadawania permissions)
+            
             self.is_superuser = True
         else:
-            # pozostałe role nie mają automatycznie uprawnień administracyjnych
+            
             self.is_superuser = False
-            # jeśli chcesz, aby np. 'prezydium' też miało dostęp, zmień warunek powyżej
+            
             self.is_staff = False
 
         super().save(*args, **kwargs)

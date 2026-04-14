@@ -3,6 +3,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Klucz jest do zmiany i ma trafić do .env, nie wrzucaj go na GitHuba bo to proszenie się o włamanie.
+# SECRET_KEY = os.getenv('SECRET_KEY')
 SECRET_KEY = 'django-insecure-gn#$q%8p&_1z*!m=5v2f#0m6^f-g7-2*8j-z#_u9y^k+6v9o%3'
 
 DEBUG = False

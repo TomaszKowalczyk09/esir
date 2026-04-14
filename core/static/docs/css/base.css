@@ -1,11 +1,8 @@
 html {
-    /* The nav header is 3.5rem high, plus 20px for the margin-top of the
-       main container. */
+    
     scroll-padding-top: calc(3.5rem + 20px);
 }
 
-/* Replacement for `body { background-attachment: fixed; }`, which has
-   performance issues when scrolling on large displays. See #1394. */
 body::before {
     content: ' ';
     position: fixed;
@@ -119,18 +116,10 @@ footer {
     margin-top: 60px;
 }
 
-/*
- * Side navigation
- *
- * Scrollspy and affixed enhanced navigation to highlight sections and secondary
- * sections of docs content.
- */
-
 .bs-sidebar.affix {
     position: -webkit-sticky;
     position: sticky;
-    /* The nav header is 3.5rem high, plus 20px for the margin-top of the
-       main container. */
+    
     top: calc(3.5rem + 20px);
 }
 
@@ -140,7 +129,6 @@ footer {
     overflow-y: auto;
 }
 
-/* Toggle (vertically flip) sidebar collapse icon */
 .bs-sidebar .navbar-toggler span {
     -moz-transform: scale(1, -1);
     -webkit-transform: scale(1, -1);
@@ -157,7 +145,6 @@ footer {
     transform: scale(1, 1);
 }
 
-/* First level of nav */
 .bs-sidebar > .navbar-collapse > .nav {
     padding-top:    10px;
     padding-bottom: 10px;
@@ -165,7 +152,6 @@ footer {
     width: 100%;
 }
 
-/* All levels of nav */
 .bs-sidebar .nav > li > a {
     display: block;
     padding: 5px 20px;
@@ -361,6 +347,6 @@ details h4, details h5, details h6 {
 }
 
 @media print {
-    /* Remove sidebar when print */
+    
     .col-md-3 { display: none; }
 }
