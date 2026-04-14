@@ -4,25 +4,21 @@ from django.utils.translation import gettext_lazy as _
 
 from .models import Uzytkownik
 
-
 @admin.action(description="Ustaw rolę: radny")
 def action_set_role_radny(modeladmin, request, queryset):
     queryset.update(rola="radny")
-
 
 @admin.action(description="Ustaw rolę: administrator")
 def action_set_role_administrator(modeladmin, request, queryset):
     queryset.update(rola="administrator")
 
-
 @admin.action(description="Ustaw rolę: prezydium")
 def action_set_role_prezydium(modeladmin, request, queryset):
     queryset.update(rola="prezydium")
 
-
 @admin.register(Uzytkownik)
 class UzytkownikAdmin(UserAdmin):
-    # Keep built-in auth admin behavior but expose custom fields
+    
     fieldsets = UserAdmin.fieldsets + (
         (_("Dane e-SIR"), {"fields": ("imie", "nazwisko", "rola", "must_change_password")}),
     )

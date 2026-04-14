@@ -9,7 +9,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 def user_login(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -17,7 +16,7 @@ def user_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            # jeśli trzeba, kierujemy od razu do zmiany hasła
+            
             if getattr(user, "must_change_password", False):
                 return redirect("change_password_first")
             return redirect("panel")
@@ -25,11 +24,9 @@ def user_login(request):
             messages.error(request, "Błędny login lub hasło.")
     return render(request, "core/login.html")
 
-
 def user_logout(request):
     logout(request)
     return redirect("login")
-
 
 @login_required
 def change_password_first(request):
@@ -50,10 +47,9 @@ def change_password_first(request):
         "core/change_password_first.html",
         {
             "form": form,
-            "force_public_layout": True,  # bez menu przy wymuszonej zmianie hasła
+            "force_public_layout": True,  
         },
     )
-
 
 class ProfilForm(forms.ModelForm):
     class Meta:
@@ -64,7 +60,6 @@ class ProfilForm(forms.ModelForm):
         widgets = {
             "opis": forms.Textarea(attrs={"rows": 4, "placeholder": "Krótki opis..."}),
         }
-
 
 @login_required
 def profil_edytuj(request):

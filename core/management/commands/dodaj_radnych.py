@@ -1,5 +1,3 @@
-# core/management/commands/dodaj_radnych.py
-
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 
@@ -8,11 +6,9 @@ from accounts.models import Uzytkownik
 import random
 import string
 
-
 def make_username(imie: str, nazwisko: str) -> str:
-    # slugify -> ascii, lower, replaces spaces etc. Keep dot between parts.
+    
     return f"{slugify(imie)}.{slugify(nazwisko)}"
-
 
 class Command(BaseCommand):
     help = "Dodaje użytkowników DEMO do systemu (bez danych osobowych)"
@@ -40,12 +36,12 @@ class Command(BaseCommand):
         print_passwords = options.get("print_passwords", False)
         count = options.get("count", 15)
 
-        # create demo administrator (session operator)
+        
         admin_username = "demo.administrator"
         admin_defaults = dict(imie="Demo", nazwisko="Administrator", rola="administrator")
         self._create_user(admin_username, admin_defaults, options)
 
-        # KONTA DEMO (bez danych radnych). Prezydium = 1 konto.
+        
         demo_users = [("Demo", "Prezydium", "prezydium")]
         for i in range(1, count + 1):
             demo_users.append(("Demo", f"Radny{i}", "radny"))
@@ -60,7 +56,7 @@ class Command(BaseCommand):
                 skipped.append((imie, nazwisko, username, rola))
                 continue
 
-            # dłuższe hasło, ale nie wypisujemy go domyślnie
+            
             password = "".join(random.choices(string.ascii_letters + string.digits, k=16))
 
             if not dry_run:

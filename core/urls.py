@@ -1,5 +1,5 @@
 from django.urls import path
-from django.views.generic import TemplateView  # Usunięte, niepotrzebne
+from django.views.generic import TemplateView  
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import re_path
@@ -7,25 +7,25 @@ from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
-            # API for clearing the global message
-    # path("docs/", TemplateView.as_view(template_name="core/static/docs/index.html")),  # Usunięte
+            
+    
     path("docs", lambda request: redirect('/docs/index.html')),
     path("docs/", lambda request: redirect('/docs/index.html')),
     re_path(r"^docs/(?P<section>[^/]+)/$", lambda request, section: redirect(f"/docs/{section}/index.html")),
         re_path(r"^docs/(?P<section>[^/]+)/$", lambda request, section: redirect(f"/docs/{section}/index.html")),
             path("api/ekran_komunikat/clear/", views.api_ekran_komunikat_clear, name="api_ekran_komunikat_clear"),
-        # API for AJAX polling of the global message
+        
         path("api/ekran_komunikat/", views.api_ekran_komunikat, name="api_ekran_komunikat"),
-    # Komunikat na ekranie sesji (bez punktu obrad)
+    
     path("ekran/komunikat/", views.ekran_komunikat, name="ekran_komunikat"),
     path("ekran/komunikat/publiczny/", views.ekran_komunikat_publiczny, name="ekran_komunikat_publiczny"),
-    # Przesuwanie punktów obrad (góra/dół)
+    
     path(
         "punkt/<int:punkt_id>/przesun/<str:kierunek>/",
         views.przesun_punkt_obrad,
         name="przesun_punkt_obrad",
     ),
-    # Usuwanie punktu obrad
+    
     path(
         "punkt/<int:punkt_id>/usun/",
         views.usun_punkt_obrad,
@@ -33,16 +33,16 @@ urlpatterns = [
     ),
     path("protokol/wybor/", views.protokol_sesji_wybor, name="protokol_sesji_wybor"),
     path("protokol/pdf/", views.protokol_sesji_pdf_wybor, name="protokol_sesji_pdf_wybor"),
-    # Landing page (public)
+    
     path("", views.landing, name="landing"),
-    # Panel główny (przekierowuje wg roli)
+    
     path("panel/", views.panel, name="panel"),
 
-    # Pomoc
+    
     path("pomoc/", views.pomoc, name="pomoc"),
     path("identyfikator/", views.e_identyfikator, name="e_identyfikator"),
 
-    # PREZYDIUM
+    
     path(
         "prezydium/dashboard/",
         views.prezydium_dashboard,
@@ -53,7 +53,7 @@ urlpatterns = [
         views.prezydium_sesje,
         name="prezydium_sesje",
     ),
-    # Zakładka „Głosowania” prezydium
+    
     path(
         "prezydium/",
         views.prezidium_panel,
@@ -70,7 +70,7 @@ urlpatterns = [
         name="nadchodzace_sesje_prezidium",
     ),
 
-    # PREZYDIUM / ADMIN – radni
+    
     path(
         "prezydium/radni/",
         views.prezydium_uczestnicy,
@@ -82,7 +82,7 @@ urlpatterns = [
         name="prezydium_uczestnik_szczegoly",
     ),
 
-    # Operacje na sesjach
+    
     path("sesje/nowa/", views.sesja_nowa, name="sesja_nowa"),
     path("sesje/<int:sesja_id>/edytuj/", views.sesja_edytuj, name="sesja_edytuj"),
     path(
@@ -101,11 +101,11 @@ urlpatterns = [
         name="usun_sesje",
     ),
 
-    # RADNY
+    
     path("radny/", views.radny, name="radny"),
     path("radny/panel/", views.radny_panel, name="radny_panel"),
 
-    # Głosowania – operacje wspólne
+    
     path(
         "glosowanie/<int:glosowanie_id>/toggle/",
         views.toggle_glosowanie,
@@ -127,9 +127,9 @@ urlpatterns = [
         name="api_lista_glosow_jawne",
     ),
 
-    # Wyniki publiczne
+    
     path("wyniki/", views.wyniki_publiczne, name="wyniki"),
-    # Ekran sesji
+    
     path("sesja/<int:sesja_id>/ekran/", views.sesja_ekran, name="sesja_ekran"),
     path("api/sesja/<int:sesja_id>/aktywny-punkt/", views.api_aktywny_punkt, name="api_aktywny_punkt"),
     path(
@@ -148,17 +148,17 @@ path(
     name="prezydium_agenda",
 ),
 
-    # PROTOKÓŁ SESJI (PDF)
+    
     path("prezydium/protokol/pdf/", views.protokol_sesji_pdf, name="protokol_sesji_pdf"),
 
-    # WNIOSKI
+    
     path("radny/wnioski/", views.wnioski_radny, name="wnioski_radny"),
     path("radny/wnioski/pdf/", views.wnioski_radny_pdf, name="wnioski_radny_pdf"),
     path("wnioski/<int:wniosek_id>/pdf/", views.wniosek_pdf, name="wniosek_pdf"),
     path("prezydium/wnioski/", views.wnioski_prezidium, name="wnioski_prezidium"),
     path("prezydium/wnioski/<int:wniosek_id>/zatwierdz/", views.wniosek_zatwierdz, name="wniosek_zatwierdz"),
 
-    # OBECNOŚĆ / QUORUM
+    
     path("prezydium/obecnosci/", views.obecnosci_prezidium, name="obecnosci_prezidium"),
     path("radny/obecnosc/", views.ustaw_obecnosc, name="ustaw_obecnosc"),
     path(
@@ -167,10 +167,10 @@ path(
         name="obecnosci_toggle_prezidium",
     ),
 
-    # TESTY / reset danych
+    
     path("prezydium/reset/", views.reset_danych_testowych, name="reset_danych_testowych"),
 
-    # KOMISJE
+    
     path("komisje/", views.komisje_moje, name="komisje_moje"),
     path("komisje/utworz/", views.komisja_utworz, name="komisja_utworz"),
     path("komisje/<int:komisja_id>/", views.komisja_szczegoly, name="komisja_szczegoly"),
@@ -182,18 +182,17 @@ path(
     path("prezydium/komisje/skrzynka/", views.komisja_skrzynka_rady, name="komisja_skrzynka_rady"),
     path("prezydium/komisje/wniosek/<int:wniosek_id>/wyslij/", views.komisja_wniosek_wyslij_do_rady, name="komisja_wniosek_wyslij_do_rady"),
 
-    # ADMINISTRATOR – panel sterowania sesją (jedno miejsce)
+    
     path(
         "administrator/sesja/",
         views.admin_sesja_panel,
         name="admin_sesja_panel",
     ),
 
-    # Łatwy dostęp do ekranu sesji
+    
     path("ekran/sesja/", views.sesja_ekran_aktywna, name="sesja_ekran_aktywna"),
     path("ekran/sesja/<int:sesja_id>/", views.sesja_ekran, name="sesja_ekran_alias"),
 ]
 
-# Serwowanie dokumentacji MKDocs jako statycznych plików
 if settings.DEBUG:
     urlpatterns += static("/docs/", document_root=settings.BASE_DIR / "core/static/docs")

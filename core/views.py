@@ -3,10 +3,9 @@ from django.db import models
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
 from .permissions import require_manage_session
-# Panel wyboru sesji do generowania protokołu PDF
+
 from .models import Sesja
 
-# Wyświetlanie komunikatu na ekranie sesji bez punktu obrad
 from django.core.cache import cache
 
 @login_required
@@ -25,13 +24,11 @@ def ekran_komunikat(request):
         komunikat = cache.get("ekran_komunikat_global", "")
     return render(request, "core/ekran_komunikat.html", {"komunikat": komunikat})
 
-# Widok publiczny ekranu komunikatu
 def ekran_komunikat_publiczny(request):
     from django.core.cache import cache
     komunikat = cache.get("ekran_komunikat_global", "")
     return render(request, "core/ekran_komunikat_publiczny.html", {"komunikat": komunikat})
 
-# API endpoint to clear the global message (admin/prezydium only)
 from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -42,14 +39,12 @@ def api_ekran_komunikat_clear(request):
     cache.set("ekran_komunikat_global", "", timeout=None)
     return JsonResponse({"ok": True})
 
-# API endpoint for AJAX polling of the global message
 from django.http import JsonResponse
 @require_http_methods(["GET"])
 def api_ekran_komunikat(request):
     from django.core.cache import cache
     komunikat = cache.get("ekran_komunikat_global", "")
     return JsonResponse({"komunikat": komunikat})
-
 
 def custom_404(request, exception):
     return render(
@@ -62,7 +57,6 @@ def custom_404(request, exception):
         status=404,
     )
 
-# Usuwanie punktu obrad
 @login_required
 @require_POST
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -73,7 +67,6 @@ def usun_punkt_obrad(request, punkt_id):
     messages.success(request, "Punkt obrad został usunięty.")
     return redirect("sesja_edytuj", sesja_id=sesja_id)
 
-# Przesuwanie punktów obrad (góra/dół)
 @login_required
 @require_POST
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -100,7 +93,7 @@ def przesun_punkt_obrad(request, punkt_id, kierunek):
             punkt.numer, nastepny.numer = nastepny.numer, punkt.numer
             punkt.save()
             nastepny.save()
-    # NIE renumeruj punktów po przesunięciu – tylko zamiana numerów!
+    
     from django.urls import reverse
     url = reverse('sesja_edytuj', args=[sesja.id]) + f"#punkt-{punkt.id}"
     return redirect(url)
@@ -111,13 +104,12 @@ def protokol_sesji_wybor(request):
     sesje = Sesja.objects.filter(jest_usunieta=False).order_by('-data')
     return render(request, "core/protokol_sesji_wybor.html", {"sesje": sesje})
 
-# Generowanie PDF dla wybranej sesji
 @login_required
 @require_manage_session(on_fail="forbidden")
 def protokol_sesji_pdf_wybor(request):
     sesja_id = request.GET.get("sesja_id")
     sesja = get_object_or_404(Sesja, id=sesja_id)
-    # poniżej kod jak w protokol_sesji_pdf, ale dla wybranej sesji
+    
     punkty = (
         sesja.punkty
         .prefetch_related("glosowania")
@@ -282,30 +274,22 @@ from .permissions import (
     require_radny_like,
 )
 
-
-# Helpers (role checks)
-
 def _is_prezydium(user):
     return is_prezydium(user)
 
-
 def _is_radny_like(user):
-    # roles that can act as a councillor (can vote / see councillor views)
+    
     return is_radny_like(user)
 
-
 def _can_manage_session(user):
-    # session operator permissions: prezydium + administrator
+    
     return can_manage_session(user)
-
 
 def _is_prezydium_or_admin(user):
     return is_prezydium_or_admin(user)
 
-
 def _can_manage_komisja(user, komisja):
     return getattr(user, "rola", None) == "administrator" or user == komisja.przewodniczacy
-
 
 def _can_view_komisja(user, komisja):
     if getattr(user, "rola", None) in {"administrator", "prezydium"}:
@@ -314,14 +298,12 @@ def _can_view_komisja(user, komisja):
         return True
     return komisja.czlonkowie.filter(id=user.id).exists()
 
-
 def _format_opis_inline(text):
     rendered = escape(text)
     rendered = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", rendered)
     rendered = re.sub(r"\*(.+?)\*", r"<em>\1</em>", rendered)
     rendered = re.sub(r"__(.+?)__", r"<u>\1</u>", rendered)
     return rendered
-
 
 def _format_punkt_opis_html(opis):
     if not opis:
@@ -376,11 +358,9 @@ def _protokol_pdf_margins_mm():
     bottom = float(getattr(settings, "PROTOKOL_PDF_MARGIN_BOTTOM_MM", 20))
     return left, right, top, bottom
 
-
 def _radny_like_qs():
     """Queryset of users who are allowed to vote like councillors (excluding prezydium)."""
     return Uzytkownik.objects.filter(rola__in=["radny", "administrator"])
-
 
 def _uprawnieni_do_glosowania_qs():
     """All users allowed to vote in jawne vote list / quorum.
@@ -388,11 +368,6 @@ def _uprawnieni_do_glosowania_qs():
     In this project it includes councillors (radny + administrator) and prezydium.
     """
     return Uzytkownik.objects.filter(rola__in=["radny", "administrator", "prezydium"])
-
-
-# --------------------------------------------------
-# Wspólny panel startowy
-# --------------------------------------------------
 
 @login_required
 def panel(request):
@@ -408,7 +383,6 @@ def panel(request):
         return redirect("prezydium_agenda")
     return redirect("radny")
 
-
 def landing(request):
     """Public landing page.
 
@@ -421,7 +395,6 @@ def landing(request):
 
     return render(request, "core/landing.html")
 
-
 @login_required
 def pomoc(request):
     """Strona pomocy (FAQ + skróty).
@@ -430,17 +403,11 @@ def pomoc(request):
     """
     return render(request, "core/pomoc.html")
 
-
 @login_required
 @require_radny_like(on_fail="redirect", redirect_to="panel")
 def e_identyfikator(request):
     """Elektroniczny identyfikator użytkownika (radny/prezydium/administrator)."""
     return render(request, "core/e_identyfikator.html")
-
-
-# --------------------------------------------------
-# Widoki PREZYDIUM
-# --------------------------------------------------
 
 @login_required
 @require_prezydium_only(on_fail="redirect", redirect_to="radny")
@@ -466,7 +433,6 @@ def prezydium_dashboard(request):
     }
     return render(request, "core/prezydium_dashboard.html", context)
 
-
 @login_required
 @require_manage_session(on_fail="redirect", redirect_to="radny")
 def prezydium_sesje(request):
@@ -475,7 +441,6 @@ def prezydium_sesje(request):
     """
     sesje = Sesja.objects.all().order_by("-data")
     return render(request, "core/prezydium_sesje.html", {"sesje": sesje})
-
 
 @login_required
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -493,7 +458,6 @@ def sesja_nowa(request):
         form = SesjaCreateForm()
 
     return render(request, "core/sesja_nowa.html", {"form": form})
-
 
 @login_required
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -558,7 +522,7 @@ def sesja_edytuj(request, sesja_id):
             if punkt_form.is_valid():
                 punkt = punkt_form.save(commit=False)
                 punkt.sesja = sesja
-                # Ustal numer nowego punktu jako max + 1
+                
                 max_numer = sesja.punkty.aggregate(max_num=models.Max('numer'))['max_num'] or 0
                 punkt.numer = max_numer + 1
                 punkt.save()
@@ -574,7 +538,7 @@ def sesja_edytuj(request, sesja_id):
                 gl = glosowanie_form.save(commit=False)
                 gl.punkt_obrad = punkt
                 gl.nazwa = punkt.tytul
-                # Automatycznie ustaw jawność na 'tajne' dla głosowań imiennych
+                
                 if gl.typ == "kandydaci":
                     gl.jawnosc = "tajne"
                 gl.save()
@@ -680,7 +644,7 @@ def sesja_edytuj(request, sesja_id):
             if radny_id:
                 radny = get_object_or_404(Uzytkownik, id=radny_id)
                 punkt = glosowanie.punkt_obrad
-                # Avoid get_or_create on non-unique fields to prevent MultipleObjectsReturned.
+                
                 kandydat = Kandydat.objects.filter(
                     punkt_obrad=punkt,
                     imie=radny.imie,
@@ -695,7 +659,7 @@ def sesja_edytuj(request, sesja_id):
                         opis="",
                     )
                     created = True
-                # Add to voting
+                
                 glosowanie.kandydaci.add(kandydat)
                 msg = "Radny" if created else "Kandydat"
                 messages.success(request, f"{msg} {kandydat.nazwisko} {kandydat.imie} został dodany do głosowania.")
@@ -754,12 +718,12 @@ def sesja_edytuj(request, sesja_id):
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
     punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
-    # Automatyczna renumeracja punktów (unikalne, rosnące numery)
+    
     for idx, punkt in enumerate(punkty, start=1):
         if punkt.numer != idx:
             punkt.numer = idx
             punkt.save(update_fields=["numer"])
-    # Ponownie pobierz punkty po renumeracji
+    
     punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
     aktywny_punkt = None
     for punkt in punkty:
@@ -767,7 +731,7 @@ def sesja_edytuj(request, sesja_id):
             aktywny_punkt = punkt
             break
 
-    # Przerwa info for template
+    
     przerwa_trwa = False
     przerwa_pozostalo = 0
     if sesja.przerwa_start and sesja.przerwa_czas:
@@ -776,7 +740,7 @@ def sesja_edytuj(request, sesja_id):
             przerwa_trwa = True
             przerwa_pozostalo = int(sesja.przerwa_czas - elapsed)
         else:
-            # Przerwa zakończona, wyczyść
+            
             sesja.przerwa_start = None
             sesja.przerwa_czas = None
             sesja.save(update_fields=["przerwa_start", "przerwa_czas"])
@@ -801,7 +765,7 @@ def sesja_edytuj(request, sesja_id):
     wymagane_kworum = (len(obecnosci) // 2) + 1 if obecnosci else 0
     kworum_osiagniete = obecnych_count >= wymagane_kworum if obecnosci else False
 
-    # Get list of councillors for candidate voting management
+    
     radni = Uzytkownik.objects.filter(rola__in=["radny", "administrator"]).order_by("nazwisko", "imie")
 
     context = {
@@ -821,7 +785,6 @@ def sesja_edytuj(request, sesja_id):
     }
     return render(request, "core/sesja_edytuj.html", context)
 
-
 @login_required
 @require_POST
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -836,7 +799,6 @@ def ustaw_sesje_aktywna(request, sesja_id):
     messages.success(request, "Sesja została ustawiona jako aktywna.")
     return redirect("prezydium_sesje")
 
-
 @login_required
 @require_POST
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -847,7 +809,6 @@ def dezaktywuj_sesje(request, sesja_id):
     messages.success(request, "Sesja została dezaktywowana.")
     return redirect("prezydium_sesje")
 
-
 @login_required
 @require_POST
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -856,7 +817,6 @@ def usun_sesje(request, sesja_id):
     sesja.delete()
     messages.success(request, "Sesja została usunięta.")
     return redirect("prezydium_sesje")
-
 
 @login_required
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -883,7 +843,6 @@ def porzadek_obrad_prezidium(request):
         {"sesja": sesja, "punkt_form": form},
     )
 
-
 @login_required
 @require_manage_session(on_fail="redirect", redirect_to="radny")
 def prezidium_panel(request):
@@ -894,7 +853,6 @@ def prezidium_panel(request):
     sesje = Sesja.objects.all().prefetch_related("punkty__glosowania")
     return render(request, "core/prezidium.html", {"sesje": sesje})
 
-
 @login_required
 @require_manage_session(on_fail="redirect", redirect_to="radny")
 def nadchodzace_sesje_prezidium(request):
@@ -904,7 +862,6 @@ def nadchodzace_sesje_prezidium(request):
     """
     sesje = Sesja.objects.all().order_by("data")
     return render(request, "core/nadchodzace_sesje_prezidium.html", {"sesje": sesje})
-
 
 @login_required
 @require_prezydium_or_admin(on_fail="forbidden")
@@ -919,13 +876,12 @@ def prezydium_uczestnicy(request):
     radni = _uprawnieni_do_glosowania_qs().order_by("nazwisko", "imie")
     return render(request, "core/prezydium_uczestnicy.html", {"radni": radni})
 
-
 @login_required
 @require_prezydium_or_admin(on_fail="forbidden")
 def prezydium_uczestnik_szczegoly(request, user_id: int):
     """Szczegóły wybranego uczestnika (dla prezydium i administratorów)."""
-    # Dopuszczamy podgląd także prezydium i administratorów,
-    # bo są częścią listy i mają status „radny” w sensie uprawnień do głosowania.
+    
+    
     radny = get_object_or_404(
         Uzytkownik,
         id=user_id,
@@ -934,18 +890,12 @@ def prezydium_uczestnik_szczegoly(request, user_id: int):
 
     return render(request, "core/prezydium_uczestnik_szczegoly.html", {"radny": radny})
 
-
-# --------------------------------------------------
-# Widoki RADNEGO
-# --------------------------------------------------
-
 @login_required
 def radny_panel(request):
     """
     Panel radnego – alias na radny (dla spójności z panelem).
     """
     return redirect("radny")
-
 
 @login_required
 @require_radny_like(on_fail="redirect", redirect_to="prezydium_dashboard")
@@ -1000,11 +950,6 @@ def radny(request):
     }
     return render(request, "core/radny.html", context)
 
-
-# --------------------------------------------------
-# Operacje na głosowaniach
-# --------------------------------------------------
-
 @login_required
 @require_http_methods(["GET", "POST"])
 @require_manage_session(on_fail="json")
@@ -1019,7 +964,6 @@ def toggle_glosowanie(request, glosowanie_id):
     glosowanie.save(update_fields=["otwarte"])
     return JsonResponse({"otwarte": glosowanie.otwarte})
 
-
 @require_http_methods(["POST"])
 @login_required
 def oddaj_glos(request, glosowanie_id):
@@ -1033,7 +977,7 @@ def oddaj_glos(request, glosowanie_id):
     def is_ajax(req):
         return req.headers.get("x-requested-with") == "XMLHttpRequest"
 
-    # Uprawnieni do oddania głosu (radny + administrator + prezydium)
+    
     if getattr(request.user, "rola", None) not in {"radny", "administrator", "prezydium"}:
         if is_ajax(request):
             return JsonResponse({"error": "Brak uprawnień do głosowania"}, status=403)
@@ -1084,7 +1028,6 @@ def oddaj_glos(request, glosowanie_id):
     messages.success(request, "Głos został zapisany.")
     return redirect("panel")
 
-
 def api_wyniki(request, glosowanie_id):
     """
     API z podsumowaniem wyników głosowania (Za / Przeciw / Wstrzymuję).
@@ -1093,7 +1036,7 @@ def api_wyniki(request, glosowanie_id):
     """
     glosowanie = get_object_or_404(Glosowanie, id=glosowanie_id)
 
-    # Tajne: w trakcie nie ujawniamy wyników szczegółowych
+    
     if (glosowanie.jawnosc == "tajne" and glosowanie.otwarte and glosowanie.typ != "kandydaci"):
         total = Glos.objects.filter(glosowanie=glosowanie).count()
         return JsonResponse({
@@ -1104,7 +1047,7 @@ def api_wyniki(request, glosowanie_id):
         })
 
     if glosowanie.typ == "kandydaci":
-        # Use candidates assigned to this specific voting, or fall back to agenda point candidates
+        
         if glosowanie.kandydaci.exists():
             kandydaci = glosowanie.kandydaci.all().order_by("nazwisko", "imie")
         else:
@@ -1151,7 +1094,6 @@ def api_wyniki(request, glosowanie_id):
         "prog": podsumowanie["prog"],
     })
 
-
 @require_GET
 def api_lista_glosow_jawne(request, glosowanie_id):
     """API: lista głosów imiennych dla głosowania jawnego.
@@ -1188,11 +1130,6 @@ def api_lista_glosow_jawne(request, glosowanie_id):
         "items": items,
     })
 
-
-# --------------------------------------------------
-# Widok wyników publicznych
-# --------------------------------------------------
-
 def wyniki_publiczne(request, sesja_id=None):
     """
     Publiczny ekran wyników – pokazuje wszystkie głosowania w aktywnej sesji.
@@ -1207,7 +1144,6 @@ def wyniki_publiczne(request, sesja_id=None):
         punkty = []
 
     return render(request, "core/wyniki.html", {"punkty": punkty})
-
 
 @login_required
 def sesja_ekran(request, sesja_id):
@@ -1238,7 +1174,6 @@ def sesja_ekran(request, sesja_id):
         "przerwa_pozostalo": przerwa_pozostalo,
     })
 
-
 @login_required
 def sesja_ekran_aktywna(request):
     """Łatwy entrypoint do ekranu sesji.
@@ -1255,7 +1190,6 @@ def sesja_ekran_aktywna(request):
         return redirect("panel")
 
     return redirect("sesja_ekran", sesja_id=sesja.id)
-
 
 @require_GET
 def api_aktywny_punkt(request, sesja_id):
@@ -1288,7 +1222,7 @@ def api_aktywny_punkt(request, sesja_id):
 
     if glosowanie:
         if glosowanie.typ == "kandydaci":
-            # Wyniki głosowania na kandydatów (bez informacji kto głosował)
+            
             from .models import Kandydat
             kandydaci = punkt.kandydaci.all()
             wyniki_kandydaci = []
@@ -1321,7 +1255,6 @@ def api_aktywny_punkt(request, sesja_id):
 
     return JsonResponse(data)
 
-
 @login_required
 @require_POST
 @require_manage_session(on_fail="redirect", redirect_to="radny")
@@ -1340,7 +1273,6 @@ def ustaw_punkt_aktywny(request, punkt_id):
         return redirect(referer)
     return redirect("sesja_edytuj", sesja_id=punkt.sesja.id)
 
-
 @login_required
 @require_manage_session(on_fail="redirect", redirect_to="radny")
 def prezydium_agenda(request):
@@ -1358,7 +1290,6 @@ def prezydium_agenda(request):
         "punkty": punkty,
     })
 
-
 @login_required
 def admin_sesja_panel(request):
     """Panel sterowania sesją dla administratora.
@@ -1371,13 +1302,8 @@ def admin_sesja_panel(request):
     """
     if getattr(request.user, "rola", None) != "administrator":
         return redirect("panel")
-    # współdzielony ekran z prezydium (render ten sam template)
+    
     return prezydium_agenda(request)
-
-
-# --------------------------------------------------
-# Wnioski
-# --------------------------------------------------
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -1401,7 +1327,7 @@ def wnioski_radny(request):
         if form.is_valid():
             wniosek = form.save(commit=False)
 
-            # jeśli użytkownik zaznaczy "poza sesją" lub nie ma aktywnego punktu
+            
             poza_sesja = (request.POST.get("poza_sesja") in ["1", "true", "True", "on"]) \
                          or (punkt is None)
             wniosek.punkt_obrad = None if poza_sesja else punkt
@@ -1431,7 +1357,6 @@ def wnioski_radny(request):
         },
     )
 
-
 @login_required
 @require_http_methods(["GET"])
 @require_prezydium_only(on_fail="redirect", redirect_to="radny")
@@ -1447,7 +1372,7 @@ def wnioski_prezidium(request):
 
     qs = Wniosek.objects.filter(punkt_obrad__sesja=sesja).select_related("punkt_obrad", "radny")
     if punkt:
-        # domyślnie filtruj do aktywnego punktu, jeśli istnieje
+        
         qs = qs.filter(punkt_obrad=punkt)
 
     wnioski = qs.order_by("zatwierdzony", "-data")
@@ -1462,7 +1387,6 @@ def wnioski_prezidium(request):
         },
     )
 
-
 @login_required
 @require_POST
 @require_prezydium_only(on_fail="forbidden")
@@ -1473,7 +1397,6 @@ def wniosek_zatwierdz(request, wniosek_id):
     wniosek.save(update_fields=["zatwierdzony"])
 
     return redirect("wnioski_prezidium")
-
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -1491,7 +1414,7 @@ def reset_danych_testowych(request):
             messages.error(request, "Aby wykonać reset wpisz dokładnie: USUN WSZYSTKO")
             return redirect("reset_danych_testowych")
 
-        # kasuj od najniższych zależności
+        
         Glos.objects.all().delete()
         Wniosek.objects.all().delete()
         Glosowanie.objects.all().delete()
@@ -1503,14 +1426,13 @@ def reset_danych_testowych(request):
 
     return render(request, "core/reset_danych_testowych.html")
 
-
 @login_required
 @require_http_methods(["GET"])
 @require_manage_session(on_fail="redirect", redirect_to="radny")
 def obecnosci_prezidium(request):
     """Panel prezydium do sprawdzania obecności i quorum w aktywnej sesji."""
     sesja = Sesja.objects.filter(aktywna=True).first()
-    # Uprawnieni: radni + administrator + prezydium
+    
     uprawnieni_qs = _uprawnieni_do_glosowania_qs().order_by("rola", "nazwisko", "imie")
     radni = uprawnieni_qs
 
@@ -1537,7 +1459,6 @@ def obecnosci_prezidium(request):
         },
     )
 
-
 @login_required
 @require_POST
 @require_radny_like(on_fail="redirect", redirect_to="prezydium_dashboard")
@@ -1555,7 +1476,7 @@ def ustaw_obecnosc(request):
 
     from .models import Obecnosc
 
-    # jeśli już zgłoszono obecność/nieobecność, blokujemy zmianę przez radnego
+    
     if Obecnosc.objects.filter(sesja=sesja, radny=request.user).exists():
         messages.warning(request, "Status obecności został już zgłoszony. Zmiany może wprowadzić tylko prezydium.")
         return redirect("radny")
@@ -1575,7 +1496,6 @@ def ustaw_obecnosc(request):
         messages.info(request, "Zgłoszono nieobecność.")
 
     return redirect("radny")
-
 
 @login_required
 @require_POST
@@ -1604,11 +1524,6 @@ def obecnosci_toggle_prezidium(request, sesja_id, radny_id):
         "jest_quorum": obecni >= quorum,
     })
 
-
-# --------------------------------------------------
-# Widoki KOMISJI
-# --------------------------------------------------
-
 @login_required
 @require_radny_like(on_fail="redirect", redirect_to="panel")
 def komisje_moje(request):
@@ -1628,7 +1543,6 @@ def komisje_moje(request):
             "radni": Uzytkownik.objects.filter(rola="radny").order_by("nazwisko", "imie"),
         },
     )
-
 
 @login_required
 @require_POST
@@ -1653,7 +1567,6 @@ def komisja_utworz(request):
     messages.success(request, "Komisja została utworzona.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
-
 @login_required
 def komisja_szczegoly(request, komisja_id):
     komisja = get_object_or_404(Komisja, id=komisja_id)
@@ -1677,7 +1590,6 @@ def komisja_szczegoly(request, komisja_id):
             "can_manage_komisja": _can_manage_komisja(request.user, komisja),
         },
     )
-
 
 @login_required
 @require_POST
@@ -1712,7 +1624,6 @@ def komisja_dodaj_sesje(request, komisja_id):
     messages.success(request, "Dodano sesję komisji.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
-
 @login_required
 @require_POST
 @require_radny_like(on_fail="forbidden")
@@ -1731,7 +1642,6 @@ def komisja_dodaj_czlonka(request, komisja_id):
     messages.success(request, "Dodano członka komisji.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
-
 @login_required
 @require_POST
 @require_radny_like(on_fail="forbidden")
@@ -1748,7 +1658,6 @@ def komisja_usun_czlonka(request, komisja_id, user_id):
     komisja.czlonkowie.remove(radny)
     messages.success(request, "Usunięto członka komisji.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
-
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -1920,7 +1829,6 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
         },
     )
 
-
 @login_required
 @require_http_methods(["GET", "POST"])
 def komisja_wnioski(request, komisja_id):
@@ -1943,14 +1851,12 @@ def komisja_wnioski(request, komisja_id):
     wnioski = komisja.wnioski.select_related("autor").all()
     return render(request, "core/komisja_wnioski.html", {"komisja": komisja, "form": form, "wnioski": wnioski})
 
-
 @login_required
 @require_prezydium_only(on_fail="forbidden")
 def komisja_skrzynka_rady(request):
     """Skrzynka prezydium: wnioski komisji do zatwierdzenia/wysłania do rady."""
     qs = KomisjaWniosek.objects.select_related("komisja", "autor").all()
     return render(request, "core/komisja_skrzynka_rady.html", {"wnioski": qs})
-
 
 @login_required
 @require_POST
@@ -1965,7 +1871,6 @@ def komisja_wniosek_wyslij_do_rady(request, wniosek_id):
 
     messages.success(request, "Wniosek komisji został wysłany do rady.")
     return redirect("komisja_skrzynka_rady")
-
 
 @login_required
 @require_GET
@@ -1982,7 +1887,6 @@ def wnioski_radny_pdf(request):
         wnioski=list(wnioski),
         filename="wnioski_moje.pdf",
     )
-
 
 @login_required
 @require_GET
@@ -2007,7 +1911,6 @@ def wniosek_pdf(request, wniosek_id):
         filename=f"wniosek_{safe_sig}.pdf",
     )
 
-
 def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
     """Generuje PDF dla listy wniosków. Wykorzystuje ReportLab."""
     from io import BytesIO
@@ -2015,7 +1918,7 @@ def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
 
-    # fonty z obsługą polskich znaków (TTF)
+    
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
@@ -2023,7 +1926,7 @@ def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    # Rejestracja fontu (jeśli plik istnieje)
+    
     font_regular = "Helvetica"
     font_bold = "Helvetica-Bold"
     try:
@@ -2039,7 +1942,7 @@ def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
             pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", font_bold_path))
             font_bold = "DejaVuSans-Bold"
     except Exception:
-        # fallback do Helvetica (bez PL znaków) jeśli coś pójdzie nie tak
+        
         pass
 
     y = height - 20 * mm
@@ -2074,7 +1977,7 @@ def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
             c.drawString(20 * mm, y, "Poza sesją")
             y -= 6 * mm
 
-        # treść (proste łamanie wierszy)
+        
         c.setFont(font_regular, 10)
         max_chars = 110
         text = (w.tresc or "").replace("\r\n", "\n").replace("\r", "\n")
@@ -2111,7 +2014,6 @@ def _wnioski_pdf_response(*, title: str, wnioski: list[Wniosek], filename: str):
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
 
-
 @login_required
 @require_GET
 @require_manage_session(on_fail="forbidden")
@@ -2146,7 +2048,7 @@ def protokol_sesji_pdf(request):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    # fonty PL (jak w _wnioski_pdf_response)
+    
     font_regular = "Helvetica"
     font_bold = "Helvetica-Bold"
     try:
@@ -2214,9 +2116,9 @@ def protokol_sesji_pdf(request):
                 if not para:
                     y -= 3 * mm
                     continue
-                # Łamanie linii na podstawie szerokości
+                
                 while para:
-                    # Oblicz ile znaków zmieści się w usable_width
+                    
                     max_chars = len(para)
                     for i in range(1, len(para)+1):
                         if c.stringWidth(para[:i], font_regular, 9) > usable_width - 2 * mm:
@@ -2240,7 +2142,7 @@ def protokol_sesji_pdf(request):
             r = gl.wynik_podsumowanie()
             c.setFont(font_regular, 9)
             meta = f"Głosowanie: {gl.nazwa} | Jawność: {gl.get_jawnosc_display()} | Większość: {gl.get_wiekszosc_display()}"
-            # Łamanie linii meta jeśli za długa
+            
             meta_lines = []
             meta_text = meta
             while meta_text:
@@ -2260,7 +2162,7 @@ def protokol_sesji_pdf(request):
             if r.get("prog"):
                 wynik += f"  |  Próg: {r['prog']}"
             wynik += f"  |  Wynik: {'PRZESZŁO' if r['przeszedl'] else 'NIE PRZESZŁO'}"
-            # Łamanie linii wynik jeśli za długa
+            
             wynik_lines = []
             wynik_text = wynik
             while wynik_text:
