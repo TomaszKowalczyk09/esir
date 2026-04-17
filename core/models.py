@@ -194,6 +194,13 @@ class KomisjaSesja(models.Model):
     nazwa = models.CharField(max_length=200)
     data = models.DateTimeField(default=timezone.now)
     aktywna = models.BooleanField(default=True)
+    aktywny_punkt = models.ForeignKey(
+        "KomisjaPunktObrad",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
 
     class Meta:
         ordering = ["-data"]

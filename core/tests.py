@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Uzytkownik
-from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos, Komisja, KomisjaSesja, KomisjaWniosek, KomisjaPunktObrad, KomisjaGlosowanie
+from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos, Komisja, KomisjaSesja, KomisjaWniosek, KomisjaPunktObrad, KomisjaGlosowanie, KomisjaGlos
 
 
 class AuthorizationMatrixTests(TestCase):
@@ -538,6 +538,17 @@ class KomisjaSessionEditingTests(TestCase):
 		)
 		self.assertEqual(response.status_code, 403)
 
+	def test_chair_can_add_point_without_numer_in_post(self):
+		self.client.force_login(self.chair)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{"dodaj_punkt": "1", "tytul": "Nowy punkt", "opis": "Opis"},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		punkt = KomisjaPunktObrad.objects.get(sesja=self.sesja, tytul="Nowy punkt")
+		self.assertEqual(punkt.numer, 1)
+
 	def test_chair_cannot_edit_other_committee_session(self):
 		self.client.force_login(self.chair)
 		response = self.client.post(
@@ -545,3 +556,137 @@ class KomisjaSessionEditingTests(TestCase):
 			{"dodaj_punkt": "1", "numer": 1, "tytul": "Niedozwolone", "opis": "X"},
 		)
 		self.assertEqual(response.status_code, 403)
+
+	def test_active_point_is_persisted_on_komisja_session(self):
+		self.client.force_login(self.chair)
+		punkt = KomisjaPunktObrad.objects.create(
+			sesja=self.sesja,
+			numer=1,
+			tytul="Punkt aktywny",
+		)
+
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{"ustaw_punkt_aktywny": "1", "punkt_id": str(punkt.id)},
+		)
+		self.assertEqual(response.status_code, 302)
+
+		self.sesja.refresh_from_db()
+		punkt.refresh_from_db()
+		self.assertEqual(self.sesja.aktywny_punkt_id, punkt.id)
+		self.assertTrue(punkt.aktywny)
+
+		api_response = self.client.get(reverse("api_komisja_aktywny_punkt", args=[self.sesja.id]))
+		self.assertEqual(api_response.status_code, 200)
+		self.assertEqual(api_response.json().get("numer"), 1)
+		self.assertEqual(api_response.json().get("tytul"), "Punkt aktywny")
+
+
+class KomisjaVotingPermissionsTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.chair = Uzytkownik.objects.create_user(
+			username="chair_vote_kom",
+			password="test12345",
+			rola="radny",
+			imie="Karol",
+			nazwisko="Chair",
+		)
+		cls.member = Uzytkownik.objects.create_user(
+			username="member_vote_kom",
+			password="test12345",
+			rola="radny",
+			imie="Maja",
+			nazwisko="Member",
+		)
+		cls.outsider = Uzytkownik.objects.create_user(
+			username="outsider_vote_kom",
+			password="test12345",
+			rola="radny",
+			imie="Ola",
+			nazwisko="Outside",
+		)
+		cls.admin = Uzytkownik.objects.create_user(
+			username="admin_vote_kom",
+			password="test12345",
+			rola="administrator",
+			imie="Ada",
+			nazwisko="Admin",
+		)
+
+		cls.komisja = Komisja.objects.create(
+			nazwa="Komisja Budzetu",
+			przewodniczacy=cls.chair,
+		)
+		cls.komisja.czlonkowie.add(cls.chair, cls.member)
+		cls.sesja = KomisjaSesja.objects.create(
+			komisja=cls.komisja,
+			nazwa="Posiedzenie Budzetu",
+			data=timezone.now(),
+		)
+		cls.punkt = KomisjaPunktObrad.objects.create(
+			sesja=cls.sesja,
+			numer=1,
+			tytul="Plan finansowy",
+			aktywny=True,
+		)
+		cls.glosowanie = KomisjaGlosowanie.objects.create(
+			punkt_obrad=cls.punkt,
+			nazwa="Głosowanie budżetowe",
+			otwarte=True,
+			jawnosc="jawne",
+		)
+
+	def test_member_can_vote_in_committee(self):
+		self.client.force_login(self.member)
+		response = self.client.post(
+			reverse("komisja_oddaj_glos", args=[self.glosowanie.id]),
+			{"glos": "za"},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertTrue(
+			KomisjaGlos.objects.filter(
+				glosowanie=self.glosowanie,
+				uzytkownik=self.member,
+				glos="za",
+			).exists()
+		)
+
+	def test_outsider_cannot_vote_in_committee(self):
+		self.client.force_login(self.outsider)
+		response = self.client.post(
+			reverse("komisja_oddaj_glos", args=[self.glosowanie.id]),
+			{"glos": "za"},
+		)
+
+		self.assertEqual(response.status_code, 403)
+		self.assertFalse(
+			KomisjaGlos.objects.filter(
+				glosowanie=self.glosowanie,
+				uzytkownik=self.outsider,
+			).exists()
+		)
+
+	def test_admin_cannot_vote_if_not_member(self):
+		self.client.force_login(self.admin)
+		response = self.client.post(
+			reverse("komisja_oddaj_glos", args=[self.glosowanie.id]),
+			{"glos": "przeciw"},
+		)
+
+		self.assertEqual(response.status_code, 403)
+		self.assertFalse(
+			KomisjaGlos.objects.filter(
+				glosowanie=self.glosowanie,
+				uzytkownik=self.admin,
+			).exists()
+		)
+
+	def test_chair_can_toggle_committee_voting(self):
+		self.client.force_login(self.chair)
+		response = self.client.post(reverse("komisja_toggle_glosowanie", args=[self.glosowanie.id]))
+
+		self.assertEqual(response.status_code, 302)
+		self.glosowanie.refresh_from_db()
+		self.assertFalse(self.glosowanie.otwarte)

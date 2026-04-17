@@ -107,7 +107,7 @@ class KomisjaSesjaForm(forms.ModelForm):
 class KomisjaPunktForm(forms.ModelForm):
     class Meta:
         model = KomisjaPunktObrad
-        fields = ["numer", "tytul", "opis"]
+        fields = ["tytul", "opis"]
 
 
 class KomisjaWniosekForm(forms.ModelForm):

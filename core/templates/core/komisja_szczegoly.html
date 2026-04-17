@@ -97,11 +97,19 @@
             <div class="fw-semibold">{{ s.nazwa }}</div>
             <div class="small text-muted">{{ s.data }}</div>
           </div>
-          {% if can_manage_komisja %}
-            <a href="{% url 'komisja_sesja_edytuj' komisja.id s.id %}" class="btn btn-sm btn-outline-primary">
-              Edytuj sesję
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'komisja_sesja_glosowania' komisja.id s.id %}" class="btn btn-sm btn-outline-success">
+              Głosowania członków
             </a>
-          {% endif %}
+            <a href="{% url 'komisja_sesja_ekran' komisja.id s.id %}" class="btn btn-sm btn-outline-dark">
+              Ekran komisji
+            </a>
+            {% if can_manage_komisja %}
+              <a href="{% url 'komisja_sesja_edytuj' komisja.id s.id %}" class="btn btn-sm btn-outline-primary">
+                Edytuj sesję
+              </a>
+            {% endif %}
+          </div>
         </div>
       </div>
     {% endfor %}

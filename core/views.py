@@ -255,6 +255,7 @@ def protokol_sesji_pdf_wybor(request):
     resp["Expires"] = "0"
     return resp
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from .models import Kandydat
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -266,7 +267,7 @@ from datetime import datetime, date, time
 import re
 from django.utils.html import escape
 
-from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek, KomisjaGlosowanie
+from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek, KomisjaGlosowanie, KomisjaGlos
 from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm, KomisjaGlosowanieForm
 from accounts.models import Uzytkownik
 from .permissions import (
@@ -310,6 +311,14 @@ def _can_manage_komisja(user, komisja):
 def _can_view_komisja(user, komisja):
     if getattr(user, "rola", None) in {"administrator", "prezydium"}:
         return True
+    if user == komisja.przewodniczacy:
+        return True
+    return komisja.czlonkowie.filter(id=user.id).exists()
+
+
+def _is_komisja_member(user, komisja):
+    if not getattr(user, "is_authenticated", False):
+        return False
     if user == komisja.przewodniczacy:
         return True
     return komisja.czlonkowie.filter(id=user.id).exists()
@@ -1236,6 +1245,9 @@ def sesja_ekran(request, sesja_id):
         "is_admin": is_admin,
         "przerwa_trwa": przerwa_trwa,
         "przerwa_pozostalo": przerwa_pozostalo,
+        "api_aktywny_punkt_url": reverse("api_aktywny_punkt", args=[sesja.id]),
+        "api_wyniki_prefix": "/api/wyniki/",
+        "api_glosy_jawne_prefix": "/api/glosy-jawne/",
     })
 
 
@@ -1796,6 +1808,7 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
                 punkt.save()
                 messages.success(request, "Punkt obrad został dodany.")
                 return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+            messages.error(request, "Nie udało się dodać punktu. Uzupełnij wymagane pola.")
 
         if "zapisz_punkt" in request.POST:
             punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
@@ -1810,6 +1823,9 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
 
         if "usun_punkt" in request.POST:
             punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+            if sesja.aktywny_punkt_id == punkt.id:
+                sesja.aktywny_punkt = None
+                sesja.save(update_fields=["aktywny_punkt"])
             punkt.delete()
             messages.success(request, "Punkt obrad został usunięty.")
             return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
@@ -1819,10 +1835,14 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
             if punkt.aktywny:
                 punkt.aktywny = False
                 punkt.save(update_fields=["aktywny"])
+                sesja.aktywny_punkt = None
+                sesja.save(update_fields=["aktywny_punkt"])
             else:
                 sesja.punkty.update(aktywny=False)
                 punkt.aktywny = True
                 punkt.save(update_fields=["aktywny"])
+                sesja.aktywny_punkt = punkt
+                sesja.save(update_fields=["aktywny_punkt"])
             return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
 
         if "przesun_punkt" in request.POST:
@@ -1919,6 +1939,270 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
             "glosowanie_form": glosowanie_form,
         },
     )
+
+
+@login_required
+@require_http_methods(["GET"])
+@require_radny_like(on_fail="forbidden")
+def komisja_sesja_glosowania(request, komisja_id, sesja_id):
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    sesja = get_object_or_404(KomisjaSesja, id=sesja_id, komisja=komisja)
+
+    if not _can_view_komisja(request.user, komisja):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    glosowania = (
+        KomisjaGlosowanie.objects.filter(
+            punkt_obrad__sesja=sesja,
+            otwarte=True,
+        )
+        .select_related("punkt_obrad")
+        .order_by("punkt_obrad__numer")
+    )
+    oddane_glosy_ids = list(
+        KomisjaGlos.objects.filter(
+            uzytkownik=request.user,
+            glosowanie__in=glosowania,
+        ).values_list("glosowanie_id", flat=True)
+    )
+
+    return render(
+        request,
+        "core/komisja_glosowania.html",
+        {
+            "komisja": komisja,
+            "sesja": sesja,
+            "glosowania": glosowania,
+            "oddane_glosy_ids": oddane_glosy_ids,
+            "can_vote": _is_komisja_member(request.user, komisja),
+        },
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+@require_radny_like(on_fail="forbidden")
+def komisja_toggle_glosowanie(request, glosowanie_id):
+    glosowanie = get_object_or_404(
+        KomisjaGlosowanie.objects.select_related("punkt_obrad__sesja__komisja"),
+        id=glosowanie_id,
+    )
+    komisja = glosowanie.punkt_obrad.sesja.komisja
+
+    if not _can_manage_komisja(request.user, komisja):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    glosowanie.otwarte = not glosowanie.otwarte
+    glosowanie.save(update_fields=["otwarte"])
+
+    return redirect(
+        "komisja_sesja_edytuj",
+        komisja_id=komisja.id,
+        sesja_id=glosowanie.punkt_obrad.sesja.id,
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+@require_radny_like(on_fail="forbidden")
+def komisja_oddaj_glos(request, glosowanie_id):
+    glosowanie = get_object_or_404(
+        KomisjaGlosowanie.objects.select_related("punkt_obrad__sesja__komisja"),
+        id=glosowanie_id,
+    )
+    komisja = glosowanie.punkt_obrad.sesja.komisja
+
+    def is_ajax(req):
+        return req.headers.get("x-requested-with") == "XMLHttpRequest"
+
+    if not _is_komisja_member(request.user, komisja):
+        if is_ajax(request):
+            return JsonResponse({"error": "Głosować mogą tylko członkowie komisji"}, status=403)
+        return HttpResponseForbidden("Głosować mogą tylko członkowie komisji")
+
+    if not glosowanie.otwarte:
+        if is_ajax(request):
+            return JsonResponse({"error": "Głosowanie zamknięte"}, status=400)
+        messages.error(request, "Głosowanie jest zamknięte.")
+        return redirect(
+            "komisja_sesja_glosowania",
+            komisja_id=komisja.id,
+            sesja_id=glosowanie.punkt_obrad.sesja.id,
+        )
+
+    wartosc = request.POST.get("glos")
+    if wartosc not in ["za", "przeciw", "wstrzymuje"]:
+        if is_ajax(request):
+            return JsonResponse({"error": "Nieprawidłowa wartość głosu"}, status=400)
+        messages.error(request, "Nieprawidłowa wartość głosu.")
+        return redirect(
+            "komisja_sesja_glosowania",
+            komisja_id=komisja.id,
+            sesja_id=glosowanie.punkt_obrad.sesja.id,
+        )
+
+    _, created = KomisjaGlos.objects.get_or_create(
+        glosowanie=glosowanie,
+        uzytkownik=request.user,
+        defaults={"glos": wartosc},
+    )
+
+    if not created:
+        if is_ajax(request):
+            return JsonResponse({"error": "Już oddałeś głos w tym głosowaniu"}, status=409)
+        messages.warning(request, "Już oddałeś głos w tym głosowaniu.")
+        return redirect(
+            "komisja_sesja_glosowania",
+            komisja_id=komisja.id,
+            sesja_id=glosowanie.punkt_obrad.sesja.id,
+        )
+
+    if is_ajax(request):
+        return JsonResponse({"success": True})
+
+    messages.success(request, "Głos został zapisany.")
+    return redirect(
+        "komisja_sesja_glosowania",
+        komisja_id=komisja.id,
+        sesja_id=glosowanie.punkt_obrad.sesja.id,
+    )
+
+
+@require_GET
+def api_komisja_wyniki(request, glosowanie_id):
+    glosowanie = get_object_or_404(KomisjaGlosowanie, id=glosowanie_id)
+
+    if glosowanie.jawnosc == "tajne" and glosowanie.otwarte:
+        total = KomisjaGlos.objects.filter(glosowanie=glosowanie).count()
+        return JsonResponse({
+            "tajne": True,
+            "otwarte": True,
+            "oddano": total,
+        })
+
+    wyniki = (
+        KomisjaGlos.objects.filter(glosowanie=glosowanie)
+        .values("glos")
+        .annotate(count=Count("glos"))
+    )
+
+    dane = {"za": 0, "przeciw": 0, "wstrzymuje": 0}
+    for wynik in wyniki:
+        dane[wynik["glos"]] = wynik["count"]
+
+    return JsonResponse({
+        **dane,
+        "tajne": glosowanie.jawnosc == "tajne",
+        "otwarte": glosowanie.otwarte,
+        "wiekszosc": glosowanie.wiekszosc,
+    })
+
+
+@require_GET
+def api_komisja_lista_glosow_jawne(request, glosowanie_id):
+    glosowanie = get_object_or_404(
+        KomisjaGlosowanie.objects.select_related("punkt_obrad__sesja__komisja"),
+        id=glosowanie_id,
+    )
+    if glosowanie.jawnosc != "jawne":
+        return JsonResponse({"error": "Głosowanie nie jest jawne"}, status=403)
+
+    komisja = glosowanie.punkt_obrad.sesja.komisja
+    czlonkowie = komisja.czlonkowie.order_by("nazwisko", "imie")
+    glosy = {
+        g.uzytkownik_id: g.glos
+        for g in KomisjaGlos.objects.filter(glosowanie=glosowanie).select_related("uzytkownik")
+    }
+
+    items = []
+    for osoba in czlonkowie:
+        items.append({
+            "id": osoba.id,
+            "imie": osoba.imie,
+            "nazwisko": osoba.nazwisko,
+            "rola": osoba.rola,
+            "glos": glosy.get(osoba.id),
+        })
+
+    return JsonResponse({
+        "jawne": True,
+        "glosowanie_id": glosowanie.id,
+        "items": items,
+    })
+
+
+@login_required
+def komisja_sesja_ekran(request, komisja_id, sesja_id):
+    from django.core.cache import cache
+
+    komisja = get_object_or_404(Komisja, id=komisja_id)
+    sesja = get_object_or_404(KomisjaSesja, id=sesja_id, komisja=komisja)
+
+    if not _can_view_komisja(request.user, komisja):
+        return HttpResponseForbidden("Brak uprawnień")
+
+    komunikat = cache.get("ekran_komunikat_global", "")
+    is_admin = _can_manage_komisja(request.user, komisja)
+
+    return render(request, "core/sesja_ekran.html", {
+        "sesja": sesja,
+        "komunikat": komunikat,
+        "is_admin": is_admin,
+        "przerwa_trwa": False,
+        "przerwa_pozostalo": 0,
+        "api_aktywny_punkt_url": reverse("api_komisja_aktywny_punkt", args=[sesja.id]),
+        "api_wyniki_prefix": "/api/komisja/wyniki/",
+        "api_glosy_jawne_prefix": "/api/komisja/glosy-jawne/",
+    })
+
+
+@require_GET
+def api_komisja_aktywny_punkt(request, sesja_id):
+    sesja = get_object_or_404(KomisjaSesja, id=sesja_id)
+
+    punkt = None
+    if sesja.aktywny_punkt_id:
+        punkt = sesja.punkty.filter(id=sesja.aktywny_punkt_id).prefetch_related("glosowania").first()
+    if punkt is None:
+        punkt = sesja.punkty.filter(aktywny=True).prefetch_related("glosowania").order_by("numer").first()
+        if punkt is not None:
+            sesja.aktywny_punkt = punkt
+            sesja.save(update_fields=["aktywny_punkt"])
+
+    if not punkt:
+        return JsonResponse({"aktywny": False})
+
+    glosowanie = getattr(punkt, "glosowanie", None)
+
+    data = {
+        "aktywny": True,
+        "numer": punkt.numer,
+        "tytul": punkt.tytul,
+        "podtytul": "",
+        "opis": punkt.opis or "",
+        "opis_html": _format_punkt_opis_html(punkt.opis or ""),
+        "glosowanie_id": glosowanie.id if glosowanie else None,
+        "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
+        "za": 0,
+        "przeciw": 0,
+        "wstrzymuje": 0,
+    }
+
+    if glosowanie:
+        wyniki = (
+            KomisjaGlos.objects.filter(glosowanie=glosowanie)
+            .values("glos")
+            .annotate(count=Count("glos"))
+        )
+        for w in wyniki:
+            if w["glos"] == "za":
+                data["za"] = w["count"]
+            elif w["glos"] == "przeciw":
+                data["przeciw"] = w["count"]
+            elif w["glos"] == "wstrzymuje":
+                data["wstrzymuje"] = w["count"]
+
+    return JsonResponse(data)
 
 
 @login_required

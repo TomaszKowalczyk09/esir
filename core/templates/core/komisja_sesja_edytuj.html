@@ -11,7 +11,15 @@
         <a href="{% url 'komisja_szczegoly' komisja.id %}" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-arrow-left me-1"></i> Powrót do komisji
         </a>
-        <span class="fw-bold fs-5">{{ komisja.nazwa }} - {{ sesja.nazwa }}</span>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+          <a href="{% url 'komisja_sesja_glosowania' komisja.id sesja.id %}" class="btn btn-outline-success btn-sm">
+            Panel głosowania członków
+          </a>
+          <a href="{% url 'komisja_sesja_ekran' komisja.id sesja.id %}" class="btn btn-outline-dark btn-sm">
+            Ekran komisji
+          </a>
+          <span class="fw-bold fs-5">{{ komisja.nazwa }} - {{ sesja.nazwa }}</span>
+        </div>
       </div>
 
       <div class="card shadow-sm mb-4">
@@ -132,11 +140,19 @@
                         <div class="small text-muted">{{ gl.get_jawnosc_display }} • {{ gl.get_wiekszosc_display }}{% if gl.liczba_uprawnionych %} • Uprawnieni: {{ gl.liczba_uprawnionych }}{% endif %}</div>
                         {% if gl.otwarte %}<span class="badge bg-success">Otwarte</span>{% else %}<span class="badge bg-secondary">Zamknięte</span>{% endif %}
                       </div>
-                      <form method="post" onsubmit="return confirm('Usunąć głosowanie?');">
-                        {% csrf_token %}
-                        <input type="hidden" name="glosowanie_id" value="{{ gl.id }}">
-                        <button type="submit" name="usun_glosowanie" class="btn btn-sm btn-outline-danger">Usuń</button>
-                      </form>
+                      <div class="d-flex gap-2 flex-wrap">
+                        <form method="post" action="{% url 'komisja_toggle_glosowanie' gl.id %}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-sm {% if gl.otwarte %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                            {% if gl.otwarte %}Zamknij głosowanie{% else %}Otwórz głosowanie{% endif %}
+                          </button>
+                        </form>
+                        <form method="post" onsubmit="return confirm('Usunąć głosowanie?');">
+                          {% csrf_token %}
+                          <input type="hidden" name="glosowanie_id" value="{{ gl.id }}">
+                          <button type="submit" name="usun_glosowanie" class="btn btn-sm btn-outline-danger">Usuń</button>
+                        </form>
+                      </div>
                     </div>
 
                     <form method="post" class="row g-2 mt-2">

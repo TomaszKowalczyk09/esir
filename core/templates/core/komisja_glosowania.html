@@ -1,0 +1,54 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Głosowania komisji{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h3 class="mb-1">{{ komisja.nazwa }} - {{ sesja.nazwa }}</h3>
+    <div class="text-muted small">Głosowania komisji</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'komisja_szczegoly' komisja.id %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Powrót do komisji
+    </a>
+    <a href="{% url 'komisja_sesja_ekran' komisja.id sesja.id %}" class="btn btn-outline-dark btn-sm">
+      Ekran komisji
+    </a>
+  </div>
+</div>
+
+{% if can_vote %}
+  {% if glosowania %}
+    {% for glosowanie in glosowania %}
+      <div class="card mb-3 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}</strong><br>
+            <small class="text-muted">{{ glosowanie.nazwa }}</small>
+          </div>
+          <span class="badge bg-success">Otwarte</span>
+        </div>
+        <div class="card-body">
+          {% if glosowanie.id in oddane_glosy_ids %}
+            <div class="alert alert-info mb-0">Już oddałeś głos w tym głosowaniu.</div>
+          {% else %}
+            <form method="post" action="{% url 'komisja_oddaj_glos' glosowanie.id %}">
+              {% csrf_token %}
+              <div class="btn-group w-100" role="group">
+                <button type="submit" name="glos" value="za" class="btn btn-success">ZA</button>
+                <button type="submit" name="glos" value="przeciw" class="btn btn-danger">PRZECIW</button>
+                <button type="submit" name="glos" value="wstrzymuje" class="btn btn-warning">WSTRZYMUJĘ SIĘ</button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-info">Brak otwartych głosowań w tej sesji komisji.</div>
+  {% endif %}
+{% else %}
+  <div class="alert alert-warning">Głosować mogą tylko członkowie komisji.</div>
+{% endif %}
+{% endblock %}
