@@ -47,16 +47,16 @@
         <div class="card-body">
           <form method="post" action="{% url 'komisja_dodaj_czlonka' komisja.id %}" class="mb-3">
             {% csrf_token %}
-            <label for="radny_id" class="form-label">Dodaj radnego</label>
-            <div class="d-flex gap-2">
-              <select id="radny_id" name="radny_id" class="form-select">
-                <option value="">Wybierz</option>
+            <label for="radny_ids" class="form-label">Dodaj członków do komisji</label>
+            <div class="d-flex gap-2 align-items-start">
+              <select id="radny_ids" name="radny_ids" class="form-select" multiple size="6">
                 {% for r in dostepni_radni %}
                   <option value="{{ r.id }}">{{ r.imie }} {{ r.nazwisko }}</option>
                 {% endfor %}
               </select>
               <button type="submit" class="btn btn-outline-primary">Dodaj</button>
             </div>
+            <div class="form-text">Przytrzymaj Ctrl (Windows), aby wybrać wiele osób (radni, prezydium, administratorzy).</div>
           </form>
 
           {% if czlonkowie %}

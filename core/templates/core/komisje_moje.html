@@ -32,6 +32,15 @@
             <label for="komisja_opis" class="form-label">Opis (opcjonalnie)</label>
             <textarea id="komisja_opis" name="opis" class="form-control" rows="2"></textarea>
           </div>
+          <div class="col-12">
+            <label for="komisja_czlonkowie" class="form-label">Lista członków komisji (opcjonalnie)</label>
+            <select id="komisja_czlonkowie" name="czlonkowie" class="form-select" multiple size="6">
+              {% for r in radni %}
+                <option value="{{ r.id }}">{{ r.imie }} {{ r.nazwisko }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Przytrzymaj Ctrl (Windows), aby wybrać wiele osób (radni, prezydium, administratorzy).</div>
+          </div>
         </div>
       </form>
     </div>

@@ -367,6 +367,13 @@ class KomisjaManagementTests(TestCase):
 			imie="Norbert",
 			nazwisko="Nowy",
 		)
+		cls.drugi_radny = Uzytkownik.objects.create_user(
+			username="new_kom_2",
+			password="test12345",
+			rola="radny",
+			imie="Damian",
+			nazwisko="Drugi",
+		)
 		cls.inny_przewodniczacy = Uzytkownik.objects.create_user(
 			username="chair_kom2",
 			password="test12345",
@@ -426,6 +433,24 @@ class KomisjaManagementTests(TestCase):
 		self.assertEqual(response.status_code, 403)
 		self.assertFalse(KomisjaSesja.objects.filter(komisja=self.inna_komisja, nazwa="Niedozwolona sesja").exists())
 
+	def test_admin_can_create_komisja_with_member_list(self):
+		self.client.force_login(self.admin)
+		response = self.client.post(
+			reverse("komisja_utworz"),
+			{
+				"nazwa": "Komisja Infrastruktury",
+				"opis": "Komisja testowa",
+				"przewodniczacy": str(self.przewodniczacy.id),
+				"czlonkowie": [str(self.czlonek.id), str(self.nowy_radny.id)],
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		nowa = Komisja.objects.get(nazwa="Komisja Infrastruktury")
+		self.assertTrue(nowa.czlonkowie.filter(id=self.przewodniczacy.id).exists())
+		self.assertTrue(nowa.czlonkowie.filter(id=self.czlonek.id).exists())
+		self.assertTrue(nowa.czlonkowie.filter(id=self.nowy_radny.id).exists())
+
 	def test_admin_can_add_and_remove_member(self):
 		self.client.force_login(self.admin)
 		add_response = self.client.post(
@@ -440,6 +465,28 @@ class KomisjaManagementTests(TestCase):
 		)
 		self.assertEqual(remove_response.status_code, 302)
 		self.assertFalse(self.komisja.czlonkowie.filter(id=self.nowy_radny.id).exists())
+
+	def test_admin_can_add_multiple_members(self):
+		self.client.force_login(self.admin)
+		response = self.client.post(
+			reverse("komisja_dodaj_czlonka", args=[self.komisja.id]),
+			{"radny_ids": [str(self.nowy_radny.id), str(self.drugi_radny.id)]},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertTrue(self.komisja.czlonkowie.filter(id=self.nowy_radny.id).exists())
+		self.assertTrue(self.komisja.czlonkowie.filter(id=self.drugi_radny.id).exists())
+
+	def test_admin_can_add_prezydium_and_admin_to_committee(self):
+		self.client.force_login(self.admin)
+		response = self.client.post(
+			reverse("komisja_dodaj_czlonka", args=[self.komisja.id]),
+			{"radny_ids": [str(self.prezydium.id), str(self.admin.id)]},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertTrue(self.komisja.czlonkowie.filter(id=self.prezydium.id).exists())
+		self.assertTrue(self.komisja.czlonkowie.filter(id=self.admin.id).exists())
 
 	def test_regular_member_cannot_manage_members(self):
 		self.client.force_login(self.czlonek)

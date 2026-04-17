@@ -1689,7 +1689,7 @@ def komisje_moje(request):
         {
             "komisje": komisje,
             "can_create_komisja": user.rola == "administrator",
-            "radni": Uzytkownik.objects.filter(rola="radny").order_by("nazwisko", "imie"),
+            "radni": Uzytkownik.objects.filter(rola__in=["radny", "prezydium", "administrator"]).order_by("nazwisko", "imie"),
         },
     )
 
@@ -1701,19 +1701,22 @@ def komisja_utworz(request):
     nazwa = (request.POST.get("nazwa") or "").strip()
     opis = (request.POST.get("opis") or "").strip()
     przewodniczacy_id = request.POST.get("przewodniczacy")
+    czlonkowie_ids = request.POST.getlist("czlonkowie")
 
     if not nazwa or not przewodniczacy_id:
         messages.error(request, "Podaj nazwę komisji i przewodniczącego.")
         return redirect("komisje_moje")
 
-    przewodniczacy = get_object_or_404(Uzytkownik, id=przewodniczacy_id, rola="radny")
+    przewodniczacy = get_object_or_404(Uzytkownik, id=przewodniczacy_id, rola__in=["radny", "prezydium", "administrator"])
     komisja = Komisja.objects.create(
         nazwa=nazwa,
         opis=opis,
         przewodniczacy=przewodniczacy,
         aktywna=True,
     )
-    komisja.czlonkowie.add(przewodniczacy)
+
+    dodatkowi_czlonkowie = Uzytkownik.objects.filter(id__in=czlonkowie_ids, rola__in=["radny", "prezydium", "administrator"])
+    komisja.czlonkowie.add(przewodniczacy, *dodatkowi_czlonkowie)
     messages.success(request, "Komisja została utworzona.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
@@ -1726,7 +1729,7 @@ def komisja_szczegoly(request, komisja_id):
 
     sesje = komisja.sesje.all()
     czlonkowie = komisja.czlonkowie.order_by("nazwisko", "imie")
-    dostepni_radni = Uzytkownik.objects.filter(rola="radny").exclude(
+    dostepni_radni = Uzytkownik.objects.filter(rola__in=["radny", "prezydium", "administrator"]).exclude(
         id__in=czlonkowie.values_list("id", flat=True)
     ).order_by("nazwisko", "imie")
 
@@ -1785,14 +1788,26 @@ def komisja_dodaj_czlonka(request, komisja_id):
     if not _can_manage_komisja(request.user, komisja):
         return HttpResponseForbidden("Brak uprawnień")
 
-    radny_id = request.POST.get("radny_id")
-    if not radny_id:
+    radny_ids = request.POST.getlist("radny_ids")
+    if not radny_ids:
+        radny_id = request.POST.get("radny_id")
+        if radny_id:
+            radny_ids = [radny_id]
+
+    if not radny_ids:
         messages.error(request, "Wybierz radnego do dodania.")
         return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
-    radny = get_object_or_404(Uzytkownik, id=radny_id, rola="radny")
-    komisja.czlonkowie.add(radny)
-    messages.success(request, "Dodano członka komisji.")
+    radni = list(Uzytkownik.objects.filter(id__in=radny_ids, rola__in=["radny", "prezydium", "administrator"]))
+    if not radni:
+        messages.error(request, "Nie znaleziono wybranych radnych.")
+        return redirect("komisja_szczegoly", komisja_id=komisja.id)
+
+    komisja.czlonkowie.add(*radni)
+    if len(radni) == 1:
+        messages.success(request, "Dodano członka komisji.")
+    else:
+        messages.success(request, f"Dodano członków komisji: {len(radni)}.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
 
@@ -1808,7 +1823,7 @@ def komisja_usun_czlonka(request, komisja_id, user_id):
         messages.error(request, "Nie można usunąć przewodniczącego z komisji.")
         return redirect("komisja_szczegoly", komisja_id=komisja.id)
 
-    radny = get_object_or_404(Uzytkownik, id=user_id, rola="radny")
+    radny = get_object_or_404(Uzytkownik, id=user_id, rola__in=["radny", "prezydium", "administrator"])
     komisja.czlonkowie.remove(radny)
     messages.success(request, "Usunięto członka komisji.")
     return redirect("komisja_szczegoly", komisja_id=komisja.id)
