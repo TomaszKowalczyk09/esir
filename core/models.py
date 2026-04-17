@@ -26,6 +26,13 @@ class Sesja(models.Model):
     przerwa_start = models.DateTimeField(null=True, blank=True)
     przerwa_czas = models.IntegerField(null=True, blank=True, help_text="Czas przerwy w sekundach")
     jest_zamknieta = models.BooleanField(default=False)
+    aktywny_podpunkt = models.ForeignKey(
+        "PodpunktObrad",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
 
     class Meta:
         ordering = ["data"]
@@ -66,15 +73,42 @@ class PunktObrad(models.Model):
     def glosowanie(self):
         prefetched = getattr(self, "_prefetched_objects_cache", {}).get("glosowania")
         if prefetched is not None:
+            prefetched = [g for g in prefetched if g.podpunkt_obrad_id is None]
             if not prefetched:
                 return None
             otwarte = [g for g in prefetched if g.otwarte]
             src = otwarte if otwarte else prefetched
             return sorted(src, key=lambda g: (g.utworzone, g.id), reverse=True)[0]
-        return self.glosowania.order_by("-otwarte", "-utworzone", "-id").first()
+        return self.glosowania.filter(podpunkt_obrad__isnull=True).order_by("-otwarte", "-utworzone", "-id").first()
 
     def __str__(self):
         return f"{self.numer}. {self.tytul}"
+
+
+class PodpunktObrad(models.Model):
+    punkt_nadrzedny = models.ForeignKey(PunktObrad, on_delete=models.CASCADE, related_name="podpunkty")
+    numer = models.IntegerField()
+    tytul = models.CharField(max_length=300)
+    opis = models.TextField(blank=True)
+    aktywny = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["punkt_nadrzedny__numer", "numer"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["punkt_nadrzedny", "numer"],
+                name="uniq_podpunktobrad_punkt_numer",
+            )
+        ]
+        verbose_name = "Podpunkt obrad"
+        verbose_name_plural = "Podpunkty obrad"
+
+    def __str__(self):
+        return f"{self.punkt_nadrzedny.numer}.{self.numer}. {self.tytul}"
+
+    @property
+    def glosowanie(self):
+        return self.glosowania.order_by("-otwarte", "-utworzone", "-id").first()
 
 
 class Glosowanie(models.Model):
@@ -83,6 +117,13 @@ class Glosowanie(models.Model):
     TYP_CHOICES = [("zwykle", "Zwykłe (za/przeciw/wstrzymuje)"), ("kandydaci", "Imienne na kandydata")]
 
     punkt_obrad = models.ForeignKey(PunktObrad, on_delete=models.CASCADE, related_name='glosowania')
+    podpunkt_obrad = models.ForeignKey(
+        PodpunktObrad,
+        on_delete=models.CASCADE,
+        related_name="glosowania",
+        null=True,
+        blank=True,
+    )
     nazwa = models.CharField(max_length=200)
     otwarte = models.BooleanField(default=False)
     utworzone = models.DateTimeField(auto_now_add=True)
@@ -211,6 +252,13 @@ class KomisjaSesja(models.Model):
         blank=True,
         related_name="+",
     )
+    aktywny_podpunkt = models.ForeignKey(
+        "KomisjaPodpunktObrad",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
 
     class Meta:
         ordering = ["-data"]
@@ -238,6 +286,32 @@ class KomisjaPunktObrad(models.Model):
 
     @property
     def glosowanie(self):
+        return self.glosowania.filter(podpunkt_obrad__isnull=True).order_by("-otwarte", "-utworzone", "-id").first()
+
+
+class KomisjaPodpunktObrad(models.Model):
+    punkt_nadrzedny = models.ForeignKey(KomisjaPunktObrad, on_delete=models.CASCADE, related_name="podpunkty")
+    numer = models.IntegerField()
+    tytul = models.CharField(max_length=300)
+    opis = models.TextField(blank=True)
+    aktywny = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["punkt_nadrzedny__numer", "numer"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["punkt_nadrzedny", "numer"],
+                name="uniq_komisjapodpunktobrad_punkt_numer",
+            )
+        ]
+        verbose_name = "Podpunkt obrad komisji"
+        verbose_name_plural = "Podpunkty obrad komisji"
+
+    def __str__(self):
+        return f"{self.punkt_nadrzedny.numer}.{self.numer}. {self.tytul}"
+
+    @property
+    def glosowanie(self):
         return self.glosowania.order_by("-otwarte", "-utworzone", "-id").first()
 
 
@@ -245,6 +319,13 @@ class KomisjaGlosowanie(models.Model):
     JAWNOSC_CHOICES = [("jawne", "Jawne"), ("tajne", "Tajne")]
     WIEKSZOSC_CHOICES = [("zwykla", "Większość zwykła"), ("bezwzgledna", "Większość bezwzględna")]
     punkt_obrad = models.ForeignKey(KomisjaPunktObrad, on_delete=models.CASCADE, related_name="glosowania")
+    podpunkt_obrad = models.ForeignKey(
+        KomisjaPodpunktObrad,
+        on_delete=models.CASCADE,
+        related_name="glosowania",
+        null=True,
+        blank=True,
+    )
     nazwa = models.CharField(max_length=200)
     otwarte = models.BooleanField(default=False)
     utworzone = models.DateTimeField(auto_now_add=True)

@@ -212,6 +212,11 @@
         color: var(--ekran-accent);
       }
 
+      .ekran-punkt-tytul.is-subpoint {
+        font-size: clamp(38px, 4vw, 62px);
+        line-height: 1.08;
+      }
+
       .ekran-punkt-sub {
         margin-top: 6px;
         font-size: clamp(15px, 1.1vw, 18px);
@@ -890,7 +895,7 @@
             <div class="ekran-empty-badge"><i class="bi bi-compass"></i> Oczekiwanie</div>
             <h2>{{ sesja.nazwa }}</h2>
             <div class="ekran-empty-text">
-              Sesja została uruchomiona, ale nie wskazano jeszcze aktywnego punktu obrad.
+              Sesja została uruchomiona, ale nie wskazano jeszcze aktywnego punktu obrad. <br> Czekaj na instrukcje Przewodniczącego.
             </div>
             {% if sesja.opis %}
               <div class="ekran-empty-note">{{ sesja.opis }}</div>
@@ -1107,6 +1112,7 @@
         // Pokaż planszę tytułową sesji
         $('#ekran-plansza-tytulowa').show();
         pointPanel.hide();
+        tytulEl.removeClass('is-subpoint');
         subEl.hide();
         opisEl.hide();
         rollWrap.hide();
@@ -1129,6 +1135,7 @@
           location.reload();
           return;
         }
+        tytulEl.toggleClass('is-subpoint', data.active_item_type === 'podpunkt');
         tytulEl.text(data.numer + '. ' + (data.tytul || 'Punkt porządku obrad'));
         subEl.text(data.podtytul || '');
         ustawOpis(opisEl, data);

@@ -68,7 +68,11 @@ def custom_404(request, exception):
 @require_manage_session(on_fail="redirect", redirect_to="radny")
 def usun_punkt_obrad(request, punkt_id):
     punkt = get_object_or_404(PunktObrad, id=punkt_id)
-    sesja_id = punkt.sesja.id
+    sesja = punkt.sesja
+    sesja_id = sesja.id
+    if sesja.aktywny_podpunkt_id and punkt.podpunkty.filter(id=sesja.aktywny_podpunkt_id).exists():
+        sesja.aktywny_podpunkt = None
+        sesja.save(update_fields=["aktywny_podpunkt"])
     punkt.delete()
     messages.success(request, "Punkt obrad został usunięty.")
     return redirect("sesja_edytuj", sesja_id=sesja_id)
@@ -267,8 +271,8 @@ from datetime import datetime, date, time
 import re
 from django.utils.html import escape
 
-from .models import Sesja, PunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaWniosek, KomisjaGlosowanie, KomisjaGlos
-from .forms import SesjaCreateForm, PunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaWniosekForm, KomisjaGlosowanieForm
+from .models import Sesja, PunktObrad, PodpunktObrad, Glosowanie, Glos, Wniosek, Komisja, KomisjaSesja, KomisjaPunktObrad, KomisjaPodpunktObrad, KomisjaWniosek, KomisjaGlosowanie, KomisjaGlos
+from .forms import SesjaCreateForm, PunktForm, PodpunktForm, GlosowanieForm, WniosekForm, KomisjaForm, KomisjaSesjaForm, KomisjaPunktForm, KomisjaPodpunktForm, KomisjaWniosekForm, KomisjaGlosowanieForm
 from accounts.models import Uzytkownik
 from .permissions import (
     has_any_role,
@@ -374,6 +378,18 @@ def _format_punkt_opis_html(opis):
     if in_list:
         html.append("</ul>")
 
+    return "".join(html)
+
+
+def _format_podpunkty_list_html(podpunkty):
+    if not podpunkty:
+        return ""
+    html = ["<ul>"]
+    for podpunkt in podpunkty:
+        html.append(
+            f"<li><strong>{podpunkt.numer}.</strong> {_format_opis_inline(podpunkt.tytul)}</li>"
+        )
+    html.append("</ul>")
     return "".join(html)
 
 def _protokol_pdf_margins_mm():
@@ -516,6 +532,7 @@ def sesja_edytuj(request, sesja_id):
     from .models import Obecnosc
 
     punkt_form = PunktForm()
+    podpunkt_form = PodpunktForm()
     glosowanie_form = GlosowanieForm()
     if request.method == "POST":
         if "zapisz_sesje" in request.POST:
@@ -626,15 +643,123 @@ def sesja_edytuj(request, sesja_id):
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
             messages.error(request, "Nie udało się dodać punktu. Uzupełnij wymagane pola.")
 
+        elif "dodaj_podpunkt" in request.POST:
+            podpunkt_form = PodpunktForm(request.POST)
+            punkt = get_object_or_404(PunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+            if podpunkt_form.is_valid():
+                podpunkt = podpunkt_form.save(commit=False)
+                podpunkt.punkt_nadrzedny = punkt
+                max_numer = punkt.podpunkty.aggregate(max_num=models.Max("numer"))["max_num"] or 0
+                podpunkt.numer = max_numer + 1
+                podpunkt.save()
+                messages.success(request, "Podpunkt został dodany.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+            messages.error(request, "Nie udało się dodać podpunktu. Uzupełnij wymagane pola.")
+
+        elif "zapisz_podpunkt" in request.POST:
+            podpunkt = get_object_or_404(
+                PodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            podpunkt.tytul = (request.POST.get("tytul") or "").strip()
+            podpunkt.opis = request.POST.get("opis", "")
+            if not podpunkt.tytul:
+                messages.error(request, "Tytuł podpunktu nie może być pusty.")
+                return redirect("sesja_edytuj", sesja_id=sesja.id)
+            podpunkt.save(update_fields=["tytul", "opis"])
+            messages.success(request, "Podpunkt został zaktualizowany.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        elif "usun_podpunkt" in request.POST:
+            podpunkt = get_object_or_404(
+                PodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            if sesja.aktywny_podpunkt_id == podpunkt.id:
+                sesja.aktywny_podpunkt = None
+                sesja.save(update_fields=["aktywny_podpunkt"])
+            podpunkt.delete()
+            messages.success(request, "Podpunkt został usunięty.")
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        elif "ustaw_podpunkt_aktywny" in request.POST:
+            podpunkt = get_object_or_404(
+                PodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            if podpunkt.aktywny:
+                podpunkt.aktywny = False
+                podpunkt.save(update_fields=["aktywny"])
+                sesja.aktywny_podpunkt = None
+                sesja.save(update_fields=["aktywny_podpunkt"])
+            else:
+                sesja.punkty.update(aktywny=False)
+                PodpunktObrad.objects.filter(punkt_nadrzedny__sesja=sesja).update(aktywny=False)
+                podpunkt.aktywny = True
+                podpunkt.save(update_fields=["aktywny"])
+                podpunkt.punkt_nadrzedny.aktywny = True
+                podpunkt.punkt_nadrzedny.save(update_fields=["aktywny"])
+                sesja.aktywny_podpunkt = podpunkt
+                sesja.save(update_fields=["aktywny_podpunkt"])
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+        elif "przesun_podpunkt" in request.POST:
+            podpunkt = get_object_or_404(
+                PodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            kierunek = request.POST.get("kierunek")
+            qs = podpunkt.punkt_nadrzedny.podpunkty
+            if kierunek == "up":
+                poprzedni = qs.filter(numer__lt=podpunkt.numer).order_by("-numer").first()
+                if poprzedni:
+                    with transaction.atomic():
+                        stary_numer = podpunkt.numer
+                        nowy_numer = poprzedni.numer
+                        podpunkt.numer = 0
+                        podpunkt.save(update_fields=["numer"])
+                        poprzedni.numer = stary_numer
+                        poprzedni.save(update_fields=["numer"])
+                        podpunkt.numer = nowy_numer
+                        podpunkt.save(update_fields=["numer"])
+            elif kierunek == "down":
+                nastepny = qs.filter(numer__gt=podpunkt.numer).order_by("numer").first()
+                if nastepny:
+                    with transaction.atomic():
+                        stary_numer = podpunkt.numer
+                        nowy_numer = nastepny.numer
+                        podpunkt.numer = 0
+                        podpunkt.save(update_fields=["numer"])
+                        nastepny.numer = stary_numer
+                        nastepny.save(update_fields=["numer"])
+                        podpunkt.numer = nowy_numer
+                        podpunkt.save(update_fields=["numer"])
+            return redirect("sesja_edytuj", sesja_id=sesja.id)
+
         elif "dodaj_glosowanie" in request.POST:
             glosowanie_form = GlosowanieForm(request.POST)
             if glosowanie_form.is_valid():
-                punkt = get_object_or_404(
-                    PunktObrad, id=request.POST.get("punkt_id"), sesja=sesja
-                )
+                podpunkt = None
+                podpunkt_id = request.POST.get("podpunkt_id")
+                if podpunkt_id:
+                    podpunkt = get_object_or_404(
+                        PodpunktObrad,
+                        id=podpunkt_id,
+                        punkt_nadrzedny__sesja=sesja,
+                    )
+                    punkt = podpunkt.punkt_nadrzedny
+                else:
+                    punkt = get_object_or_404(
+                        PunktObrad, id=request.POST.get("punkt_id"), sesja=sesja
+                    )
                 gl = glosowanie_form.save(commit=False)
                 gl.punkt_obrad = punkt
-                gl.nazwa = punkt.tytul
+                gl.podpunkt_obrad = podpunkt
+                gl.nazwa = podpunkt.tytul if podpunkt else punkt.tytul
                 # Automatycznie ustaw jawność na 'tajne' dla głosowań imiennych
                 if gl.typ == "kandydaci":
                     gl.jawnosc = "tajne"
@@ -814,14 +939,19 @@ def sesja_edytuj(request, sesja_id):
             messages.success(request, "Lista obecności została zaktualizowana.")
             return redirect("sesja_edytuj", sesja_id=sesja.id)
 
-    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
+    punkty = list(sesja.punkty.prefetch_related("glosowania", "podpunkty", "podpunkty__glosowania").order_by("numer"))
     # Automatyczna renumeracja punktów (unikalne, rosnące numery)
     for idx, punkt in enumerate(punkty, start=1):
         if punkt.numer != idx:
             punkt.numer = idx
             punkt.save(update_fields=["numer"])
+        podpunkty = list(punkt.podpunkty.order_by("numer"))
+        for pidx, podpunkt in enumerate(podpunkty, start=1):
+            if podpunkt.numer != pidx:
+                podpunkt.numer = pidx
+                podpunkt.save(update_fields=["numer"])
     # Ponownie pobierz punkty po renumeracji
-    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
+    punkty = list(sesja.punkty.prefetch_related("glosowania", "podpunkty", "podpunkty__glosowania").order_by("numer"))
     aktywny_punkt = None
     for punkt in punkty:
         if getattr(punkt, "aktywny", False):
@@ -869,8 +999,10 @@ def sesja_edytuj(request, sesja_id):
         "sesja": sesja,
         "punkty": punkty,
         "punkt_form": punkt_form,
+        "podpunkt_form": podpunkt_form,
         "glosowanie_form": glosowanie_form,
         "aktywny_punkt": aktywny_punkt,
+        "aktywny_podpunkt": sesja.aktywny_podpunkt,
         "przerwa_trwa": przerwa_trwa,
         "przerwa_pozostalo": przerwa_pozostalo,
         "obecnosci": obecnosci,
@@ -1041,8 +1173,8 @@ def radny(request):
                 punkt_obrad__sesja=aktywna_sesja,
                 otwarte=True,
             )
-            .select_related("punkt_obrad")
-            .order_by("punkt_obrad__numer")
+            .select_related("punkt_obrad", "podpunkt_obrad")
+            .order_by("punkt_obrad__numer", "podpunkt_obrad__numer", "id")
         )
         oddane_glosy_ids = list(
             Glos.objects.filter(
@@ -1329,32 +1461,79 @@ def api_aktywny_punkt(request, sesja_id):
     """
     sesja = get_object_or_404(Sesja, id=sesja_id)
 
-    punkt = sesja.punkty.filter(aktywny=True).prefetch_related("glosowania").order_by("numer").first()
+    aktywny_podpunkt = None
+    if sesja.aktywny_podpunkt_id:
+        aktywny_podpunkt = PodpunktObrad.objects.filter(
+            id=sesja.aktywny_podpunkt_id,
+            punkt_nadrzedny__sesja=sesja,
+        ).prefetch_related("glosowania").first()
+    if aktywny_podpunkt is None:
+        aktywny_podpunkt = PodpunktObrad.objects.filter(
+            punkt_nadrzedny__sesja=sesja,
+            aktywny=True,
+        ).prefetch_related("glosowania").order_by("punkt_nadrzedny__numer", "numer").first()
+        if aktywny_podpunkt is not None:
+            sesja.aktywny_podpunkt = aktywny_podpunkt
+            sesja.save(update_fields=["aktywny_podpunkt"])
 
-    if not punkt:
-        return JsonResponse({"aktywny": False})
+    if aktywny_podpunkt is not None:
+        punkt = aktywny_podpunkt.punkt_nadrzedny
+        glosowanie = getattr(aktywny_podpunkt, "glosowanie", None)
+        data = {
+            "aktywny": True,
+            "active_item_type": "podpunkt",
+            "punkt_id": punkt.id,
+            "punkt_numer": punkt.numer,
+            "punkt_tytul": punkt.tytul,
+            "podpunkt_id": aktywny_podpunkt.id,
+            "podpunkt_numer": aktywny_podpunkt.numer,
+            "numer": f"{punkt.numer}.{aktywny_podpunkt.numer}",
+            "tytul": aktywny_podpunkt.tytul,
+            "podtytul": f"Punkt {punkt.numer}. {punkt.tytul}",
+            "opis": aktywny_podpunkt.opis or "",
+            "opis_html": _format_punkt_opis_html(aktywny_podpunkt.opis or ""),
+            "glosowanie_id": glosowanie.id if glosowanie else None,
+            "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
+            "za": 0,
+            "przeciw": 0,
+            "wstrzymuje": 0,
+        }
+    else:
+        punkt = sesja.punkty.filter(aktywny=True).prefetch_related("glosowania", "podpunkty").order_by("numer").first()
+        if not punkt:
+            return JsonResponse({"aktywny": False})
 
-    glosowanie = getattr(punkt, "glosowanie", None)
-
-    data = {
-        "aktywny": True,
-        "numer": punkt.numer,
-        "tytul": punkt.tytul,
-        "podtytul": "",
-        "opis": punkt.opis or "",
-        "opis_html": _format_punkt_opis_html(punkt.opis or ""),
-        "glosowanie_id": glosowanie.id if glosowanie else None,
-        "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
-        "za": 0,
-        "przeciw": 0,
-        "wstrzymuje": 0,
-    }
+        podpunkty = list(punkt.podpunkty.order_by("numer"))
+        opis_html = _format_podpunkty_list_html(podpunkty) if podpunkty else _format_punkt_opis_html(punkt.opis or "")
+        glosowanie = getattr(punkt, "glosowanie", None)
+        data = {
+            "aktywny": True,
+            "active_item_type": "punkt",
+            "punkt_id": punkt.id,
+            "punkt_numer": punkt.numer,
+            "punkt_tytul": punkt.tytul,
+            "podpunkt_id": None,
+            "podpunkt_numer": None,
+            "numer": punkt.numer,
+            "tytul": punkt.tytul,
+            "podtytul": "",
+            "opis": punkt.opis or "",
+            "opis_html": opis_html,
+            "glosowanie_id": glosowanie.id if glosowanie else None,
+            "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
+            "za": 0,
+            "przeciw": 0,
+            "wstrzymuje": 0,
+        }
 
     if glosowanie:
         if glosowanie.typ == "kandydaci":
             # Wyniki głosowania na kandydatów (bez informacji kto głosował)
             from .models import Kandydat
-            kandydaci = punkt.kandydaci.all()
+            if glosowanie.kandydaci.exists():
+                kandydaci = glosowanie.kandydaci.all()
+            else:
+                kandydaci = punkt.kandydaci.all()
             wyniki_kandydaci = []
             suma_glosow = 0
             for k in kandydaci:
@@ -1394,10 +1573,16 @@ def ustaw_punkt_aktywny(request, punkt_id):
     if punkt.aktywny:
         punkt.aktywny = False
         punkt.save(update_fields=["aktywny"])
+        PodpunktObrad.objects.filter(punkt_nadrzedny__sesja=punkt.sesja).update(aktywny=False)
+        punkt.sesja.aktywny_podpunkt = None
+        punkt.sesja.save(update_fields=["aktywny_podpunkt"])
     else:
         PunktObrad.objects.filter(sesja=punkt.sesja).update(aktywny=False)
+        PodpunktObrad.objects.filter(punkt_nadrzedny__sesja=punkt.sesja).update(aktywny=False)
         punkt.aktywny = True
         punkt.save(update_fields=["aktywny"])
+        punkt.sesja.aktywny_podpunkt = None
+        punkt.sesja.save(update_fields=["aktywny_podpunkt"])
 
     referer = request.META.get("HTTP_REFERER")
     if referer:
@@ -1840,6 +2025,7 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
         return HttpResponseForbidden("Brak uprawnień")
 
     punkt_form = KomisjaPunktForm()
+    podpunkt_form = KomisjaPodpunktForm()
     glosowanie_form = KomisjaGlosowanieForm()
 
     if request.method == "POST":
@@ -1917,6 +2103,103 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
                 return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
             messages.error(request, "Nie udało się dodać punktu. Uzupełnij wymagane pola.")
 
+        if "dodaj_podpunkt" in request.POST:
+            podpunkt_form = KomisjaPodpunktForm(request.POST)
+            punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+            if podpunkt_form.is_valid():
+                podpunkt = podpunkt_form.save(commit=False)
+                podpunkt.punkt_nadrzedny = punkt
+                max_numer = punkt.podpunkty.aggregate(max_num=models.Max("numer"))["max_num"] or 0
+                podpunkt.numer = max_numer + 1
+                podpunkt.save()
+                messages.success(request, "Podpunkt został dodany.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+            messages.error(request, "Nie udało się dodać podpunktu. Uzupełnij wymagane pola.")
+
+        if "zapisz_podpunkt" in request.POST:
+            podpunkt = get_object_or_404(
+                KomisjaPodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            podpunkt.tytul = (request.POST.get("tytul") or "").strip()
+            podpunkt.opis = request.POST.get("opis", "")
+            if not podpunkt.tytul:
+                messages.error(request, "Tytuł podpunktu nie może być pusty.")
+                return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+            podpunkt.save(update_fields=["tytul", "opis"])
+            messages.success(request, "Podpunkt został zaktualizowany.")
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "usun_podpunkt" in request.POST:
+            podpunkt = get_object_or_404(
+                KomisjaPodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            if sesja.aktywny_podpunkt_id == podpunkt.id:
+                sesja.aktywny_podpunkt = None
+                sesja.save(update_fields=["aktywny_podpunkt"])
+            podpunkt.delete()
+            messages.success(request, "Podpunkt został usunięty.")
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "ustaw_podpunkt_aktywny" in request.POST:
+            podpunkt = get_object_or_404(
+                KomisjaPodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            if podpunkt.aktywny:
+                podpunkt.aktywny = False
+                podpunkt.save(update_fields=["aktywny"])
+                sesja.aktywny_podpunkt = None
+                sesja.save(update_fields=["aktywny_podpunkt"])
+            else:
+                sesja.punkty.update(aktywny=False)
+                KomisjaPodpunktObrad.objects.filter(punkt_nadrzedny__sesja=sesja).update(aktywny=False)
+                podpunkt.aktywny = True
+                podpunkt.save(update_fields=["aktywny"])
+                podpunkt.punkt_nadrzedny.aktywny = True
+                podpunkt.punkt_nadrzedny.save(update_fields=["aktywny"])
+                sesja.aktywny_podpunkt = podpunkt
+                sesja.save(update_fields=["aktywny_podpunkt"])
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+        if "przesun_podpunkt" in request.POST:
+            podpunkt = get_object_or_404(
+                KomisjaPodpunktObrad,
+                id=request.POST.get("podpunkt_id"),
+                punkt_nadrzedny__sesja=sesja,
+            )
+            kierunek = request.POST.get("kierunek")
+            qs = podpunkt.punkt_nadrzedny.podpunkty
+            if kierunek == "up":
+                poprzedni = qs.filter(numer__lt=podpunkt.numer).order_by("-numer").first()
+                if poprzedni:
+                    with transaction.atomic():
+                        stary_numer = podpunkt.numer
+                        nowy_numer = poprzedni.numer
+                        podpunkt.numer = 0
+                        podpunkt.save(update_fields=["numer"])
+                        poprzedni.numer = stary_numer
+                        poprzedni.save(update_fields=["numer"])
+                        podpunkt.numer = nowy_numer
+                        podpunkt.save(update_fields=["numer"])
+            elif kierunek == "down":
+                nastepny = qs.filter(numer__gt=podpunkt.numer).order_by("numer").first()
+                if nastepny:
+                    with transaction.atomic():
+                        stary_numer = podpunkt.numer
+                        nowy_numer = nastepny.numer
+                        podpunkt.numer = 0
+                        podpunkt.save(update_fields=["numer"])
+                        nastepny.numer = stary_numer
+                        nastepny.save(update_fields=["numer"])
+                        podpunkt.numer = nowy_numer
+                        podpunkt.save(update_fields=["numer"])
+            return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
         if "zapisz_punkt" in request.POST:
             punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
             punkt.tytul = (request.POST.get("tytul") or "").strip()
@@ -1933,6 +2216,9 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
             if sesja.aktywny_punkt_id == punkt.id:
                 sesja.aktywny_punkt = None
                 sesja.save(update_fields=["aktywny_punkt"])
+            if sesja.aktywny_podpunkt_id and punkt.podpunkty.filter(id=sesja.aktywny_podpunkt_id).exists():
+                sesja.aktywny_podpunkt = None
+                sesja.save(update_fields=["aktywny_podpunkt"])
             punkt.delete()
             messages.success(request, "Punkt obrad został usunięty.")
             return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
@@ -1942,14 +2228,18 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
             if punkt.aktywny:
                 punkt.aktywny = False
                 punkt.save(update_fields=["aktywny"])
+                KomisjaPodpunktObrad.objects.filter(punkt_nadrzedny__sesja=sesja).update(aktywny=False)
                 sesja.aktywny_punkt = None
-                sesja.save(update_fields=["aktywny_punkt"])
+                sesja.aktywny_podpunkt = None
+                sesja.save(update_fields=["aktywny_punkt", "aktywny_podpunkt"])
             else:
                 sesja.punkty.update(aktywny=False)
+                KomisjaPodpunktObrad.objects.filter(punkt_nadrzedny__sesja=sesja).update(aktywny=False)
                 punkt.aktywny = True
                 punkt.save(update_fields=["aktywny"])
                 sesja.aktywny_punkt = punkt
-                sesja.save(update_fields=["aktywny_punkt"])
+                sesja.aktywny_podpunkt = None
+                sesja.save(update_fields=["aktywny_punkt", "aktywny_podpunkt"])
             return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
 
         if "przesun_punkt" in request.POST:
@@ -1972,11 +2262,22 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
         if "dodaj_glosowanie" in request.POST:
             glosowanie_form = KomisjaGlosowanieForm(request.POST)
             if glosowanie_form.is_valid():
-                punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
+                podpunkt = None
+                podpunkt_id = request.POST.get("podpunkt_id")
+                if podpunkt_id:
+                    podpunkt = get_object_or_404(
+                        KomisjaPodpunktObrad,
+                        id=podpunkt_id,
+                        punkt_nadrzedny__sesja=sesja,
+                    )
+                    punkt = podpunkt.punkt_nadrzedny
+                else:
+                    punkt = get_object_or_404(KomisjaPunktObrad, id=request.POST.get("punkt_id"), sesja=sesja)
                 gl = glosowanie_form.save(commit=False)
                 gl.punkt_obrad = punkt
+                gl.podpunkt_obrad = podpunkt
                 if not gl.nazwa.strip():
-                    gl.nazwa = punkt.tytul
+                    gl.nazwa = podpunkt.tytul if podpunkt else punkt.tytul
                 gl.save()
                 messages.success(request, "Głosowanie komisji zostało dodane.")
                 return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
@@ -2028,12 +2329,17 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
             messages.success(request, "Głosowanie komisji zostało usunięte.")
             return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
 
-    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
+    punkty = list(sesja.punkty.prefetch_related("glosowania", "podpunkty", "podpunkty__glosowania").order_by("numer"))
     for idx, punkt in enumerate(punkty, start=1):
         if punkt.numer != idx:
             punkt.numer = idx
             punkt.save(update_fields=["numer"])
-    punkty = list(sesja.punkty.prefetch_related("glosowania").order_by("numer"))
+        podpunkty = list(punkt.podpunkty.order_by("numer"))
+        for pidx, podpunkt in enumerate(podpunkty, start=1):
+            if podpunkt.numer != pidx:
+                podpunkt.numer = pidx
+                podpunkt.save(update_fields=["numer"])
+    punkty = list(sesja.punkty.prefetch_related("glosowania", "podpunkty", "podpunkty__glosowania").order_by("numer"))
 
     return render(
         request,
@@ -2043,7 +2349,9 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
             "sesja": sesja,
             "punkty": punkty,
             "punkt_form": punkt_form,
+            "podpunkt_form": podpunkt_form,
             "glosowanie_form": glosowanie_form,
+            "aktywny_podpunkt": sesja.aktywny_podpunkt,
         },
     )
 
@@ -2063,8 +2371,8 @@ def komisja_sesja_glosowania(request, komisja_id, sesja_id):
             punkt_obrad__sesja=sesja,
             otwarte=True,
         )
-        .select_related("punkt_obrad")
-        .order_by("punkt_obrad__numer")
+        .select_related("punkt_obrad", "podpunkt_obrad")
+        .order_by("punkt_obrad__numer", "podpunkt_obrad__numer", "id")
     )
     oddane_glosy_ids = list(
         KomisjaGlos.objects.filter(
@@ -2267,33 +2575,78 @@ def komisja_sesja_ekran(request, komisja_id, sesja_id):
 def api_komisja_aktywny_punkt(request, sesja_id):
     sesja = get_object_or_404(KomisjaSesja, id=sesja_id)
 
-    punkt = None
-    if sesja.aktywny_punkt_id:
-        punkt = sesja.punkty.filter(id=sesja.aktywny_punkt_id).prefetch_related("glosowania").first()
-    if punkt is None:
-        punkt = sesja.punkty.filter(aktywny=True).prefetch_related("glosowania").order_by("numer").first()
-        if punkt is not None:
-            sesja.aktywny_punkt = punkt
-            sesja.save(update_fields=["aktywny_punkt"])
+    aktywny_podpunkt = None
+    if sesja.aktywny_podpunkt_id:
+        aktywny_podpunkt = KomisjaPodpunktObrad.objects.filter(
+            id=sesja.aktywny_podpunkt_id,
+            punkt_nadrzedny__sesja=sesja,
+        ).prefetch_related("glosowania").first()
+    if aktywny_podpunkt is None:
+        aktywny_podpunkt = KomisjaPodpunktObrad.objects.filter(
+            punkt_nadrzedny__sesja=sesja,
+            aktywny=True,
+        ).prefetch_related("glosowania").order_by("punkt_nadrzedny__numer", "numer").first()
+        if aktywny_podpunkt is not None:
+            sesja.aktywny_podpunkt = aktywny_podpunkt
+            sesja.save(update_fields=["aktywny_podpunkt"])
 
-    if not punkt:
-        return JsonResponse({"aktywny": False})
+    if aktywny_podpunkt is not None:
+        punkt = aktywny_podpunkt.punkt_nadrzedny
+        glosowanie = getattr(aktywny_podpunkt, "glosowanie", None)
+        data = {
+            "aktywny": True,
+            "active_item_type": "podpunkt",
+            "punkt_id": punkt.id,
+            "punkt_numer": punkt.numer,
+            "punkt_tytul": punkt.tytul,
+            "podpunkt_id": aktywny_podpunkt.id,
+            "podpunkt_numer": aktywny_podpunkt.numer,
+            "numer": f"{punkt.numer}.{aktywny_podpunkt.numer}",
+            "tytul": aktywny_podpunkt.tytul,
+            "podtytul": f"Punkt {punkt.numer}. {punkt.tytul}",
+            "opis": aktywny_podpunkt.opis or "",
+            "opis_html": _format_punkt_opis_html(aktywny_podpunkt.opis or ""),
+            "glosowanie_id": glosowanie.id if glosowanie else None,
+            "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
+            "za": 0,
+            "przeciw": 0,
+            "wstrzymuje": 0,
+        }
+    else:
+        punkt = None
+        if sesja.aktywny_punkt_id:
+            punkt = sesja.punkty.filter(id=sesja.aktywny_punkt_id).prefetch_related("glosowania", "podpunkty").first()
+        if punkt is None:
+            punkt = sesja.punkty.filter(aktywny=True).prefetch_related("glosowania", "podpunkty").order_by("numer").first()
+            if punkt is not None:
+                sesja.aktywny_punkt = punkt
+                sesja.save(update_fields=["aktywny_punkt"])
 
-    glosowanie = getattr(punkt, "glosowanie", None)
+        if not punkt:
+            return JsonResponse({"aktywny": False})
 
-    data = {
-        "aktywny": True,
-        "numer": punkt.numer,
-        "tytul": punkt.tytul,
-        "podtytul": "",
-        "opis": punkt.opis or "",
-        "opis_html": _format_punkt_opis_html(punkt.opis or ""),
-        "glosowanie_id": glosowanie.id if glosowanie else None,
-        "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
-        "za": 0,
-        "przeciw": 0,
-        "wstrzymuje": 0,
-    }
+        podpunkty = list(punkt.podpunkty.order_by("numer"))
+        opis_html = _format_podpunkty_list_html(podpunkty) if podpunkty else _format_punkt_opis_html(punkt.opis or "")
+        glosowanie = getattr(punkt, "glosowanie", None)
+        data = {
+            "aktywny": True,
+            "active_item_type": "punkt",
+            "punkt_id": punkt.id,
+            "punkt_numer": punkt.numer,
+            "punkt_tytul": punkt.tytul,
+            "podpunkt_id": None,
+            "podpunkt_numer": None,
+            "numer": punkt.numer,
+            "tytul": punkt.tytul,
+            "podtytul": "",
+            "opis": punkt.opis or "",
+            "opis_html": opis_html,
+            "glosowanie_id": glosowanie.id if glosowanie else None,
+            "glosowanie_nazwa": glosowanie.nazwa if glosowanie else "",
+            "za": 0,
+            "przeciw": 0,
+            "wstrzymuje": 0,
+        }
 
     if glosowanie:
         wyniki = (

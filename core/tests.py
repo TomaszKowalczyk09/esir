@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Uzytkownik
-from core.models import Sesja, PunktObrad, Glosowanie, Obecnosc, Glos, Komisja, KomisjaSesja, KomisjaWniosek, KomisjaPunktObrad, KomisjaGlosowanie, KomisjaGlos
+from core.models import Sesja, PunktObrad, PodpunktObrad, Glosowanie, Obecnosc, Glos, Komisja, KomisjaSesja, KomisjaWniosek, KomisjaPunktObrad, KomisjaPodpunktObrad, KomisjaGlosowanie, KomisjaGlos
 
 
 class AuthorizationMatrixTests(TestCase):
@@ -317,6 +317,207 @@ class SessionEditingAndAgendaTests(TestCase):
 		self.assertEqual(glosowanie.jawnosc, "jawne")
 		self.assertEqual(glosowanie.wiekszosc, "zwykla")
 		self.assertEqual(glosowanie.liczba_uprawnionych, 9)
+
+
+class SubpointsAgendaApiTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.prezydium = Uzytkownik.objects.create_user(
+			username="prezydium_sub",
+			password="test12345",
+			rola="prezydium",
+			imie="Pola",
+			nazwisko="Subpoint",
+		)
+		cls.sesja = Sesja.objects.create(
+			nazwa="Sesja podpunktów",
+			data=timezone.now(),
+			aktywna=True,
+		)
+		cls.punkt = PunktObrad.objects.create(
+			sesja=cls.sesja,
+			numer=1,
+			tytul="Punkt główny",
+			aktywny=True,
+		)
+		cls.podpunkt_1 = PodpunktObrad.objects.create(
+			punkt_nadrzedny=cls.punkt,
+			numer=1,
+			tytul="Podpunkt A",
+		)
+		cls.podpunkt_2 = PodpunktObrad.objects.create(
+			punkt_nadrzedny=cls.punkt,
+			numer=2,
+			tytul="Podpunkt B",
+		)
+
+	def test_active_point_api_renders_subpoint_list_when_point_is_active(self):
+		self.client.force_login(self.prezydium)
+		response = self.client.get(reverse("api_aktywny_punkt", args=[self.sesja.id]))
+
+		self.assertEqual(response.status_code, 200)
+		payload = response.json()
+		self.assertEqual(payload.get("active_item_type"), "punkt")
+		html = payload.get("opis_html", "")
+		self.assertIn("Podpunkt A", html)
+		self.assertIn("Podpunkt B", html)
+
+	def test_active_subpoint_api_contains_parent_context(self):
+		self.client.force_login(self.prezydium)
+		response = self.client.post(
+			reverse("sesja_edytuj", args=[self.sesja.id]),
+			{"ustaw_podpunkt_aktywny": "1", "podpunkt_id": str(self.podpunkt_1.id)},
+		)
+		self.assertEqual(response.status_code, 302)
+
+		api_response = self.client.get(reverse("api_aktywny_punkt", args=[self.sesja.id]))
+		self.assertEqual(api_response.status_code, 200)
+		payload = api_response.json()
+		self.assertEqual(payload.get("active_item_type"), "podpunkt")
+		self.assertEqual(payload.get("podpunkt_id"), self.podpunkt_1.id)
+		self.assertEqual(payload.get("punkt_id"), self.punkt.id)
+		self.assertIn("Punkt 1. Punkt główny", payload.get("podtytul", ""))
+
+	def test_results_do_not_mix_between_subpoints(self):
+		self.client.force_login(self.prezydium)
+		gl_a = Glosowanie.objects.create(
+			punkt_obrad=self.punkt,
+			podpunkt_obrad=self.podpunkt_1,
+			nazwa="Głosowanie A",
+			otwarte=False,
+		)
+		gl_b = Glosowanie.objects.create(
+			punkt_obrad=self.punkt,
+			podpunkt_obrad=self.podpunkt_2,
+			nazwa="Głosowanie B",
+			otwarte=False,
+		)
+		Glos.objects.create(glosowanie=gl_a, uzytkownik=self.prezydium, glos="za")
+		Glos.objects.create(glosowanie=gl_b, uzytkownik=self.prezydium, glos="przeciw")
+
+		self.client.post(
+			reverse("sesja_edytuj", args=[self.sesja.id]),
+			{"ustaw_podpunkt_aktywny": "1", "podpunkt_id": str(self.podpunkt_1.id)},
+		)
+		api_response = self.client.get(reverse("api_aktywny_punkt", args=[self.sesja.id]))
+		payload = api_response.json()
+		self.assertEqual(payload.get("glosowanie_id"), gl_a.id)
+		self.assertEqual(payload.get("za"), 1)
+		self.assertEqual(payload.get("przeciw"), 0)
+
+	def test_can_reorder_subpoints_in_session_editor(self):
+		self.client.force_login(self.prezydium)
+		response = self.client.post(
+			reverse("sesja_edytuj", args=[self.sesja.id]),
+			{
+				"przesun_podpunkt": "1",
+				"podpunkt_id": str(self.podpunkt_2.id),
+				"kierunek": "up",
+			},
+		)
+		self.assertEqual(response.status_code, 302)
+		self.podpunkt_1.refresh_from_db()
+		self.podpunkt_2.refresh_from_db()
+		self.assertEqual(self.podpunkt_2.numer, 1)
+		self.assertEqual(self.podpunkt_1.numer, 2)
+
+
+class KomisjaSubpointsApiTests(TestCase):
+	@classmethod
+	def setUpTestData(cls):
+		cls.chair = Uzytkownik.objects.create_user(
+			username="chair_sub_kom",
+			password="test12345",
+			rola="radny",
+			imie="Karol",
+			nazwisko="Chair",
+		)
+		cls.member = Uzytkownik.objects.create_user(
+			username="member_sub_kom",
+			password="test12345",
+			rola="radny",
+			imie="Marta",
+			nazwisko="Member",
+		)
+		cls.outsider = Uzytkownik.objects.create_user(
+			username="outsider_sub_kom",
+			password="test12345",
+			rola="radny",
+			imie="Ola",
+			nazwisko="Outside",
+		)
+		cls.komisja = Komisja.objects.create(
+			nazwa="Komisja Sub",
+			przewodniczacy=cls.chair,
+		)
+		cls.komisja.czlonkowie.add(cls.chair, cls.member)
+		cls.sesja = KomisjaSesja.objects.create(
+			komisja=cls.komisja,
+			nazwa="Posiedzenie Sub",
+			data=timezone.now(),
+		)
+		cls.punkt = KomisjaPunktObrad.objects.create(
+			sesja=cls.sesja,
+			numer=1,
+			tytul="Punkt komisji",
+			aktywny=True,
+		)
+		cls.podpunkt = KomisjaPodpunktObrad.objects.create(
+			punkt_nadrzedny=cls.punkt,
+			numer=1,
+			tytul="Podpunkt komisji",
+		)
+
+	def test_committee_active_subpoint_api_contains_parent_context(self):
+		self.client.force_login(self.chair)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{"ustaw_podpunkt_aktywny": "1", "podpunkt_id": str(self.podpunkt.id)},
+		)
+		self.assertEqual(response.status_code, 302)
+
+		api_response = self.client.get(reverse("api_komisja_aktywny_punkt", args=[self.sesja.id]))
+		self.assertEqual(api_response.status_code, 200)
+		payload = api_response.json()
+		self.assertEqual(payload.get("active_item_type"), "podpunkt")
+		self.assertEqual(payload.get("podpunkt_id"), self.podpunkt.id)
+		self.assertEqual(payload.get("punkt_id"), self.punkt.id)
+
+	def test_outsider_cannot_vote_in_committee_subpoint_voting(self):
+		glosowanie = KomisjaGlosowanie.objects.create(
+			punkt_obrad=self.punkt,
+			podpunkt_obrad=self.podpunkt,
+			nazwa="Głosowanie podpunktowe",
+			otwarte=True,
+		)
+		self.client.force_login(self.outsider)
+		response = self.client.post(
+			reverse("komisja_oddaj_glos", args=[glosowanie.id]),
+			{"glos": "za"},
+		)
+		self.assertEqual(response.status_code, 403)
+		self.assertFalse(KomisjaGlos.objects.filter(glosowanie=glosowanie, uzytkownik=self.outsider).exists())
+
+	def test_can_reorder_subpoints_in_committee_editor(self):
+		podpunkt_2 = KomisjaPodpunktObrad.objects.create(
+			punkt_nadrzedny=self.punkt,
+			numer=2,
+			tytul="Podpunkt komisji 2",
+		)
+		self.client.force_login(self.chair)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{
+				"przesun_podpunkt": "1",
+				"podpunkt_id": str(podpunkt_2.id),
+				"kierunek": "up",
+			},
+		)
+		self.assertEqual(response.status_code, 302)
+		self.podpunkt.refresh_from_db()
+		podpunkt_2.refresh_from_db()
+		self.assertEqual(podpunkt_2.numer, 1)
+		self.assertEqual(self.podpunkt.numer, 2)
 
 
 class Custom404PageTests(TestCase):

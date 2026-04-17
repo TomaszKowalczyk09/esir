@@ -24,7 +24,12 @@
       <div class="card mb-3 shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
           <div>
-            <strong>{{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}</strong><br>
+            {% if glosowanie.podpunkt_obrad_id %}
+              <strong>{{ glosowanie.punkt_obrad.numer }}.{{ glosowanie.podpunkt_obrad.numer }}. {{ glosowanie.podpunkt_obrad.tytul }}</strong><br>
+              <small class="text-muted">Punkt nadrzędny: {{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}</small><br>
+            {% else %}
+              <strong>{{ glosowanie.punkt_obrad.numer }}. {{ glosowanie.punkt_obrad.tytul }}</strong><br>
+            {% endif %}
             <small class="text-muted">{{ glosowanie.nazwa }}</small>
           </div>
           <span class="badge bg-success">Otwarte</span>

@@ -2,11 +2,13 @@ from django import forms
 from .models import (
     Sesja,
     PunktObrad,
+    PodpunktObrad,
     Glosowanie,
     Wniosek,
     Komisja,
     KomisjaSesja,
     KomisjaPunktObrad,
+    KomisjaPodpunktObrad,
     KomisjaWniosek,
     KomisjaGlosowanie,
 )
@@ -49,6 +51,26 @@ class PunktForm(forms.ModelForm):
         labels = {
             "tytul": "Tytuł",
             "opis": "Opis (opcjonalnie)",
+        }
+
+
+class PodpunktForm(forms.ModelForm):
+    class Meta:
+        model = PodpunktObrad
+        fields = ["tytul", "opis"]
+        widgets = {
+            "tytul": forms.TextInput(attrs={"class": "form-control", "placeholder": "Tytuł podpunktu"}),
+            "opis": forms.Textarea(
+                attrs={
+                    "class": "form-control punkt-opis-editor",
+                    "rows": 3,
+                    "placeholder": "Opis podpunktu (opcjonalnie)",
+                }
+            ),
+        }
+        labels = {
+            "tytul": "Tytuł podpunktu",
+            "opis": "Opis podpunktu",
         }
 
 
@@ -111,6 +133,16 @@ class KomisjaPunktForm(forms.ModelForm):
         widgets = {
             "tytul": forms.TextInput(attrs={"class": "form-control", "placeholder": "Np. Budżet, transport, inwestycje"}),
             "opis": forms.Textarea(attrs={"class": "form-control", "rows": 5, "placeholder": "Krótki opis punktu obrad"}),
+        }
+
+
+class KomisjaPodpunktForm(forms.ModelForm):
+    class Meta:
+        model = KomisjaPodpunktObrad
+        fields = ["tytul", "opis"]
+        widgets = {
+            "tytul": forms.TextInput(attrs={"class": "form-control", "placeholder": "Tytuł podpunktu"}),
+            "opis": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Krótki opis podpunktu"}),
         }
 
 
