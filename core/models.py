@@ -176,8 +176,18 @@ class Obecnosc(models.Model):
 class Komisja(models.Model):
     nazwa = models.CharField(max_length=200)
     opis = models.TextField(blank=True)
-    przewodniczacy = models.ForeignKey(Uzytkownik, on_delete=models.PROTECT, related_name="komisje_przewodniczy", limit_choices_to={"rola": "radny"})
-    czlonkowie = models.ManyToManyField(Uzytkownik, related_name="komisje", blank=True, limit_choices_to={"rola": "radny"})
+    przewodniczacy = models.ForeignKey(
+        Uzytkownik,
+        on_delete=models.PROTECT,
+        related_name="komisje_przewodniczy",
+        limit_choices_to=models.Q(rola__in=["radny", "prezydium", "administrator"]),
+    )
+    czlonkowie = models.ManyToManyField(
+        Uzytkownik,
+        related_name="komisje",
+        blank=True,
+        limit_choices_to=models.Q(rola__in=["radny", "prezydium", "administrator"]),
+    )
     aktywna = models.BooleanField(default=True)
 
     class Meta:
