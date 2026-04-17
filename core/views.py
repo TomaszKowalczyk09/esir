@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_POST
 from .permissions import require_manage_session
@@ -565,14 +565,66 @@ def sesja_edytuj(request, sesja_id):
         if "dodaj_punkt" in request.POST:
             punkt_form = PunktForm(request.POST)
             if punkt_form.is_valid():
-                punkt = punkt_form.save(commit=False)
-                punkt.sesja = sesja
-                # Ustal numer nowego punktu jako max + 1
-                max_numer = sesja.punkty.aggregate(max_num=models.Max('numer'))['max_num'] or 0
-                punkt.numer = max_numer + 1
-                punkt.save()
-                messages.success(request, "Punkt obrad został dodany.")
+                dodaj_glosowanie_razem = request.POST.get("dodaj_glosowanie_nowy_punkt") in ["1", "on", "true", "True"]
+                typ_glosowania = request.POST.get("nowe_glosowanie_typ", "zwykle")
+                nazwa_glosowania = (request.POST.get("nowe_glosowanie_nazwa") or "").strip()
+                jawnosc = request.POST.get("nowe_glosowanie_jawnosc", "jawne")
+                wiekszosc = request.POST.get("nowe_glosowanie_wiekszosc", "zwykla")
+                liczba_raw = (request.POST.get("nowe_glosowanie_liczba_uprawnionych") or "").strip()
+
+                if dodaj_glosowanie_razem:
+                    typ_values = {k for k, _ in Glosowanie.TYP_CHOICES}
+                    jawnosc_values = {k for k, _ in Glosowanie.JAWNOSC_CHOICES}
+                    wiekszosc_values = {k for k, _ in Glosowanie.WIEKSZOSC_CHOICES}
+
+                    if typ_glosowania not in typ_values:
+                        messages.error(request, "Nieprawidłowy typ głosowania.")
+                        return redirect("sesja_edytuj", sesja_id=sesja.id)
+                    if jawnosc not in jawnosc_values:
+                        messages.error(request, "Nieprawidłowa jawność głosowania.")
+                        return redirect("sesja_edytuj", sesja_id=sesja.id)
+                    if wiekszosc not in wiekszosc_values:
+                        messages.error(request, "Nieprawidłowy rodzaj większości.")
+                        return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+                liczba_uprawnionych = None
+                if liczba_raw:
+                    try:
+                        liczba_uprawnionych = int(liczba_raw)
+                    except ValueError:
+                        messages.error(request, "Liczba uprawnionych musi być liczbą całkowitą.")
+                        return redirect("sesja_edytuj", sesja_id=sesja.id)
+                    if liczba_uprawnionych < 0:
+                        messages.error(request, "Liczba uprawnionych nie może być ujemna.")
+                        return redirect("sesja_edytuj", sesja_id=sesja.id)
+
+                with transaction.atomic():
+                    punkt = punkt_form.save(commit=False)
+                    punkt.sesja = sesja
+                    # Ustal numer nowego punktu jako max + 1
+                    max_numer = sesja.punkty.aggregate(max_num=models.Max('numer'))['max_num'] or 0
+                    punkt.numer = max_numer + 1
+                    punkt.save()
+
+                    if dodaj_glosowanie_razem:
+                        glosowanie = Glosowanie.objects.create(
+                            punkt_obrad=punkt,
+                            nazwa=nazwa_glosowania or punkt.tytul,
+                            typ=typ_glosowania,
+                            jawnosc="tajne" if typ_glosowania == "kandydaci" else jawnosc,
+                            wiekszosc=wiekszosc,
+                            liczba_uprawnionych=liczba_uprawnionych,
+                        )
+                        if typ_glosowania == "kandydaci":
+                            glosowanie.jawnosc = "tajne"
+                            glosowanie.save(update_fields=["jawnosc"])
+
+                if dodaj_glosowanie_razem:
+                    messages.success(request, "Punkt obrad i głosowanie zostały dodane.")
+                else:
+                    messages.success(request, "Punkt obrad został dodany.")
                 return redirect("sesja_edytuj", sesja_id=sesja.id)
+            messages.error(request, "Nie udało się dodać punktu. Uzupełnij wymagane pola.")
 
         elif "dodaj_glosowanie" in request.POST:
             glosowanie_form = GlosowanieForm(request.POST)
@@ -1801,12 +1853,52 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
         if "dodaj_punkt" in request.POST:
             punkt_form = KomisjaPunktForm(request.POST)
             if punkt_form.is_valid():
-                punkt = punkt_form.save(commit=False)
-                punkt.sesja = sesja
-                max_numer = sesja.punkty.aggregate(max_num=models.Max("numer"))["max_num"] or 0
-                punkt.numer = max_numer + 1
-                punkt.save()
-                messages.success(request, "Punkt obrad został dodany.")
+                dodaj_glosowanie_razem = request.POST.get("dodaj_glosowanie_nowy_punkt") in ["1", "on", "true", "True"]
+
+                nazwa_glosowania = (request.POST.get("nowe_glosowanie_nazwa") or "").strip()
+                jawnosc = request.POST.get("nowe_glosowanie_jawnosc", "jawne")
+                wiekszosc = request.POST.get("nowe_glosowanie_wiekszosc", "zwykla")
+                liczba_raw = (request.POST.get("nowe_glosowanie_liczba_uprawnionych") or "").strip()
+
+                if dodaj_glosowanie_razem:
+                    if jawnosc not in {k for k, _ in KomisjaGlosowanie.JAWNOSC_CHOICES}:
+                        messages.error(request, "Nieprawidłowa jawność głosowania.")
+                        return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+                    if wiekszosc not in {k for k, _ in KomisjaGlosowanie.WIEKSZOSC_CHOICES}:
+                        messages.error(request, "Nieprawidłowy rodzaj większości.")
+                        return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+                liczba_uprawnionych = None
+                if liczba_raw:
+                    try:
+                        liczba_uprawnionych = int(liczba_raw)
+                    except ValueError:
+                        messages.error(request, "Liczba uprawnionych musi być liczbą całkowitą.")
+                        return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+                    if liczba_uprawnionych < 0:
+                        messages.error(request, "Liczba uprawnionych nie może być ujemna.")
+                        return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+
+                with transaction.atomic():
+                    punkt = punkt_form.save(commit=False)
+                    punkt.sesja = sesja
+                    max_numer = sesja.punkty.aggregate(max_num=models.Max("numer"))["max_num"] or 0
+                    punkt.numer = max_numer + 1
+                    punkt.save()
+
+                    if dodaj_glosowanie_razem:
+                        KomisjaGlosowanie.objects.create(
+                            punkt_obrad=punkt,
+                            nazwa=nazwa_glosowania or punkt.tytul,
+                            jawnosc=jawnosc,
+                            wiekszosc=wiekszosc,
+                            liczba_uprawnionych=liczba_uprawnionych,
+                        )
+
+                if dodaj_glosowanie_razem:
+                    messages.success(request, "Punkt obrad i głosowanie zostały dodane.")
+                else:
+                    messages.success(request, "Punkt obrad został dodany.")
                 return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
             messages.error(request, "Nie udało się dodać punktu. Uzupełnij wymagane pola.")
 

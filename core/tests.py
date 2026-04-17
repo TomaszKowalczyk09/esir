@@ -292,6 +292,32 @@ class SessionEditingAndAgendaTests(TestCase):
 		self.assertContains(response, "<strong>Wazne</strong>")
 		self.assertContains(response, "<em>kursywa</em>")
 
+	def test_add_point_modal_can_create_first_voting(self):
+		self.client.force_login(self.prezydium)
+		response = self.client.post(
+			reverse("sesja_edytuj", args=[self.sesja.id]),
+			{
+				"dodaj_punkt": "1",
+				"tytul": "Punkt z głosowaniem",
+				"opis": "Opis punktu",
+				"dodaj_glosowanie_nowy_punkt": "on",
+				"nowe_glosowanie_typ": "zwykle",
+				"nowe_glosowanie_nazwa": "Głosowanie do punktu",
+				"nowe_glosowanie_jawnosc": "jawne",
+				"nowe_glosowanie_wiekszosc": "zwykla",
+				"nowe_glosowanie_liczba_uprawnionych": "9",
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		punkt = PunktObrad.objects.get(sesja=self.sesja, tytul="Punkt z głosowaniem")
+		glosowanie = Glosowanie.objects.get(punkt_obrad=punkt)
+		self.assertEqual(glosowanie.nazwa, "Głosowanie do punktu")
+		self.assertEqual(glosowanie.typ, "zwykle")
+		self.assertEqual(glosowanie.jawnosc, "jawne")
+		self.assertEqual(glosowanie.wiekszosc, "zwykla")
+		self.assertEqual(glosowanie.liczba_uprawnionych, 9)
+
 
 class Custom404PageTests(TestCase):
 	@override_settings(DEBUG=False)
@@ -548,6 +574,30 @@ class KomisjaSessionEditingTests(TestCase):
 		self.assertEqual(response.status_code, 302)
 		punkt = KomisjaPunktObrad.objects.get(sesja=self.sesja, tytul="Nowy punkt")
 		self.assertEqual(punkt.numer, 1)
+
+	def test_chair_can_add_point_with_initial_voting_in_one_submit(self):
+		self.client.force_login(self.chair)
+		response = self.client.post(
+			reverse("komisja_sesja_edytuj", args=[self.komisja.id, self.sesja.id]),
+			{
+				"dodaj_punkt": "1",
+				"tytul": "Punkt z głosowaniem",
+				"opis": "Opis punktu",
+				"dodaj_glosowanie_nowy_punkt": "on",
+				"nowe_glosowanie_nazwa": "Głosowanie do punktu",
+				"nowe_glosowanie_jawnosc": "jawne",
+				"nowe_glosowanie_wiekszosc": "zwykla",
+				"nowe_glosowanie_liczba_uprawnionych": "5",
+			},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		punkt = KomisjaPunktObrad.objects.get(sesja=self.sesja, tytul="Punkt z głosowaniem")
+		glosowanie = KomisjaGlosowanie.objects.get(punkt_obrad=punkt)
+		self.assertEqual(glosowanie.nazwa, "Głosowanie do punktu")
+		self.assertEqual(glosowanie.jawnosc, "jawne")
+		self.assertEqual(glosowanie.wiekszosc, "zwykla")
+		self.assertEqual(glosowanie.liczba_uprawnionych, 5)
 
 	def test_chair_cannot_edit_other_committee_session(self):
 		self.client.force_login(self.chair)

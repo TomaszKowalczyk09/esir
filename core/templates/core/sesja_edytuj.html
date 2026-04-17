@@ -6,6 +6,109 @@
 
 {% block content %}
 
+<style>
+  .sesja-nowy-punkt-modal .modal-content {
+    border: 0;
+    border-radius: 1.1rem;
+    overflow: hidden;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
+  }
+
+  .sesja-nowy-punkt-modal .modal-header {
+    background:
+      radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 34%),
+      linear-gradient(135deg, #0b2a55 0%, #12376f 100%);
+    color: #fff;
+    border-bottom: 0;
+    padding: 1.1rem 1.25rem;
+  }
+
+  .sesja-nowy-punkt-modal .modal-title {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .sesja-nowy-punkt-modal .modal-subtitle {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: .92rem;
+    margin-top: .25rem;
+  }
+
+  .sesja-nowy-punkt-modal .modal-body {
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    padding: 1.25rem;
+  }
+
+  .sesja-modal-section {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    padding: 1rem;
+  }
+
+  .sesja-modal-section + .sesja-modal-section {
+    margin-top: 1rem;
+  }
+
+  .sesja-modal-section-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 700;
+    margin-bottom: .85rem;
+    color: #0f172a;
+  }
+
+  .sesja-modal-help {
+    color: #64748b;
+    font-size: .9rem;
+  }
+
+  .sesja-modal-footer-note {
+    color: #64748b;
+    font-size: .9rem;
+  }
+
+  .sesja-nowy-punkt-modal .form-control,
+  .sesja-nowy-punkt-modal .form-select {
+    border-radius: .8rem;
+    min-height: 48px;
+  }
+
+  .sesja-nowy-punkt-modal textarea.form-control {
+    min-height: 140px;
+  }
+
+  .sesja-nowy-punkt-modal .form-check-input {
+    width: 2.7rem;
+    height: 1.35rem;
+    cursor: pointer;
+  }
+
+  .sesja-nowy-punkt-modal .form-check-label {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .sesja-nowy-punkt-modal .btn-primary {
+    border-radius: .9rem;
+    min-height: 48px;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(13, 110, 253, 0.18);
+  }
+
+  @media (max-width: 768px) {
+    .sesja-nowy-punkt-modal .modal-body {
+      padding: 1rem;
+    }
+
+    .sesja-modal-section {
+      padding: .9rem;
+    }
+  }
+</style>
+
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-9 mx-auto">
@@ -350,34 +453,110 @@
       </div>
     </div>
     <!-- Modal dodawania punktu -->
-    <div class="modal fade" id="modalDodajPunkt" tabindex="-1" aria-labelledby="modalDodajPunktLabel" aria-hidden="true">
-      <div class="modal-dialog">
+    <div class="modal fade sesja-nowy-punkt-modal" id="modalDodajPunkt" tabindex="-1" aria-labelledby="modalDodajPunktLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="modalDodajPunktLabel">Dodaj punkt obrad</h5>
+            <div>
+              <h5 class="modal-title mb-1" id="modalDodajPunktLabel">Nowy punkt obrad</h5>
+              <div class="modal-subtitle">Dodaj punkt i, jeśli chcesz, od razu utwórz pierwsze głosowanie.</div>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
           </div>
           <div class="modal-body">
-            <form method="post">
+            <form method="post" class="row g-3">
               {% csrf_token %}
-              <div class="mb-3">
-                <label for="id_tytul" class="form-label">Tytuł</label>
-                {{ punkt_form.tytul }}
-              </div>
-              <div class="mb-3 format-editor-wrap">
-                <label for="id_opis" class="form-label">Opis</label>
-                <div class="btn-toolbar mb-2 gap-1" role="toolbar" aria-label="Formatowanie opisu">
-                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="bold" title="Pogrubienie">B</button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="italic" title="Kursywa"><i>I</i></button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="underline" title="Podkreślenie"><u>U</u></button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="list" title="Lista punktowana"><i class="bi bi-list-ul"></i></button>
+              <div class="col-lg-7">
+                <div class="sesja-modal-section h-100">
+                  <div class="sesja-modal-section-title">
+                    <span class="badge text-bg-primary">1</span>
+                    <span>Dane punktu</span>
+                  </div>
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label for="id_tytul" class="form-label">Tytuł punktu</label>
+                      {{ punkt_form.tytul }}
+                    </div>
+                    <div class="col-12">
+                      <label for="id_opis" class="form-label">Opis punktu</label>
+                      <div class="format-editor-wrap">
+                        <div class="btn-toolbar mb-2 gap-1" role="toolbar" aria-label="Formatowanie opisu">
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="bold" title="Pogrubienie">B</button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="italic" title="Kursywa"><i>I</i></button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="underline" title="Podkreślenie"><u>U</u></button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary format-opis-btn" data-format="list" title="Lista punktowana"><i class="bi bi-list-ul"></i></button>
+                        </div>
+                        {{ punkt_form.opis }}
+                        <small class="text-muted">Formatowanie: <strong>**pogrubienie**</strong>, <em>*kursywa*</em>, <u>__podkreślenie__</u>, lista: <code>- element</code>.</small>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="sesja-modal-help">Numer punktu zostanie nadany automatycznie po zapisaniu.</div>
+                    </div>
+                  </div>
                 </div>
-                {{ punkt_form.opis }}
-                <small class="text-muted">Formatowanie: <strong>**pogrubienie**</strong>, <em>*kursywa*</em>, <u>__podkreślenie__</u>, lista: <code>- element</code>.</small>
               </div>
-              <button type="submit" class="btn btn-primary w-100 mt-3" name="dodaj_punkt">
-                <i class="bi bi-plus-lg me-1"></i> Dodaj punkt
-              </button>
+
+              <div class="col-lg-5">
+                <div class="sesja-modal-section h-100">
+                  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <div class="sesja-modal-section-title mb-0">
+                      <span class="badge text-bg-success">2</span>
+                      <span>Pierwsze głosowanie</span>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                      <input class="form-check-input" type="checkbox" id="dodaj_glosowanie_nowy_punkt" name="dodaj_glosowanie_nowy_punkt">
+                      <label class="form-check-label visually-hidden" for="dodaj_glosowanie_nowy_punkt">Dodaj głosowanie</label>
+                    </div>
+                  </div>
+                  <div class="sesja-modal-help mb-3">
+                    Zaznacz przełącznik, jeśli punkt ma od razu dostać pierwsze głosowanie.
+                  </div>
+
+                  <div id="sesja-glosowanie-fields" class="row g-3 d-none">
+                    <div class="col-12">
+                      <label class="form-label mb-1">Nazwa głosowania</label>
+                      <input type="text" name="nowe_glosowanie_nazwa" class="form-control" placeholder="Domyślnie tytuł punktu">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label mb-1">Typ głosowania</label>
+                      <select name="nowe_glosowanie_typ" class="form-select">
+                        <option value="zwykle">Zwykłe (za/przeciw/wstrzymuje)</option>
+                        <option value="kandydaci">Imienne na kandydata</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label mb-1">Jawność</label>
+                      <select name="nowe_glosowanie_jawnosc" class="form-select">
+                        <option value="jawne">Jawne</option>
+                        <option value="tajne">Tajne</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label mb-1">Większość</label>
+                      <select name="nowe_glosowanie_wiekszosc" class="form-select">
+                        <option value="zwykla">Zwykła</option>
+                        <option value="bezwzgledna">Bezwzględna</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label mb-1">Uprawnieni (opcjonalnie)</label>
+                      <input type="number" name="nowe_glosowanie_liczba_uprawnionych" min="0" class="form-control" placeholder="np. 11">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 mt-1">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                  <div class="sesja-modal-footer-note">
+                    Punkt zostanie dopisany na końcu porządku obrad.
+                  </div>
+                  <button type="submit" class="btn btn-primary px-4" name="dodaj_punkt">
+                    <i class="bi bi-plus-lg me-1"></i> Dodaj punkt obrad
+                  </button>
+                </div>
+              </div>
             </form>
           </div>
         </div>
@@ -572,6 +751,16 @@
             }
           });
         });
+      })();
+
+      (function () {
+        const toggle = document.getElementById('dodaj_glosowanie_nowy_punkt');
+        const fields = document.getElementById('sesja-glosowanie-fields');
+        if (!toggle || !fields) return;
+
+        const sync = () => fields.classList.toggle('d-none', !toggle.checked);
+        toggle.addEventListener('change', sync);
+        sync();
       })();
     </script>
 {% endblock %}

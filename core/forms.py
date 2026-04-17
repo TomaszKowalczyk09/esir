@@ -37,11 +37,11 @@ class PunktForm(forms.ModelForm):
         model = PunktObrad
         fields = ["tytul", "opis"]
         widgets = {
-            "tytul": forms.TextInput(attrs={"class": "form-control"}),
+            "tytul": forms.TextInput(attrs={"class": "form-control", "placeholder": "Np. Budżet, inwestycje, transport"}),
             "opis": forms.Textarea(
                 attrs={
                     "class": "form-control punkt-opis-editor",
-                    "rows": 4,
+                    "rows": 5,
                     "placeholder": "Możesz użyć formatowania: **pogrubienie**, *kursywa*, __podkreślenie__, - lista",
                 }
             ),
@@ -108,6 +108,10 @@ class KomisjaPunktForm(forms.ModelForm):
     class Meta:
         model = KomisjaPunktObrad
         fields = ["tytul", "opis"]
+        widgets = {
+            "tytul": forms.TextInput(attrs={"class": "form-control", "placeholder": "Np. Budżet, transport, inwestycje"}),
+            "opis": forms.Textarea(attrs={"class": "form-control", "rows": 5, "placeholder": "Krótki opis punktu obrad"}),
+        }
 
 
 class KomisjaWniosekForm(forms.ModelForm):

@@ -4,6 +4,112 @@
 {% block title %}Edycja sesji komisji{% endblock %}
 
 {% block content %}
+<style>
+  .komisja-nowy-punkt-modal .modal-content {
+    border: 0;
+    border-radius: 1.1rem;
+    overflow: hidden;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
+  }
+
+  .komisja-nowy-punkt-modal .modal-header {
+    background:
+      radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 34%),
+      linear-gradient(135deg, #0b2a55 0%, #12376f 100%);
+    color: #fff;
+    border-bottom: 0;
+    padding: 1.1rem 1.25rem;
+  }
+
+  .komisja-nowy-punkt-modal .modal-title {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .komisja-nowy-punkt-modal .modal-subtitle {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: .92rem;
+    margin-top: .25rem;
+  }
+
+  .komisja-nowy-punkt-modal .modal-body {
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    padding: 1.25rem;
+  }
+
+  .komisja-modal-section {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    padding: 1rem;
+  }
+
+  .komisja-modal-section + .komisja-modal-section {
+    margin-top: 1rem;
+  }
+
+  .komisja-modal-section-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 700;
+    margin-bottom: .85rem;
+    color: #0f172a;
+  }
+
+  .komisja-modal-section-title .badge {
+    font-weight: 700;
+  }
+
+  .komisja-modal-help {
+    color: #64748b;
+    font-size: .9rem;
+  }
+
+  .komisja-modal-footer-note {
+    color: #64748b;
+    font-size: .9rem;
+  }
+
+  .komisja-nowy-punkt-modal .form-control,
+  .komisja-nowy-punkt-modal .form-select {
+    border-radius: .8rem;
+    min-height: 48px;
+  }
+
+  .komisja-nowy-punkt-modal textarea.form-control {
+    min-height: 140px;
+  }
+
+  .komisja-nowy-punkt-modal .form-check-input {
+    width: 2.7rem;
+    height: 1.35rem;
+    cursor: pointer;
+  }
+
+  .komisja-nowy-punkt-modal .form-check-label {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .komisja-nowy-punkt-modal .btn-primary {
+    border-radius: .9rem;
+    min-height: 48px;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(13, 110, 253, 0.18);
+  }
+
+  @media (max-width: 768px) {
+    .komisja-nowy-punkt-modal .modal-body {
+      padding: 1rem;
+    }
+
+    .komisja-modal-section {
+      padding: .9rem;
+    }
+  }
+</style>
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-10 mx-auto">
@@ -51,31 +157,13 @@
         </div>
       </div>
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">Dodaj punkt obrad</div>
-        <div class="card-body">
-          <form method="post" class="row g-2">
-            {% csrf_token %}
-            <div class="col-md-8">
-              <label class="form-label mb-1">Tytuł</label>
-              {{ punkt_form.tytul }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label mb-1">Numer (nadawany automatycznie)</label>
-              <input type="text" class="form-control" value="auto" disabled>
-            </div>
-            <div class="col-12">
-              <label class="form-label mb-1">Opis</label>
-              {{ punkt_form.opis }}
-            </div>
-            <div class="col-12">
-              <button type="submit" name="dodaj_punkt" class="btn btn-primary">Dodaj punkt</button>
-            </div>
-          </form>
-        </div>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h5 class="mb-0">Punkty i głosowania</h5>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalKomisjaDodajPunkt">
+          <i class="bi bi-plus-lg me-1"></i> Nowy punkt obrad
+        </button>
       </div>
 
-      <h5 class="mb-2">Punkty i głosowania</h5>
       {% if punkty %}
         {% for punkt in punkty %}
           <div class="card mb-3 shadow-sm" id="punkt-{{ punkt.id }}">
@@ -219,7 +307,117 @@
       {% else %}
         <div class="alert alert-info">Brak punktów obrad w tej sesji komisji.</div>
       {% endif %}
+
+      <div class="modal fade komisja-nowy-punkt-modal" id="modalKomisjaDodajPunkt" tabindex="-1" aria-labelledby="modalKomisjaDodajPunktLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div>
+                <h5 class="modal-title mb-1" id="modalKomisjaDodajPunktLabel">Nowy punkt obrad komisji</h5>
+                <div class="modal-subtitle">Dodaj punkt i, jeśli chcesz, od razu utwórz pierwsze głosowanie.</div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body">
+              <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-lg-7">
+                  <div class="komisja-modal-section h-100">
+                    <div class="komisja-modal-section-title">
+                      <span class="badge text-bg-primary">1</span>
+                      <span>Dane punktu</span>
+                    </div>
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <label class="form-label mb-1">Tytuł punktu</label>
+                        {{ punkt_form.tytul }}
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label mb-1">Opis punktu</label>
+                        {{ punkt_form.opis }}
+                      </div>
+                      <div class="col-12">
+                        <div class="komisja-modal-help">
+                          Numer zostanie nadany automatycznie po zapisaniu.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-lg-5">
+                  <div class="komisja-modal-section h-100">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                      <div class="komisja-modal-section-title mb-0">
+                        <span class="badge text-bg-success">2</span>
+                        <span>Pierwsze głosowanie</span>
+                      </div>
+                      <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="dodaj_glosowanie_nowy_punkt" name="dodaj_glosowanie_nowy_punkt">
+                        <label class="form-check-label visually-hidden" for="dodaj_glosowanie_nowy_punkt">Dodaj głosowanie</label>
+                      </div>
+                    </div>
+                    <div class="komisja-modal-help mb-3">
+                      Zaznacz przełącznik, jeśli punkt ma od razu dostać pierwsze głosowanie.
+                    </div>
+
+                    <div id="komisja-glosowanie-fields" class="row g-3 d-none">
+                      <div class="col-12">
+                        <label class="form-label mb-1">Nazwa głosowania</label>
+                        <input type="text" name="nowe_glosowanie_nazwa" class="form-control" placeholder="Domyślnie tytuł punktu">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label mb-1">Jawność</label>
+                        <select name="nowe_glosowanie_jawnosc" class="form-select">
+                          <option value="jawne">Jawne</option>
+                          <option value="tajne">Tajne</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label mb-1">Większość</label>
+                        <select name="nowe_glosowanie_wiekszosc" class="form-select">
+                          <option value="zwykla">Zwykła</option>
+                          <option value="bezwzgledna">Bezwzględna</option>
+                        </select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label mb-1">Uprawnieni (opcjonalnie)</label>
+                        <input type="number" name="nowe_glosowanie_liczba_uprawnionych" min="0" class="form-control" placeholder="np. 7">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12 mt-1">
+                  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                    <div class="komisja-modal-footer-note">
+                      Punkt zostanie dopisany na końcu porządku obrad.
+                    </div>
+                    <button type="submit" name="dodaj_punkt" class="btn btn-primary px-4">
+                      Dodaj punkt obrad
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+<script>
+  (function () {
+    const toggle = document.getElementById('dodaj_glosowanie_nowy_punkt');
+    const fields = document.getElementById('komisja-glosowanie-fields');
+    if (!toggle || !fields) return;
+
+    const sync = () => {
+      fields.classList.toggle('d-none', !toggle.checked);
+    };
+
+    toggle.addEventListener('change', sync);
+    sync();
+  })();
+</script>
 {% endblock %}
