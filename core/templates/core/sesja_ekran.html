@@ -23,6 +23,10 @@
         --ekran-success: #198754;
         --ekran-warning: #b45309;
         --ekran-danger: #b91c1c;
+        --title-bg-deep: #06162f;
+        --title-bg-mid: #0e2b57;
+        --title-bg-glow: #3f7fc8;
+        --title-text-soft: rgba(230, 241, 255, 0.88);
       }
 
       html, body {
@@ -31,6 +35,7 @@
         color: var(--ekran-text);
         font-family: "Segoe UI", "Aptos", Arial, sans-serif;
         background: var(--ekran-bg);
+        transition: background 280ms ease, color 220ms ease;
       }
 
       .ekran-shell {
@@ -250,6 +255,11 @@
         background: #ffffff;
       }
 
+      .ekran-empty-hero {
+        max-width: min(1200px, 100%);
+        margin-inline: auto;
+      }
+
       .ekran-empty-badge {
         display: inline-flex;
         align-items: center;
@@ -285,6 +295,89 @@
         margin-top: 12px;
         font-size: 16px;
         color: var(--ekran-muted);
+      }
+
+      .ekran-empty-status {
+        margin-top: 18px;
+        font-size: clamp(14px, 1vw, 16px);
+        font-weight: 600;
+        color: var(--ekran-muted);
+      }
+
+      body.ekran-title-mode {
+        background:
+          radial-gradient(1200px 480px at 12% -5%, rgba(63, 127, 200, 0.36), transparent 72%),
+          radial-gradient(900px 460px at 92% 102%, rgba(16, 71, 138, 0.44), transparent 76%),
+          linear-gradient(145deg, var(--title-bg-deep) 0%, var(--title-bg-mid) 58%, #123464 100%);
+        color: #f8fbff;
+      }
+
+      body.ekran-title-mode .ekran-topbar {
+        background: transparent;
+        border-bottom-color: rgba(201, 223, 255, 0.24);
+        backdrop-filter: blur(3px);
+      }
+
+      body.ekran-title-mode .ekran-kicker,
+      body.ekran-title-mode .ekran-brand p,
+      body.ekran-title-mode .ekran-clock,
+      body.ekran-title-mode .ekran-pill,
+      body.ekran-title-mode .ekran-pill i {
+        color: #e4efff;
+      }
+
+      body.ekran-title-mode .ekran-brand h1 {
+        display: none;
+      }
+
+      body.ekran-title-mode .ekran-pill {
+        border-color: rgba(201, 223, 255, 0.34);
+        background: rgba(201, 223, 255, 0.1);
+      }
+
+      body.ekran-title-mode .ekran-main {
+        display: grid;
+        place-items: center;
+      }
+
+      body.ekran-title-mode .ekran-stage {
+        width: min(1400px, 100%);
+      }
+
+      body.ekran-title-mode .ekran-empty-state {
+        background:
+          linear-gradient(155deg, rgba(255, 255, 255, 0.09) 0%, rgba(191, 220, 255, 0.05) 45%, rgba(120, 170, 234, 0.1) 100%),
+          linear-gradient(180deg, rgba(6, 22, 47, 0.58), rgba(10, 32, 68, 0.58));
+        border: 1px solid rgba(201, 223, 255, 0.24);
+        box-shadow: 0 32px 70px rgba(2, 8, 23, 0.45), inset 0 0 0 1px rgba(187, 214, 255, 0.1);
+      }
+
+      body.ekran-title-mode .ekran-empty-badge {
+        background: rgba(191, 220, 255, 0.16);
+        border-color: rgba(201, 223, 255, 0.35);
+        color: #d9eaff;
+      }
+
+      body.ekran-title-mode .ekran-empty-state h2 {
+        color: #ffffff;
+        text-shadow: 0 10px 26px rgba(1, 16, 41, 0.44);
+      }
+
+      body.ekran-title-mode .ekran-empty-text,
+      body.ekran-title-mode .ekran-empty-note,
+      body.ekran-title-mode .ekran-empty-status {
+        color: var(--title-text-soft);
+      }
+
+      body.ekran-title-mode .ekran-footer {
+        background: rgba(4, 18, 40, 0.36);
+        border-top-color: rgba(201, 223, 255, 0.2);
+        color: #d9eaff;
+      }
+
+      body.ekran-title-mode .ekran-footer strong,
+      body.ekran-title-mode .ekran-footer .text-muted {
+        color: #ffffff !important;
       }
 
       .ekran-info-card {
@@ -892,14 +985,16 @@
       <div class="ekran-stage-grid">
         <div class="ekran-primary">
           <div id="ekran-plansza-tytulowa" class="ekran-empty-state">
-            <div class="ekran-empty-badge"><i class="bi bi-compass"></i> Oczekiwanie</div>
-            <h2>{{ sesja.nazwa }}</h2>
-            <div class="ekran-empty-text">
-              Sesja została uruchomiona, ale nie wskazano jeszcze aktywnego punktu obrad. <br> Czekaj na instrukcje Przewodniczącego.
+            <div class="ekran-empty-hero">
+              <div class="ekran-empty-badge"><i class="bi bi-compass"></i> Oczekiwanie</div>
+              <h2>{{ sesja.nazwa }}</h2>
+              <div class="ekran-empty-text">
+                Sesja została uruchomiona, ale nie wskazano jeszcze aktywnego punktu obrad. <br> Czekaj na instrukcje Przewodniczącego.
+              </div>
+              {% if sesja.opis %}
+                <div class="ekran-empty-note">{{ sesja.opis }}</div>
+              {% endif %}
             </div>
-            {% if sesja.opis %}
-              <div class="ekran-empty-note">{{ sesja.opis }}</div>
-            {% endif %}
           </div>
 
           <section id="ekran-punkt-panel" class="ekran-panel">
@@ -1025,6 +1120,10 @@
     document.body.classList.toggle('ekran-rollcall-mode', !!enabled);
   }
 
+  function setTitleMode(enabled) {
+    document.body.classList.toggle('ekran-title-mode', !!enabled);
+  }
+
   function renderRollcall(list) {
     const items = [...(list || [])].sort((a, b) => {
       const an = normalize(a.nazwisko);
@@ -1107,6 +1206,7 @@
       });
 
       if (!data.aktywny) {
+        setTitleMode(true);
         setRollcallMode(false);
         wynikiBox.hide(); // Wyniki zawsze ukryte, gdy punkt nieaktywny
         // Pokaż planszę tytułową sesji
@@ -1121,6 +1221,7 @@
         lastRenderKey = renderKey;
         return;
       } else {
+        setTitleMode(false);
         $('#ekran-plansza-tytulowa').hide();
         pointPanel.show();
         tytulEl.show();
@@ -1161,17 +1262,28 @@
           // Wyniki głosowania imiennego na kandydatów
           if (data.kandydaci && Array.isArray(data.kandydaci)) {
             setRollcallMode(false);
+            const sumaKandydaci = data.kandydaci_glosow_suma || 0;
+            if (otwarte || sumaKandydaci <= 0) {
+              const noVotesKey = JSON.stringify({
+                gid: data.glosowanie_id,
+                kind: 'kandydaci-no-votes',
+                otwarte,
+                suma: sumaKandydaci
+              });
+              if (!sameKey(lastVotesKey, noVotesKey)) {
+                wynikiBox.hide();
+                rollWrap.hide();
+                lastVotesKey = noVotesKey;
+              }
+              return;
+            }
             let html = `
               <div class="ekran-wyniki-header mb-3">
                 <h2 class="fw-bold text-center">Wyniki głosowania imiennego</h2>
                 <hr>
               </div>
             `;
-            if ((data.kandydaci_glosow_suma || 0) === 0) {
-              html += '<div class="alert alert-info text-center">Brak oddanych głosów na kandydatów.</div>';
-            } else {
-              html += `<div class="mb-2 text-center text-muted">Oddano <span class="fw-bold">${data.kandydaci_glosow_suma}</span> głosów</div>`;
-            }
+            html += `<div class="mb-2 text-center text-muted">Oddano <span class="fw-bold">${sumaKandydaci}</span> głosów</div>`;
             html += '<div class="table-responsive"><table class="table table-bordered table-striped table-hover align-middle mb-4"><thead><tr><th class="text-center">Nazwisko i imię</th><th class="text-center">Liczba głosów</th></tr></thead><tbody>';
             for (const k of data.kandydaci) {
               html += '<tr>';
@@ -1208,6 +1320,19 @@
           // Po zamknięciu głosowania pokaż podsumowanie (lista + wykres donut)
           if (!otwarte) {
             setRollcallMode(false);
+            if (suma <= 0) {
+              const noVotesKey = JSON.stringify({
+                gid: data.glosowanie_id,
+                kind: 'brak-glosow',
+                otwarte: false
+              });
+              if (!sameKey(lastVotesKey, noVotesKey)) {
+                wynikiBox.hide();
+                rollWrap.hide();
+                lastVotesKey = noVotesKey;
+              }
+              return;
+            }
             const pct = (n) => suma ? ((n * 100) / suma).toFixed(3) : '0.000';
             const zaPct = pct(za);
             const przeciwPct = pct(przeciw);
