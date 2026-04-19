@@ -2381,6 +2381,7 @@ def komisja_sesja_edytuj(request, komisja_id, sesja_id):
                 gl.save()
                 messages.success(request, "Głosowanie komisji zostało dodane.")
                 return redirect("komisja_sesja_edytuj", komisja_id=komisja.id, sesja_id=sesja.id)
+            messages.error(request, "Nie udało się dodać głosowania. Sprawdź wprowadzone pola.")
 
         if "zapisz_glosowanie" in request.POST:
             glosowanie = get_object_or_404(

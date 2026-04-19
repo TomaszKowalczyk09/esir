@@ -196,6 +196,73 @@
     white-space: nowrap;
   }
 
+  .komisja-control-panel {
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .komisja-control-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-bottom: .75rem;
+  }
+
+  .komisja-control-section {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: .85rem;
+    background: #fff;
+    padding: .75rem;
+    height: 100%;
+  }
+
+  .komisja-control-title {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: .6rem;
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+  }
+
+  .komisja-control-list {
+    display: grid;
+    gap: .45rem;
+    max-height: 300px;
+    overflow: auto;
+    padding-right: .2rem;
+  }
+
+  .komisja-control-item {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: .7rem;
+    background: #f8fafc;
+    padding: .5rem;
+  }
+
+  .komisja-control-item-sub {
+    margin-left: 1rem;
+    background: #fff;
+  }
+
+  .komisja-control-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    flex-wrap: wrap;
+  }
+
+  .komisja-control-item-head .btn {
+    --bs-btn-padding-y: .2rem;
+    --bs-btn-padding-x: .45rem;
+    font-size: .78rem;
+  }
+
   @media (max-width: 768px) {
     .komisja-nowy-punkt-modal .modal-body {
       padding: 1rem;
@@ -250,6 +317,125 @@
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <div class="card komisja-control-panel mb-4">
+        <div class="card-body">
+          <div class="komisja-control-head">
+            <div>
+              <h6 class="mb-1">Centrum sterowania sesją komisji</h6>
+              <div class="small text-muted">Szybkie zarządzanie aktywnymi punktami/podpunktami i głosowaniami w jednym miejscu.</div>
+            </div>
+            <div class="d-flex gap-1 flex-wrap">
+              {% if sesja.aktywny_punkt %}
+                <span class="badge text-bg-primary">Aktywny punkt: {{ sesja.aktywny_punkt.numer }}</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Brak aktywnego punktu</span>
+              {% endif %}
+              {% if sesja.aktywny_podpunkt %}
+                <span class="badge text-bg-info">Aktywny podpunkt: {{ sesja.aktywny_podpunkt.punkt_nadrzedny.numer }}.{{ sesja.aktywny_podpunkt.numer }}</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Brak aktywnego podpunktu</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <div class="komisja-control-section">
+                <div class="komisja-control-title"><i class="bi bi-list-check"></i> Aktywacja punktów i podpunktów</div>
+                <div class="komisja-control-list">
+                  {% for punkt in punkty %}
+                    <div class="komisja-control-item">
+                      <div class="komisja-control-item-head">
+                        <span class="small fw-semibold">{{ punkt.numer }}. {{ punkt.tytul }}</span>
+                        <form method="post" class="m-0">
+                          {% csrf_token %}
+                          <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
+                          <button type="submit" name="ustaw_punkt_aktywny" class="btn btn-sm {% if punkt.aktywny %}btn-warning{% else %}btn-outline-primary{% endif %}">
+                            {% if punkt.aktywny %}Dezaktywuj{% else %}Ustaw aktywny{% endif %}
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                    {% for podpunkt in punkt.podpunkty.all %}
+                      <div class="komisja-control-item komisja-control-item-sub">
+                        <div class="komisja-control-item-head">
+                          <span class="small">{{ punkt.numer }}.{{ podpunkt.numer }}. {{ podpunkt.tytul }}</span>
+                          <form method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="podpunkt_id" value="{{ podpunkt.id }}">
+                            <button type="submit" name="ustaw_podpunkt_aktywny" class="btn btn-sm {% if podpunkt.aktywny %}btn-warning{% else %}btn-outline-primary{% endif %}">
+                              {% if podpunkt.aktywny %}Dezaktywuj{% else %}Ustaw aktywny{% endif %}
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  {% empty %}
+                    <div class="small text-muted">Brak punktów do aktywacji.</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-6">
+              <div class="komisja-control-section">
+                <div class="komisja-control-title"><i class="bi bi-ui-checks-grid"></i> Otwieranie i zamykanie głosowań</div>
+                <div class="komisja-control-list">
+                  {% for punkt in punkty %}
+                    {% for gl in punkt.glosowania.all %}
+                      {% if not gl.podpunkt_obrad_id %}
+                        <div class="komisja-control-item">
+                          <div class="komisja-control-item-head">
+                            <span class="small">
+                              {{ punkt.numer }}. {{ gl.nazwa }}
+                              {% if gl.otwarte %}
+                                <span class="badge bg-success ms-1">Otwarte</span>
+                              {% else %}
+                                <span class="badge bg-secondary ms-1">Zamknięte</span>
+                              {% endif %}
+                            </span>
+                            <form method="post" action="{% url 'komisja_toggle_glosowanie' gl.id %}" class="m-0">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-sm {% if gl.otwarte %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                                {% if gl.otwarte %}Zamknij{% else %}Otwórz{% endif %}
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                    {% for podpunkt in punkt.podpunkty.all %}
+                      {% for gl in podpunkt.glosowania.all %}
+                        <div class="komisja-control-item komisja-control-item-sub">
+                          <div class="komisja-control-item-head">
+                            <span class="small">
+                              {{ punkt.numer }}.{{ podpunkt.numer }}. {{ gl.nazwa }}
+                              {% if gl.otwarte %}
+                                <span class="badge bg-success ms-1">Otwarte</span>
+                              {% else %}
+                                <span class="badge bg-secondary ms-1">Zamknięte</span>
+                              {% endif %}
+                            </span>
+                            <form method="post" action="{% url 'komisja_toggle_glosowanie' gl.id %}" class="m-0">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-sm {% if gl.otwarte %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                                {% if gl.otwarte %}Zamknij{% else %}Otwórz{% endif %}
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      {% endfor %}
+                    {% endfor %}
+                  {% empty %}
+                    <div class="small text-muted">Brak głosowań do sterowania.</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

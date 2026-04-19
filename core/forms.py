@@ -156,6 +156,11 @@ class KomisjaWniosekForm(forms.ModelForm):
 
 
 class KomisjaGlosowanieForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Nazwa może być pusta - widok ustawi domyślnie tytuł punktu/podpunktu.
+        self.fields["nazwa"].required = False
+
     class Meta:
         model = KomisjaGlosowanie
         fields = ["nazwa", "jawnosc", "wiekszosc", "liczba_uprawnionych"]
