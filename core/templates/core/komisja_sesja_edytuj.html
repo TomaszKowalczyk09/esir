@@ -143,6 +143,44 @@
     box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
   }
 
+  .podpunkt-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: .65rem;
+    flex-wrap: wrap;
+  }
+
+  .podpunkt-title {
+    font-size: .95rem;
+    margin-bottom: .05rem;
+  }
+
+  .podpunkt-actions {
+    display: flex;
+    gap: .35rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .podpunkt-actions .btn {
+    --bs-btn-padding-y: .25rem;
+    --bs-btn-padding-x: .5rem;
+    line-height: 1.2;
+  }
+
+  .podpunkt-details {
+    margin-top: .55rem;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    padding-top: .65rem;
+  }
+
+  .podpunkt-voting-wrap {
+    margin-top: .55rem;
+    border-top: 1px dashed rgba(15, 23, 42, 0.14);
+    padding-top: .65rem;
+  }
+
   .podpunkt-add-wrap {
     border-radius: .85rem;
     border: 1px solid rgba(15, 23, 42, 0.08);
@@ -369,13 +407,13 @@
                 </div>
                 {% for podpunkt in punkt.podpunkty.all %}
                   <div class="podpunkt-item p-2 mb-2">
-                    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                      <div>
-                        <div class="fw-semibold">{{ punkt.numer }}.{{ podpunkt.numer }}. {{ podpunkt.tytul }}</div>
+                    <div class="podpunkt-summary">
+                      <div class="flex-grow-1">
+                        <div class="fw-semibold podpunkt-title">{{ punkt.numer }}.{{ podpunkt.numer }}. {{ podpunkt.tytul }}</div>
                         {% if podpunkt.aktywny %}<span class="badge bg-primary mt-1">Aktywny podpunkt</span>{% endif %}
                         {% if podpunkt.opis %}<div class="small text-muted mt-1">{{ podpunkt.opis|format_opis }}</div>{% endif %}
                       </div>
-                      <div class="d-flex gap-1 flex-wrap">
+                      <div class="podpunkt-actions">
                         <div class="btn-group" role="group" aria-label="Przesuwanie podpunktu">
                           {% if not forloop.first %}
                             <form method="post">
@@ -394,6 +432,9 @@
                             </form>
                           {% endif %}
                         </div>
+                        <button class="btn btn-sm btn-outline-dark" type="button" data-bs-toggle="collapse" data-bs-target="#podpunktDetails{{ podpunkt.id }}" aria-expanded="false" aria-controls="podpunktDetails{{ podpunkt.id }}">
+                          Edytuj
+                        </button>
                         <form method="post">
                           {% csrf_token %}
                           <input type="hidden" name="podpunkt_id" value="{{ podpunkt.id }}">
@@ -409,55 +450,59 @@
                       </div>
                     </div>
 
-                    <form method="post" class="row g-2 mt-2">
-                      {% csrf_token %}
-                      <input type="hidden" name="podpunkt_id" value="{{ podpunkt.id }}">
-                      <div class="col-md-5">
-                        <input type="text" name="tytul" class="form-control" value="{{ podpunkt.tytul }}" required>
-                      </div>
-                      <div class="col-md-5">
-                        <input type="text" name="opis" class="form-control" value="{{ podpunkt.opis }}" placeholder="Opis podpunktu">
-                      </div>
-                      <div class="col-md-2 d-grid">
-                        <button type="submit" name="zapisz_podpunkt" class="btn btn-sm btn-outline-dark">Zapisz</button>
-                      </div>
-                    </form>
+                    <div class="collapse" id="podpunktDetails{{ podpunkt.id }}">
+                      <div class="podpunkt-details">
+                        <form method="post" class="row g-2 mt-1">
+                          {% csrf_token %}
+                          <input type="hidden" name="podpunkt_id" value="{{ podpunkt.id }}">
+                          <div class="col-md-5">
+                            <input type="text" name="tytul" class="form-control" value="{{ podpunkt.tytul }}" required>
+                          </div>
+                          <div class="col-md-5">
+                            <input type="text" name="opis" class="form-control" value="{{ podpunkt.opis }}" placeholder="Opis podpunktu">
+                          </div>
+                          <div class="col-md-2 d-grid">
+                            <button type="submit" name="zapisz_podpunkt" class="btn btn-sm btn-outline-dark">Zapisz</button>
+                          </div>
+                        </form>
 
-                    <div class="mt-2 border-top pt-2">
-                      <div class="small text-muted mb-2">Głosowania podpunktu</div>
-                      {% for gl in podpunkt.glosowania.all %}
-                        <div class="border rounded p-2 mb-2 bg-white">
-                          <div class="fw-semibold">{{ gl.nazwa }}</div>
-                          <div class="small text-muted">{{ gl.get_jawnosc_display }} • {{ gl.get_wiekszosc_display }}</div>
-                        </div>
-                      {% empty %}
-                        <div class="small text-muted mb-2">Brak głosowań dla podpunktu.</div>
-                      {% endfor %}
+                        <div class="podpunkt-voting-wrap">
+                          <div class="small text-muted mb-2">Głosowania podpunktu</div>
+                          {% for gl in podpunkt.glosowania.all %}
+                            <div class="border rounded p-2 mb-2 bg-white">
+                              <div class="fw-semibold">{{ gl.nazwa }}</div>
+                              <div class="small text-muted">{{ gl.get_jawnosc_display }} • {{ gl.get_wiekszosc_display }}</div>
+                            </div>
+                          {% empty %}
+                            <div class="small text-muted mb-2">Brak głosowań dla podpunktu.</div>
+                          {% endfor %}
 
-                      <form method="post" class="row g-2 mt-2">
-                        {% csrf_token %}
-                        <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
-                        <input type="hidden" name="podpunkt_id" value="{{ podpunkt.id }}">
-                        <div class="col-md-4">
-                          <label class="form-label mb-1">Nazwa</label>
-                          <input type="text" name="nazwa" class="form-control" placeholder="Domyślnie tytuł podpunktu">
+                          <form method="post" class="row g-2 mt-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="punkt_id" value="{{ punkt.id }}">
+                            <input type="hidden" name="podpunkt_id" value="{{ podpunkt.id }}">
+                            <div class="col-md-4">
+                              <label class="form-label mb-1">Nazwa</label>
+                              <input type="text" name="nazwa" class="form-control" placeholder="Domyślnie tytuł podpunktu">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label mb-1">Jawność</label>
+                              {{ glosowanie_form.jawnosc }}
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label mb-1">Większość</label>
+                              {{ glosowanie_form.wiekszosc }}
+                            </div>
+                            <div class="col-md-2">
+                              <label class="form-label mb-1">Uprawnieni</label>
+                              {{ glosowanie_form.liczba_uprawnionych }}
+                            </div>
+                            <div class="col-12">
+                              <button type="submit" name="dodaj_glosowanie" class="btn btn-sm btn-outline-success">Dodaj głosowanie do podpunktu</button>
+                            </div>
+                          </form>
                         </div>
-                        <div class="col-md-3">
-                          <label class="form-label mb-1">Jawność</label>
-                          {{ glosowanie_form.jawnosc }}
-                        </div>
-                        <div class="col-md-3">
-                          <label class="form-label mb-1">Większość</label>
-                          {{ glosowanie_form.wiekszosc }}
-                        </div>
-                        <div class="col-md-2">
-                          <label class="form-label mb-1">Uprawnieni</label>
-                          {{ glosowanie_form.liczba_uprawnionych }}
-                        </div>
-                        <div class="col-12">
-                          <button type="submit" name="dodaj_glosowanie" class="btn btn-sm btn-outline-success">Dodaj głosowanie do podpunktu</button>
-                        </div>
-                      </form>
+                      </div>
                     </div>
                   </div>
                 {% empty %}
